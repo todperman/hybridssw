@@ -23,8 +23,7 @@ function Show-Tool {
 
 Write-Host ""
 Write-Host "=== เครื่องมือที่ต้องใช้ ===" -ForegroundColor Cyan
-$php = Show-Tool "PHP" "php" "-r"
-if ($php) { $php = (Get-Command php).Source }
+$php = Show-Tool "PHP" "php" "-v"
 Show-Tool "Composer" "composer" "--version" | Out-Null
 Show-Tool "Git"      "git"      "--version" | Out-Null
 Show-Tool "Node"     "node"     "--version" | Out-Null
