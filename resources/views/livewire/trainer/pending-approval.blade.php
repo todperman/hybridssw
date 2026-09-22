@@ -59,10 +59,10 @@
                 ] as [$allowed, $text])
                     <li class="flex items-center gap-3 px-5 py-3">
                         @if ($allowed)
-                            <x-lucide-check class="h-4 w-4 shrink-0 text-brand-deep" stroke-width="2.4" />
+                            @svg('lucide-check', 'h-4 w-4 shrink-0 text-brand-deep', ['stroke-width' => '2.4'])
                             <span class="text-ink">{{ $text }}</span>
                         @else
-                            <x-lucide-x class="h-4 w-4 shrink-0 text-muted/60" stroke-width="2.4" />
+                            @svg('lucide-x', 'h-4 w-4 shrink-0 text-muted/60', ['stroke-width' => '2.4'])
                             <span class="text-muted">{{ $text }}</span>
                         @endif
                     </li>
@@ -74,7 +74,7 @@
 
                 {{-- รีเฟรชหน้าเพื่อดึงสถานะล่าสุด เผื่อแอดมินเพิ่งกดอนุมัติ --}}
                 <button type="button" onclick="window.location.reload()" class="btn-ghost text-[13px]">
-                    <x-lucide-refresh-cw class="h-4 w-4" stroke-width="2" />
+                    @svg('lucide-refresh-cw', 'h-4 w-4', ['stroke-width' => '2'])
                     เช็กสถานะอีกครั้ง
                 </button>
             </div>

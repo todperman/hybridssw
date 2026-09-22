@@ -52,7 +52,7 @@
         <div class="overflow-hidden rounded-lg2 border border-red-200 bg-red-50/60 shadow-soft backdrop-blur-sm">
             <div class="border-b border-red-200/70 px-5 py-3.5">
                 <h2 class="flex items-center gap-2 font-display text-[17px] font-bold text-red-800">
-                    <x-lucide-triangle-alert class="h-4 w-4" stroke-width="2" />
+                    @svg('lucide-triangle-alert', 'h-4 w-4', ['stroke-width' => '2'])
                     ลบบัญชี
                 </h2>
                 <p class="mt-0.5 text-[13px] text-red-700/80">ทำแล้วย้อนกลับไม่ได้</p>

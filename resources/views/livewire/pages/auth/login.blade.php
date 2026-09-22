@@ -61,7 +61,7 @@ new class extends Component
 
             @error('form.email')
                 <p class="field-error">
-                    <x-lucide-circle-alert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    @svg('lucide-circle-alert', 'mt-0.5 h-3.5 w-3.5 shrink-0')
                     {{ $message }}
                 </p>
             @enderror
@@ -77,13 +77,13 @@ new class extends Component
             <button type="button" @click="showPassword = ! showPassword"
                     class="field-toggle"
                     x-bind:aria-label="showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'">
-                <x-lucide-eye x-show="! showPassword" class="h-4.5 w-4.5" style="width:18px;height:18px" stroke-width="1.8" />
-                <x-lucide-eye-off x-show="showPassword" class="h-4.5 w-4.5" style="width:18px;height:18px" stroke-width="1.8" />
+                @svg('lucide-eye', 'h-4.5 w-4.5', ['x-show' => '! showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
+                @svg('lucide-eye-off', 'h-4.5 w-4.5', ['x-show' => 'showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
             </button>
 
             @error('form.password')
                 <p class="field-error">
-                    <x-lucide-circle-alert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    @svg('lucide-circle-alert', 'mt-0.5 h-3.5 w-3.5 shrink-0')
                     {{ $message }}
                 </p>
             @enderror

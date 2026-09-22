@@ -84,7 +84,7 @@ new class extends Component
                         <button class="glass-toggle min-h-[44px] gap-2 px-4 text-sm text-ink">
                             <x-avatar :user="auth()->user()" size="h-7 w-7" text="text-[11px]" />
                             <span x-data="{}" x-text="'{{ auth()->user()?->name }}'"></span>
-                            <x-lucide-chevron-down class="h-4 w-4 text-muted" />
+                            @svg('lucide-chevron-down', 'h-4 w-4 text-muted')
                         </button>
                     </x-slot>
 
@@ -128,7 +128,7 @@ new class extends Component
     <button type="button" @click="account = true"
             class="bottom-nav__item {{ request()->routeIs('profile') ? 'is-active' : '' }}">
         <span class="bottom-nav__icon">
-            <x-lucide-user-round class="h-5 w-5" stroke-width="1.9" />
+            @svg('lucide-user-round', 'h-5 w-5', ['stroke-width' => '1.9'])
         </span>
         <span class="bottom-nav__label">บัญชี</span>
     </button>
@@ -159,12 +159,12 @@ new class extends Component
         <div class="mt-4 space-y-1.5">
             <a href="{{ route('profile') }}" wire:navigate @click="account = false"
                class="glass-row w-full gap-3 px-4 py-3 text-sm text-ink">
-                <x-lucide-user-round class="h-4 w-4 text-brand-deep" stroke-width="1.9" />
+                @svg('lucide-user-round', 'h-4 w-4 text-brand-deep', ['stroke-width' => '1.9'])
                 โปรไฟล์
             </a>
 
             <button wire:click="logout" class="glass-row w-full gap-3 px-4 py-3 text-start text-sm text-red-700">
-                <x-lucide-log-out class="h-4 w-4" stroke-width="1.9" />
+                @svg('lucide-log-out', 'h-4 w-4', ['stroke-width' => '1.9'])
                 ออกจากระบบ
             </button>
         </div>

@@ -10,7 +10,7 @@
         <x-slot:action>
             <a href="{{ route('trainer.team') }}" wire:navigate
                class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
-                <x-lucide-users class="h-4 w-4" stroke-width="1.9" />
+                @svg('lucide-users', 'h-4 w-4', ['stroke-width' => '1.9'])
                 จัดการทีม
             </a>
         </x-slot:action>
@@ -56,7 +56,7 @@
             <div class="flex items-center gap-2">
                 <button wire:click="shiftWeek(-1)" aria-label="สัปดาห์ก่อนหน้า"
                         class="glass-icon">
-                    <x-lucide-chevron-left class="h-4 w-4" />
+                    @svg('lucide-chevron-left', 'h-4 w-4')
                 </button>
 
                 <div class="grid flex-1 grid-cols-7 gap-1 sm:gap-2">
@@ -89,7 +89,7 @@
 
                 <button wire:click="shiftWeek(1)" aria-label="สัปดาห์ถัดไป"
                         class="glass-icon">
-                    <x-lucide-chevron-right class="h-4 w-4" />
+                    @svg('lucide-chevron-right', 'h-4 w-4')
                 </button>
             </div>
 
@@ -110,9 +110,9 @@
                             aria-pressed="{{ $onlyMine ? 'true' : 'false' }}"
                             class="glass-toggle shrink-0 {{ $onlyMine ? 'glass-toggle-mine' : '' }}">
                         @if ($onlyMine)
-                            <x-lucide-check class="h-3.5 w-3.5" stroke-width="2.6" />
+                            @svg('lucide-check', 'h-3.5 w-3.5', ['stroke-width' => '2.6'])
                         @else
-                            <x-lucide-list-filter class="h-3.5 w-3.5" stroke-width="2.2" />
+                            @svg('lucide-list-filter', 'h-3.5 w-3.5', ['stroke-width' => '2.2'])
                         @endif
                         การจองของฉัน
                     </button>
@@ -363,7 +363,7 @@
                                                                                 cancelLabel: 'เก็บไว้ก่อน',
                                                                                 action: () => $wire.cancelBooking({{ $booking->id }}),
                                                                             })">
-                                                                        <x-lucide-x class="h-3.5 w-3.5" stroke-width="2.4" />
+                                                                        @svg('lucide-x', 'h-3.5 w-3.5', ['stroke-width' => '2.4'])
                                                                     </button>
                                                                 @endif
                                                             </li>
@@ -375,7 +375,7 @@
                                                                 <span class="flex -space-x-1.5">
                                                                     @for ($i = 0; $i < min($otherCount, 3); $i++)
                                                                         <span class="grid h-6 w-6 place-items-center rounded-full bg-brand-light/50 ring-2 ring-white">
-                                                                            <x-lucide-user class="h-3 w-3 text-brand-dark/70" />
+                                                                            @svg('lucide-user', 'h-3 w-3 text-brand-dark/70')
                                                                         </span>
                                                                     @endfor
                                                                 </span>
@@ -390,7 +390,7 @@
                                                         <span class="flex -space-x-1.5">
                                                             @for ($i = 0; $i < min($otherCount, 3); $i++)
                                                                 <span class="grid h-6 w-6 place-items-center rounded-full bg-brand-light/50 ring-2 ring-white">
-                                                                    <x-lucide-user class="h-3 w-3 text-brand-dark/70" />
+                                                                    @svg('lucide-user', 'h-3 w-3 text-brand-dark/70')
                                                                 </span>
                                                             @endfor
                                                         </span>
@@ -459,7 +459,7 @@
 
                         <button wire:click="closeSession" aria-label="ปิด"
                                 class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/70 hover:text-ink">
-                            <x-lucide-x class="h-4 w-4" stroke-width="2.2" />
+                            @svg('lucide-x', 'h-4 w-4', ['stroke-width' => '2.2'])
                         </button>
                     </div>
                 </div>
@@ -469,13 +469,13 @@
                         <div class="space-y-1.5 rounded-2xl border border-white/60 bg-white/60 p-3.5 text-sm backdrop-blur-sm">
                             @foreach ($lastResult['booked'] ?? [] as $ok)
                                 <p class="flex items-center gap-2 text-brand-dark">
-                                    <x-lucide-check class="h-4 w-4 shrink-0 text-brand" stroke-width="2.4" />
+                                    @svg('lucide-check', 'h-4 w-4 shrink-0 text-brand', ['stroke-width' => '2.4'])
                                     {{ $ok['name'] }} — {{ $ok['status'] }}
                                 </p>
                             @endforeach
                             @foreach ($lastResult['failed'] ?? [] as $bad)
                                 <p class="flex items-center gap-2 text-red-700">
-                                    <x-lucide-x class="h-4 w-4 shrink-0" stroke-width="2.4" />
+                                    @svg('lucide-x', 'h-4 w-4 shrink-0', ['stroke-width' => '2.4'])
                                     {{ $bad['name'] }} — {{ $bad['reason'] }}
                                 </p>
                             @endforeach

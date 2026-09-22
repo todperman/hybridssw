@@ -10,7 +10,7 @@
         <x-slot:action>
             <a href="{{ route('trainer.schedule') }}" wire:navigate
                class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
-                <x-lucide-calendar-days class="h-4 w-4" stroke-width="1.9" />
+                @svg('lucide-calendar-days', 'h-4 w-4', ['stroke-width' => '1.9'])
                 ไปหน้าจอง
             </a>
         </x-slot:action>
@@ -100,8 +100,8 @@
                                    class="glass-input min-w-0 flex-1 px-3.5 py-2.5 font-mono text-[13px] text-ink">
 
                             <button type="button" @click="copy()" class="btn-grad shrink-0 px-4">
-                                <x-lucide-copy x-show="! copied" class="h-4 w-4" stroke-width="1.9" />
-                                <x-lucide-check x-show="copied" class="h-4 w-4" stroke-width="2.4" />
+                                @svg('lucide-copy', 'h-4 w-4', ['x-show' => '! copied', 'stroke-width' => '1.9'])
+                                @svg('lucide-check', 'h-4 w-4', ['x-show' => 'copied', 'stroke-width' => '2.4'])
                                 <span x-text="copied ? 'คัดลอกแล้ว' : 'คัดลอก'"></span>
                             </button>
                         </div>
@@ -109,12 +109,12 @@
                         {{-- ปุ่มแชร์ของระบบปฏิบัติการ มีเฉพาะเครื่องที่รองรับ จึงซ่อนไว้ก่อนแล้วค่อยโชว์ --}}
                         <div class="flex flex-wrap gap-2">
                             <button type="button" x-show="canShare" x-cloak @click="share()" class="btn-ghost text-[13px]">
-                                <x-lucide-share-2 class="h-4 w-4" stroke-width="1.9" />
+                                @svg('lucide-share-2', 'h-4 w-4', ['stroke-width' => '1.9'])
                                 แชร์ลิงก์
                             </button>
 
                             <button type="button" @click="saveQr()" class="btn-ghost text-[13px]">
-                                <x-lucide-download class="h-4 w-4" stroke-width="1.9" />
+                                @svg('lucide-download', 'h-4 w-4', ['stroke-width' => '1.9'])
                                 บันทึก QR
                             </button>
                         </div>
@@ -155,7 +155,7 @@
 
                 @if ($trainer->isApproved())
                     <button wire:click="openGroupForm" class="btn-grad px-5">
-                        <x-lucide-plus class="h-4 w-4" />
+                        @svg('lucide-plus', 'h-4 w-4')
                         สร้างกลุ่ม
                     </button>
                 @endif
@@ -228,7 +228,7 @@
                             <div class="mt-3 flex items-center gap-2 border-t border-line pt-3">
                                 <button wire:click="manageGroup({{ $group->id }})" class="btn-grad-soft flex-1 text-[13px]"
                                         style="--g-soft: {{ $c['soft'] }}; --g-base: {{ $c['base'] }}; --g-ink: {{ $c['ink'] }}">
-                                    <x-lucide-users class="h-4 w-4" stroke-width="2" />
+                                    @svg('lucide-users', 'h-4 w-4', ['stroke-width' => '2'])
                                     จัดสมาชิก
                                 </button>
 
@@ -236,7 +236,7 @@
 
                                 <button wire:click="openGroupForm({{ $group->id }})" aria-label="แก้ไขกลุ่ม {{ $group->name }}"
                                         class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/70 hover:text-ink">
-                                    <x-lucide-pencil class="h-4 w-4" stroke-width="1.9" />
+                                    @svg('lucide-pencil', 'h-4 w-4', ['stroke-width' => '1.9'])
                                 </button>
 
                                 <button type="button" aria-label="ลบกลุ่ม {{ $group->name }}"
@@ -250,7 +250,7 @@
                                             cancelLabel: 'เก็บไว้ก่อน',
                                             action: () => $wire.deleteGroup({{ $group->id }}),
                                         })">
-                                    <x-lucide-trash-2 class="h-4 w-4" stroke-width="1.9" />
+                                    @svg('lucide-trash-2', 'h-4 w-4', ['stroke-width' => '1.9'])
                                 </button>
                                 </div>
                             </div>
@@ -270,14 +270,14 @@
                      ปุ่มย่อเหลือ "เพิ่ม" บนจอแคบ ช่องค้นหาจะได้เหลือที่พอพิมพ์ --}}
                 <div class="flex w-full items-center gap-2 sm:w-auto">
                     <div class="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-                        <x-lucide-search class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                        @svg('lucide-search', 'pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted')
                         <input type="text" wire:model.live.debounce.300ms="search" placeholder="ค้นหาชื่อ ชื่อเล่น หรืออีเมล"
                                class="min-h-[44px] w-full rounded-full border-line bg-white/70 py-2 pl-10 pr-4 text-sm">
                     </div>
 
                     @if ($trainer->isApproved())
                         <button wire:click="openAddForm" class="btn-grad shrink-0 px-4 text-[13px]">
-                            <x-lucide-user-plus class="h-4 w-4" stroke-width="2" />
+                            @svg('lucide-user-plus', 'h-4 w-4', ['stroke-width' => '2'])
                             <span class="sm:hidden">เพิ่ม</span>
                             <span class="hidden sm:inline">เพิ่มลูกทีมเอง</span>
                         </button>
@@ -310,7 +310,7 @@
                                 <x-avatar :user="$member->user" size="h-12 w-12" text="text-base" class="ring-2 ring-white" />
 
                                 <span class="absolute inset-0 grid place-items-center rounded-full bg-ink/55 opacity-0 transition group-hover:opacity-100">
-                                    <x-lucide-camera class="h-4 w-4 text-white" stroke-width="1.9" />
+                                    @svg('lucide-camera', 'h-4 w-4 text-white', ['stroke-width' => '1.9'])
                                 </span>
 
                                 <span wire:loading wire:target="photos.{{ $member->id }}"
@@ -339,7 +339,7 @@
                                     @if ($member->user->phone)
                                         <a href="tel:{{ preg_replace('/\s+/', '', $member->user->phone) }}"
                                            class="inline-flex items-center gap-1 text-brand-deep hover:underline">
-                                            <x-lucide-phone class="h-3 w-3" stroke-width="2" />
+                                            @svg('lucide-phone', 'h-3 w-3', ['stroke-width' => '2'])
                                             {{ $member->user->phone }}
                                         </a>
                                     @endif
@@ -382,7 +382,7 @@
                                 <div class="mt-2" x-data="{ open: false, note: @js($note ?? '') }">
                                     <button type="button" @click="open = ! open"
                                             class="inline-flex items-center gap-1 text-[12px] font-medium text-brand-deep hover:underline">
-                                        <x-lucide-chevron-down class="h-3.5 w-3.5 transition" x-bind:class="open && 'rotate-180'" stroke-width="2.2" />
+                                        @svg('lucide-chevron-down', 'h-3.5 w-3.5 transition', ['x-bind:class' => 'open && \'rotate-180\'', 'stroke-width' => '2.2'])
                                         <span x-text="open ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'"></span>
                                     </button>
 
@@ -434,7 +434,7 @@
                             <button type="button" wire:click="editMember({{ $member->id }})"
                                     aria-label="แก้ไขข้อมูลของ {{ $member->user->name }}"
                                     class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/70 hover:text-brand-deep">
-                                <x-lucide-pencil class="h-4 w-4" stroke-width="1.9" />
+                                @svg('lucide-pencil', 'h-4 w-4', ['stroke-width' => '1.9'])
                             </button>
 
                             <button type="button" aria-label="นำ {{ $member->user->name }} ออกจากทีม"
@@ -448,7 +448,7 @@
                                         cancelLabel: 'เก็บไว้ก่อน',
                                         action: () => $wire.removeMember({{ $member->id }}),
                                     })">
-                                <x-lucide-trash-2 class="h-4 w-4" stroke-width="1.9" />
+                                @svg('lucide-trash-2', 'h-4 w-4', ['stroke-width' => '1.9'])
                             </button>
                             </div>
                         </div>
@@ -743,7 +743,7 @@
 
                         <button wire:click="manageGroup(null)" aria-label="ปิด"
                                 class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/70 hover:text-ink">
-                            <x-lucide-x class="h-4 w-4" stroke-width="2.2" />
+                            @svg('lucide-x', 'h-4 w-4', ['stroke-width' => '2.2'])
                         </button>
                     </div>
                 </div>
@@ -782,7 +782,7 @@
                                                     cancelLabel: 'เก็บไว้ก่อน',
                                                     action: () => $wire.removeFromGroup({{ $m->id }}),
                                                 })">
-                                            <x-lucide-minus class="h-4 w-4" stroke-width="2.4" />
+                                            @svg('lucide-minus', 'h-4 w-4', ['stroke-width' => '2.4'])
                                         </button>
                                     </li>
                                 @endforeach
@@ -819,7 +819,7 @@
                                                 @disabled($full)
                                                 class="btn-grad-soft shrink-0 px-4 text-[13px] disabled:cursor-not-allowed disabled:opacity-40"
                                                 style="--g-soft: {{ $gc['soft'] }}; --g-base: {{ $gc['base'] }}; --g-ink: {{ $gc['ink'] }}">
-                                            <x-lucide-plus class="h-4 w-4" stroke-width="2.4" />
+                                            @svg('lucide-plus', 'h-4 w-4', ['stroke-width' => '2.4'])
                                             เพิ่ม
                                         </button>
                                     </li>

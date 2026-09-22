@@ -30,9 +30,9 @@
                                   'bg-accent-light text-accent-ink': $store.confirm.tone === 'warning',
                                   'bg-mist text-brand-dark': $store.confirm.tone === 'info',
                               }">
-                            <x-lucide-trash-2 x-show="$store.confirm.tone === 'danger'" class="h-5 w-5" stroke-width="1.9" />
-                            <x-lucide-triangle-alert x-show="$store.confirm.tone === 'warning'" class="h-5 w-5" stroke-width="1.9" />
-                            <x-lucide-info x-show="$store.confirm.tone === 'info'" class="h-5 w-5" stroke-width="1.9" />
+                            @svg('lucide-trash-2', 'h-5 w-5', ['x-show' => '$store.confirm.tone === \'danger\'', 'stroke-width' => '1.9'])
+                            @svg('lucide-triangle-alert', 'h-5 w-5', ['x-show' => '$store.confirm.tone === \'warning\'', 'stroke-width' => '1.9'])
+                            @svg('lucide-info', 'h-5 w-5', ['x-show' => '$store.confirm.tone === \'info\'', 'stroke-width' => '1.9'])
                         </span>
 
                         <div class="min-w-0 flex-1 pt-0.5">

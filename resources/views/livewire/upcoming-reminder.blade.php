@@ -77,7 +77,7 @@
 
             <div class="flex items-start gap-3 p-4">
                 <span class="reminder__icon">
-                    <x-lucide-alarm-clock class="h-5 w-5" stroke-width="1.9" />
+                    @svg('lucide-alarm-clock', 'h-5 w-5', ['stroke-width' => '1.9'])
                 </span>
 
                 <div class="min-w-0 flex-1">
@@ -121,7 +121,7 @@
 
                 <button type="button" @click="close()" aria-label="ปิดการแจ้งเตือน"
                         class="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/70 hover:text-ink">
-                    <x-lucide-x class="h-4 w-4" stroke-width="2.2" />
+                    @svg('lucide-x', 'h-4 w-4', ['stroke-width' => '2.2'])
                 </button>
             </div>
         </div>

@@ -35,7 +35,7 @@
                         {{ $done ? 'bg-brand-light text-brand-dark' : '' }}
                         {{ ! $current && ! $done ? 'bg-mist text-muted' : '' }}">
                         @if ($done)
-                            <x-lucide-check class="h-4 w-4" stroke-width="2.5" />
+                            @svg('lucide-check', 'h-4 w-4', ['stroke-width' => '2.5'])
                         @else
                             {{ $number }}
                         @endif
@@ -113,8 +113,8 @@
                         <button type="button" @click="showPassword = ! showPassword"
                                 class="field-toggle"
                                 x-bind:aria-label="showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'">
-                            <x-lucide-eye x-show="! showPassword" style="width:18px;height:18px" stroke-width="1.8" />
-                            <x-lucide-eye-off x-show="showPassword" style="width:18px;height:18px" stroke-width="1.8" />
+                            @svg('lucide-eye', '', ['x-show' => '! showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
+                            @svg('lucide-eye-off', '', ['x-show' => 'showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
                         </button>
                     </div>
 
@@ -141,7 +141,7 @@
 
                 <button type="submit" class="btn-primary fade-up d-5 mt-2 w-full px-6 py-3.5 text-[15px]">
                     ถัดไป
-                    <x-lucide-arrow-right class="h-4 w-4" />
+                    @svg('lucide-arrow-right', 'h-4 w-4')
                 </button>
             </form>
         @endif
@@ -164,7 +164,7 @@
                             <span class="absolute right-4 top-4 grid h-5 w-5 place-items-center rounded-full border-2 transition
                                          {{ $active ? 'border-brand-deep bg-brand-deep' : 'border-line' }}">
                                 @if ($active)
-                                    <x-lucide-check class="h-3 w-3 text-white" stroke-width="3.5" />
+                                    @svg('lucide-check', 'h-3 w-3 text-white', ['stroke-width' => '3.5'])
                                 @endif
                             </span>
 
@@ -210,7 +210,7 @@
                             <span wire:loading wire:target="register">กำลังสมัคร…</span>
                         @else
                             ถัดไป
-                            <x-lucide-arrow-right class="h-4 w-4" />
+                            @svg('lucide-arrow-right', 'h-4 w-4')
                         @endif
                     </button>
                 </div>

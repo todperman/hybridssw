@@ -17,7 +17,7 @@
     <button type="button" @click="toggle()"
             :aria-expanded="open" aria-haspopup="dialog"
             {{ $attributes->merge(['class' => 'glass-input inline-flex min-h-[38px] items-center gap-2 px-3 text-[13px] text-ink transition hover:border-brand/40 sm:min-h-[44px]']) }}>
-        <x-lucide-calendar-days class="h-4 w-4 shrink-0 text-brand-deep" stroke-width="1.9" />
+        @svg('lucide-calendar-days', 'h-4 w-4 shrink-0 text-brand-deep', ['stroke-width' => '1.9'])
         <span x-text="label" class="truncate"></span>
     </button>
 
@@ -27,13 +27,13 @@
 
         <div class="mb-2 flex items-center justify-between gap-2">
             <button type="button" @click="shiftMonth(-1)" aria-label="เดือนก่อนหน้า" class="ss-cal__nav">
-                <x-lucide-chevron-left class="h-4 w-4" stroke-width="2.2" />
+                @svg('lucide-chevron-left', 'h-4 w-4', ['stroke-width' => '2.2'])
             </button>
 
             <p class="font-display text-[14px] font-bold text-ink" x-text="title"></p>
 
             <button type="button" @click="shiftMonth(1)" aria-label="เดือนถัดไป" class="ss-cal__nav">
-                <x-lucide-chevron-right class="h-4 w-4" stroke-width="2.2" />
+                @svg('lucide-chevron-right', 'h-4 w-4', ['stroke-width' => '2.2'])
             </button>
         </div>
 

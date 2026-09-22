@@ -55,8 +55,8 @@
 
                 <button type="button" @click="showPassword = ! showPassword" class="field-toggle"
                         x-bind:aria-label="showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'">
-                    <x-lucide-eye x-show="! showPassword" style="width:18px;height:18px" stroke-width="1.8" />
-                    <x-lucide-eye-off x-show="showPassword" style="width:18px;height:18px" stroke-width="1.8" />
+                    @svg('lucide-eye', '', ['x-show' => '! showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
+                    @svg('lucide-eye-off', '', ['x-show' => 'showPassword', 'style' => 'width:18px;height:18px', 'stroke-width' => '1.8'])
                 </button>
                 @error('password') <p class="field-error">{{ $message }}</p> @enderror
             </div>

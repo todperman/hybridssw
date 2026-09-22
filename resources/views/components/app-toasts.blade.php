@@ -39,9 +39,9 @@
                       'bg-accent-light text-accent-ink': item.tone === 'warning',
                       'bg-mist text-muted': item.tone === 'info',
                   }">
-                <x-lucide-check x-show="item.tone === 'success'" class="h-4 w-4" stroke-width="2.4" />
-                <x-lucide-x x-show="item.tone === 'error'" class="h-4 w-4" stroke-width="2.2" />
-                <x-lucide-circle-alert x-show="item.tone === 'warning' || item.tone === 'info'" class="h-4 w-4" stroke-width="2.2" />
+                @svg('lucide-check', 'h-4 w-4', ['x-show' => 'item.tone === \'success\'', 'stroke-width' => '2.4'])
+                @svg('lucide-x', 'h-4 w-4', ['x-show' => 'item.tone === \'error\'', 'stroke-width' => '2.2'])
+                @svg('lucide-circle-alert', 'h-4 w-4', ['x-show' => 'item.tone === \'warning\' || item.tone === \'info\'', 'stroke-width' => '2.2'])
             </span>
 
             <div class="min-w-0 flex-1">
@@ -51,7 +51,7 @@
 
             <button type="button" @click="remove(item.id)" aria-label="ปิดข้อความ"
                     class="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-mist hover:text-ink">
-                <x-lucide-x class="h-3.5 w-3.5" stroke-width="2.2" />
+                @svg('lucide-x', 'h-3.5 w-3.5', ['stroke-width' => '2.2'])
             </button>
         </div>
     </template>
