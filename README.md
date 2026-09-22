@@ -224,6 +224,21 @@ php artisan optimize          # cache config/route/view ใหม่ทั้ง
 php artisan up
 ```
 
+### ถ้าเซิร์ฟเวอร์เป็น Windows + IIS
+
+IIS ไม่อ่าน `.htaccess` ใช้ `public/web.config` ที่มีมาให้ในโปรเจกต์แทน
+ต้องติดตั้ง **URL Rewrite Module** ของ IIS ก่อน ไม่งั้นทุก URL นอกจากหน้าแรกจะ 500
+
+- PHP ต้องเป็นรุ่น **NTS (Non-Thread-Safe) x64** เพราะ IIS ต่อผ่าน FastCGI
+- เปิด extension ใน `php.ini`: `intl` `mbstring` `openssl` `pdo_mysql` `fileinfo` `curl` `zip` `gd`
+- ตั้ง `cgi.fix_pathinfo=1` และ `fastcgi.impersonate=1`
+- Physical path ของ site ต้องชี้ที่ `public\` เท่านั้น
+- ให้สิทธิ์ Modify แก่ `IIS AppPool\<ชื่อ pool>` บน `storage\` และ `bootstrap\cache\`
+- `php artisan storage:link` ต้องรันจาก PowerShell ที่เปิดแบบ Run as administrator
+  เพราะการสร้าง symlink บน Windows ต้องใช้สิทธิ์ผู้ดูแล
+- แทน cron ให้ใช้ Task Scheduler รัน `php artisan schedule:run` ทุก 1 นาที
+- แทน supervisor ให้ทำ queue worker เป็น Windows Service ด้วย NSSM
+
 ### สิ่งที่ต้องตั้งเพิ่มบนเซิร์ฟเวอร์
 
 **เว็บเซิร์ฟเวอร์** ชี้ document root ไปที่ `public/` เท่านั้น
