@@ -1,6 +1,14 @@
 # Srisawan Hybrid Workout
 
-ระบบจองชั่วโมงการเล่นฟิตเนส — Laravel 12 + Livewire 3 + Filament 4 + MySQL 8.4
+![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)
+![Livewire](https://img.shields.io/badge/Livewire-3-4E56A6?logo=livewire&logoColor=white)
+![Filament](https://img.shields.io/badge/Filament-4-FFAA00?logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+
+ระบบจองชั่วโมงการเล่นฟิตเนส — เทรนเนอร์สมัครเอง จัดลูกทีมเอง และจองรอบเองได้ทั้งหมด
+มีคิวสำรอง เวลาตัดรอบ นับผู้ไม่มาตามนัด และหลังบ้าน Filament สำหรับตั้งค่าสาขา
 
 ## แบ่งหน้าที่หน้าบ้าน / หลังบ้าน
 
@@ -174,7 +182,7 @@ php artisan serve --port=8210
 
 ## ขึ้นเซิร์ฟเวอร์จริง
 
-ความต้องการขั้นต่ำ: PHP 8.4 (ต้องมี `ext-intl` สำหรับรูปแบบเงินบาทและวันที่ภาษาไทย),
+ความต้องการขั้นต่ำ: PHP 8.2 (พัฒนาและทดสอบบน 8.4 — ต้องมี `ext-intl` สำหรับรูปแบบเงินบาทและวันที่ภาษาไทย),
 MySQL 8, Composer, Node 20+ สำหรับ build ไฟล์ครั้งเดียว
 
 ### ครั้งแรก
