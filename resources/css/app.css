@@ -1,0 +1,1129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* โทเคนชุดเดียวกับ hybridssw.srisawan.com เผื่อ CSS ที่ไม่ผ่าน Tailwind ต้องใช้ */
+@layer base {
+    :root {
+        --ink: #1c2f3a;
+        --muted: #5b676c;
+        --paper: #f3f6f8;
+        --mist: #e8eef1;
+        --line: #d6dcde;
+        --track: #e4e7e8;
+        --brand: #218dae;
+        --brand-deep: #007595;
+        --brand-light: #2bbbd7;
+        --brand-dark: #00516f;
+        --brand-deepest: #00334a;
+        --accent: #ffd758;
+        --accent-deep: #d2a40f;
+        --accent-ink: #7a5800;
+        --accent-light: #fce59a;
+    }
+
+    /* ต้องมีกฎนี้ ไม่งั้นทุกอย่างที่ติด x-cloak จะโผล่แวบหนึ่งก่อน Alpine เริ่มทำงาน
+       เช่น แผ่นบัญชี ไอคอนสลับรหัสผ่าน และกล่องยืนยัน */
+    [x-cloak] {
+        display: none !important;
+    }
+
+    html {
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        background-color: var(--paper);
+        color: var(--ink);
+    }
+
+    /*
+       ภาษาไทยมีสระบนและวรรณยุกต์ซ้อนขึ้นไปเหนือตัวอักษร
+       ถ้าบีบ line-height ต่ำกว่า ~1.25 วรรณยุกต์จะไปชนบรรทัดบน
+       และ letter-spacing ติดลบก็ทำให้สระ-วรรณยุกต์เบียดกันจนอ่านยาก
+       จึงตั้งค่าที่ปลอดภัยสำหรับไทยไว้เป็นฐาน แล้วค่อยไปปรับเฉพาะจุดที่เป็นอังกฤษล้วน
+    */
+    h1, h2, h3 {
+        font-family: '"Plus Jakarta Sans"', 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+        letter-spacing: normal;
+        line-height: 1.3;
+    }
+
+
+    /* ช่องกรอกของ @tailwindcss/forms ใช้สีเส้นและโฟกัสของแบรนด์ */
+    [type='text'], [type='email'], [type='password'], [type='date'],
+    [type='number'], [type='tel'], select, textarea {
+        @apply rounded-xl border-line text-ink placeholder:text-muted/50;
+    }
+
+    [type='text']:focus, [type='email']:focus, [type='password']:focus, [type='date']:focus,
+    [type='number']:focus, [type='tel']:focus, select:focus, textarea:focus {
+        @apply border-brand-deep ring-brand-deep/30;
+    }
+
+    [type='checkbox'], [type='radio'] {
+        @apply border-line text-brand-deep focus:ring-brand-deep/30;
+    }
+}
+
+@layer components {
+    /* ---------- ปุ่มแบบ liquid glass สไตล์ minimal ----------
+       ใส เบา เส้นขอบบาง ไม่มีเงาหนักและไม่มีพื้นทึบ
+       ลำดับความสำคัญมาจากความเข้มของสีที่เคลือบอยู่ ไม่ใช่จากน้ำหนักเงา
+       เบราว์เซอร์ที่ไม่มี backdrop-filter ดู @supports ท้ายบล็อก */
+
+    .btn-glass {
+        @apply relative inline-flex min-h-[44px] items-center justify-center gap-2
+               rounded-full border px-5 py-2.5 text-sm font-semibold
+               transition duration-200 ease-out-soft
+               focus:outline-none focus:ring-2 focus:ring-brand-deep/25
+               disabled:cursor-not-allowed disabled:opacity-40;
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+    }
+
+    .btn-primary {
+        @apply btn-glass text-brand-dark;
+        border-color: rgba(0, 117, 149, .42);
+        background-color: rgba(0, 117, 149, .17);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 4px 14px -8px rgba(0, 117, 149, .5);
+    }
+
+    .btn-primary:hover {
+        border-color: rgba(0, 117, 149, .48);
+        background-color: rgba(0, 117, 149, .20);
+    }
+
+    .btn-ghost {
+        @apply btn-glass px-4 py-2 font-medium text-ink;
+        border-color: rgba(28, 47, 58, .14);
+        background-color: rgba(255, 255, 255, .45);
+    }
+
+    .btn-ghost:hover {
+        border-color: rgba(28, 47, 58, .26);
+        background-color: rgba(255, 255, 255, .70);
+    }
+
+    /* ปุ่มเน้น ใช้สีแบรนด์เคลือบแบบไล่เฉด ยังคงโปร่งอยู่ */
+    .btn-grad {
+        @apply btn-glass text-brand-dark;
+        border-color: rgba(0, 117, 149, .45);
+        background-image: linear-gradient(110deg, rgba(0, 117, 149, .26) 0%, rgba(43, 187, 215, .19) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 4px 14px -8px rgba(0, 117, 149, .55);
+    }
+
+    .btn-grad:hover {
+        border-color: rgba(0, 117, 149, .68);
+        background-image: linear-gradient(110deg, rgba(0, 117, 149, .34) 0%, rgba(43, 187, 215, .26) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 8px 20px -10px rgba(0, 117, 149, .55);
+    }
+
+    /* ปุ่มรองที่เคลือบด้วยสีประจำกลุ่ม รับค่าผ่าน --g-soft/--g-base/--g-ink จาก inline style */
+    .btn-grad-soft {
+        @apply btn-glass px-4 py-2;
+        border-color: color-mix(in oklab, var(--g-base, var(--brand)) 48%, transparent);
+        background-color: color-mix(in oklab, var(--g-soft, var(--mist)) 72%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+        color: var(--g-ink, var(--brand-dark));
+    }
+
+    .btn-grad-soft:hover {
+        border-color: color-mix(in oklab, var(--g-base, var(--brand)) 72%, transparent);
+        background-color: color-mix(in oklab, var(--g-soft, var(--mist)) 100%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 6px 16px -10px color-mix(in oklab, var(--g-base, var(--brand)) 60%, transparent);
+    }
+
+    /* หัวการ์ดไล่สี: เส้นแบรนด์บางด้านบน + พื้นไล่สีจาง ๆ ที่ไม่แย่งสายตาไปจากเนื้อหา
+       ต้องอยู่ในกล่องที่มี overflow-hidden เส้นด้านบนจึงโค้งตามมุมการ์ด */
+    .card-head {
+        @apply relative border-b border-line px-5 py-3.5;
+        background-image: linear-gradient(100deg, rgba(43, 187, 215, .15) 0%, rgba(43, 187, 215, .05) 46%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    .card-head::before {
+        content: '';
+        @apply absolute inset-x-0 top-0 h-[3px];
+        background-image: linear-gradient(90deg, #00516f 0%, #2bbbd7 55%, #ffd758 100%);
+    }
+
+    /* ตัวอักษรไล่สี ใช้กับหัวข้อสั้น ๆ เท่านั้นเพื่อคงความอ่านง่าย */
+    .text-grad {
+        background-image: linear-gradient(95deg, #00334a 0%, #007595 55%, #218dae 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .card {
+        @apply rounded-lg2 border border-line bg-white/80 shadow-soft backdrop-blur-sm;
+    }
+
+    .chip {
+        @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    }
+
+    /* ---------- ตัวควบคุมแบบกระจก ----------
+       ปุ่มไอคอน ปุ่มสลับสถานะ และการ์ดวัน ใช้สูตรเดียวกับปุ่ม
+       สถานะ "เลือกอยู่" บอกด้วยสีแบรนด์ที่เคลือบเข้มขึ้น ไม่ใช่พื้นทึบ */
+    .glass-icon {
+        @apply grid h-11 w-11 shrink-0 place-items-center rounded-full border text-muted
+               transition duration-200 ease-out-soft hover:text-ink
+               focus:outline-none focus:ring-2 focus:ring-brand-deep/25;
+        border-color: rgba(28, 47, 58, .14);
+        background-color: rgba(255, 255, 255, .45);
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+    }
+
+    .glass-icon:hover {
+        border-color: rgba(28, 47, 58, .26);
+        background-color: rgba(255, 255, 255, .72);
+    }
+
+    .glass-toggle {
+        @apply inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3.5
+               text-[13px] font-medium text-muted transition duration-200 ease-out-soft hover:text-ink
+               focus:outline-none focus:ring-2 focus:ring-brand-deep/25;
+        border-color: rgba(28, 47, 58, .12);
+        background-color: rgba(255, 255, 255, .42);
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+    }
+
+    .glass-toggle-on,
+    .glass-toggle-on:hover {
+        @apply text-brand-dark;
+        border-color: rgba(0, 117, 149, .42);
+        background-color: rgba(0, 117, 149, .16);
+    }
+
+    .glass-seg {
+        @apply inline-flex rounded-full border p-1;
+        border-color: rgba(28, 47, 58, .12);
+        background-color: rgba(255, 255, 255, .42);
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+    }
+
+    .glass-seg-btn {
+        @apply min-h-[36px] rounded-full px-3.5 text-[13px] font-medium text-muted
+               transition duration-200 ease-out-soft hover:text-ink;
+    }
+
+    .glass-seg-btn-on,
+    .glass-seg-btn-on:hover {
+        @apply text-brand-dark;
+        background-color: rgba(0, 117, 149, .16);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .70);
+    }
+
+    .glass-day {
+        @apply relative flex min-h-[60px] flex-col items-center justify-center rounded-2xl border py-2
+               transition duration-200 ease-out-soft;
+        border-color: rgba(28, 47, 58, .10);
+        background-color: rgba(255, 255, 255, .45);
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .60);
+    }
+
+    .glass-day:hover {
+        border-color: rgba(0, 117, 149, .30);
+        background-color: rgba(255, 255, 255, .72);
+    }
+
+    .glass-day-on,
+    .glass-day-on:hover {
+        border-color: rgba(0, 117, 149, .45);
+        background-color: rgba(0, 117, 149, .16);
+    }
+
+    /* สถานะ "ของคุณ" ใช้ส้มดินเผา แยกจากสีแบรนด์ได้ทันทีโดยไม่ต้องอ่านคำอธิบาย */
+    .glass-day-mine,
+    .glass-day-mine:hover {
+        border-color: rgba(207, 106, 38, .45);
+        background-color: rgba(207, 106, 38, .14);
+    }
+
+    .glass-toggle-mine,
+    .glass-toggle-mine:hover {
+        color: var(--mine-ink);
+        border-color: rgba(207, 106, 38, .42);
+        background-color: rgba(207, 106, 38, .15);
+    }
+
+    .glass-seg-btn-mine,
+    .glass-seg-btn-mine:hover {
+        color: var(--mine-ink);
+        background-color: rgba(207, 106, 38, .16);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .70);
+    }
+
+    .glass-input {
+        @apply rounded-full border;
+        border-color: rgba(28, 47, 58, .14) !important;
+        background-color: rgba(255, 255, 255, .45);
+        backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%);
+    }
+
+    /* ---------- แถบที่ตรึงไว้ ----------
+       --nav-h ตั้งจาก JS ตามความสูงจริงของเมนู ไม่ต้องเดาเป็นตัวเลขตายตัว */
+    .sticky-under-nav {
+        position: sticky;
+        top: var(--nav-h, 72px);
+    }
+
+    /* ตารางสัปดาห์
+       ไม่ตรึงหัววันไว้ เพราะแถบเลือกวันด้านบนตรึงอยู่แล้วและบอกข้อมูลชุดเดียวกัน
+       การไม่มี scroll ซ้อนใน scroll ทำให้เลื่อนบนมือถือลื่นกว่าด้วย
+       เหลือแค่เลื่อนแนวนอนตอนจอกลาง ๆ ที่ตารางกว้างเกิน */
+    .wg-scroll {
+        @apply overflow-x-auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .wg-table {
+        @apply w-full border-separate;
+        border-spacing: 0;
+    }
+
+    .wg-table th,
+    .wg-table td {
+        padding: 3px;
+    }
+
+    .wg-table th:first-child,
+    .wg-table td:first-child {
+        padding-left: 0.75rem;
+    }
+
+    .wg-table th:last-child,
+    .wg-table td:last-child {
+        padding-right: 0.75rem;
+    }
+
+    .wg-table thead th {
+        padding-top: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .wg-table tbody tr:last-child th,
+    .wg-table tbody tr:last-child td {
+        padding-bottom: 0.75rem;
+    }
+
+    /* เส้นคั่นใต้หัวตาราง วาดด้วย ::after เพื่อให้ต่อกันเป็นเส้นเดียวทุกคอลัมน์ */
+    .wg-table thead th {
+        position: relative;
+    }
+
+    .wg-table thead th::after {
+        content: '';
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        height: 1px;
+        background-color: rgba(28, 47, 58, .10);
+    }
+
+    /* คอลัมน์เวลาตรึงไว้ด้านซ้าย เวลาเลื่อนแนวนอนจะได้ยังอ่านชั่วโมงออก */
+    .wg-table tbody th,
+    .wg-table thead th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background-color: rgba(250, 252, 253, .94);
+        backdrop-filter: blur(18px) saturate(180%);
+        -webkit-backdrop-filter: blur(18px) saturate(180%);
+    }
+
+    /* มือถือ: บีบให้เห็นครบทั้ง 7 วันในจอเดียว เพราะถ้าต้องเลื่อนแนวนอน
+       มุมมองสัปดาห์ก็ไม่ต่างอะไรกับไทม์ไลน์รายวัน ระยะขอบจึงลดลงทุกจุด */
+    @media (max-width: 639px) {
+        .wg-table th,
+        .wg-table td {
+            padding: 2px;
+        }
+
+        .wg-table th:first-child,
+        .wg-table td:first-child {
+            padding-left: 0.375rem;
+        }
+
+        .wg-table th:last-child,
+        .wg-table td:last-child {
+            padding-right: 0.375rem;
+        }
+
+        .wg-table thead th {
+            padding-top: 0.5rem;
+            padding-bottom: 0.375rem;
+        }
+
+        .wg-table tbody tr:last-child th,
+        .wg-table tbody tr:last-child td {
+            padding-bottom: 0.5rem;
+        }
+
+        /* จอเล็กตารางพอดีจออยู่แล้ว ไม่ต้องตรึงคอลัมน์เวลาให้เปลืองพื้นหลัง */
+        .wg-table tbody th,
+        .wg-table thead th:first-child {
+            position: static;
+            background-color: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+    }
+
+    /* ---------- ลายน้ำชื่อแบรนด์ในหัวเรื่อง ----------
+       ตัวอักษรใหญ่วางเฉียง ทำหน้าที่เป็นพื้นผิวไม่ใช่ข้อความ
+       ใช้ขอบตัวอักษรแทนตัวทึบ จะได้ไม่ไปลดคอนทราสต์ของหัวข้อจริง
+       ยึดขอบขวาและล้นออกไป เพื่อเว้นพื้นที่ฝั่งซ้ายไว้ให้ชื่อหน้าอ่านสะอาด */
+    .hero-wordmark {
+        position: absolute;
+        right: -3%;
+        top: 50%;
+        text-align: right;
+        white-space: nowrap;
+        font-family: theme('fontFamily.display');
+        font-size: clamp(3.25rem, 8.5vw, 7rem);
+        font-weight: 800;
+        line-height: .82;
+        letter-spacing: -.045em;
+        text-transform: uppercase;
+        transform: translateY(-50%) rotate(-7deg);
+        transform-origin: right center;
+        color: transparent;
+        -webkit-text-stroke: 1.5px rgba(255, 255, 255, .12);
+        user-select: none;
+    }
+
+    /* จอเล็ก: เดิมดันออกนอกจอจนเหลือแค่ "HYB" ดูเหมือนภาพแหว่งมากกว่าลายน้ำ
+       ย่อลงแล้วดึงกลับเข้ามาให้อ่านครบทั้งสองคำ วางไว้ครึ่งบนที่ยังมีที่ว่าง */
+    @media (max-width: 639px) {
+        .hero-wordmark {
+            right: 3%;
+            top: 34%;
+            font-size: 2.35rem;
+            line-height: .9;
+            transform: translateY(-50%) rotate(-7deg);
+            -webkit-text-stroke-width: 1px;
+        }
+    }
+
+    /* เบราว์เซอร์ที่ไม่มี text-stroke ให้ใช้ตัวทึบจาง ๆ แทน จะได้ไม่หายไปทั้งคำ */
+    @supports not (-webkit-text-stroke: 1px red) {
+        .hero-wordmark {
+            color: rgba(255, 255, 255, .055);
+        }
+    }
+
+    /* ---------- แถบเมนูล่างสำหรับมือถือ ----------
+       ทำเป็นแคปซูลลอยเหนือขอบจอ ไม่ใช่แถบเต็มความกว้างติดขอบ
+       ดูเบาและทันสมัยกว่า แล้วเนื้อหายังเลื่อนลอดเห็นผ่านกระจกได้
+       padding ล่างบวก safe-area เพื่อไม่ชนแถบโฮมของ iPhone */
+    .bottom-nav {
+        @apply pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pt-6;
+        padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* ไล่สีจางด้านหลังแคปซูล กันเนื้อหาที่เลื่อนมาชนจนอ่านเมนูไม่ออก */
+    .bottom-nav::before {
+        content: '';
+        @apply pointer-events-none absolute inset-x-0 bottom-0 top-0;
+        background-image: linear-gradient(to top, rgba(243, 246, 248, .92) 30%, rgba(243, 246, 248, 0) 100%);
+    }
+
+    .bottom-nav__bar {
+        @apply pointer-events-auto relative flex items-stretch gap-1 p-1.5;
+        border-radius: 26px;
+        background-color: rgba(255, 255, 255, .62);
+        backdrop-filter: blur(24px) saturate(190%);
+        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, .75);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(28, 47, 58, .05),
+            0 14px 34px -18px rgba(0, 51, 74, .55);
+    }
+
+    .bottom-nav__item {
+        @apply relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[20px] px-1 py-1.5
+               text-[10px] font-medium leading-none text-muted
+               transition-colors duration-200 ease-out-soft;
+        min-height: 50px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .bottom-nav__label {
+        @apply block w-full truncate text-center transition-transform duration-300 ease-out-soft;
+    }
+
+    /* ไอคอนยกตัวขึ้นเล็กน้อยตอนเลือก ให้รู้สึกว่ากดติด */
+    .bottom-nav__icon {
+        @apply grid place-items-center transition-transform duration-300 ease-out-soft;
+    }
+
+    .bottom-nav__item.is-active {
+        @apply text-brand-dark;
+    }
+
+    .bottom-nav__item.is-active .bottom-nav__icon {
+        transform: translateY(-1px) scale(1.06);
+    }
+
+    /* แคปซูลสีแบรนด์ใต้เมนูที่เลือกอยู่ เฟดเข้าแทนการกระพริบ */
+    .bottom-nav__item::before {
+        content: '';
+        @apply pointer-events-none absolute inset-0 rounded-[20px] opacity-0
+               transition-opacity duration-300 ease-out-soft;
+        background-image: linear-gradient(180deg, rgba(0, 117, 149, .20) 0%, rgba(0, 117, 149, .10) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    }
+
+    .bottom-nav__item.is-active::before {
+        @apply opacity-100;
+    }
+
+    /* จุดเล็ก ๆ ใต้เมนูที่เลือก ช่วยให้รู้ตำแหน่งแม้ตอนสีถูกลดความเข้ม */
+    .bottom-nav__item.is-active::after {
+        content: '';
+        @apply absolute rounded-full bg-brand-deep;
+        width: 4px;
+        height: 4px;
+        bottom: 3px;
+    }
+
+    .bottom-nav__item > * {
+        @apply relative;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .bottom-nav__item,
+        .bottom-nav__icon,
+        .bottom-nav__label,
+        .bottom-nav__item::before {
+            transition: none;
+        }
+    }
+
+    /* ---------- ปฏิทินของแอป ----------
+       ใช้แทนป๊อปอัปของ <input type="date"> ที่แต่งด้วย CSS ไม่ได้ */
+    .ss-cal {
+        /* ยึดขอบซ้ายของปุ่ม เพราะปุ่มปฏิทินอยู่ฝั่งซ้ายของแถบเครื่องมือ
+           ถ้ายึดขวาแล้วปุ่มอยู่ชิดซ้าย แผงจะยื่นออกนอกจอ */
+        @apply absolute left-0 z-40 mt-2 w-[19rem] max-w-[calc(100vw-2rem)] rounded-[22px] p-3;
+        background-color: rgba(255, 255, 255, .88);
+        backdrop-filter: blur(24px) saturate(190%);
+        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, .8);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(28, 47, 58, .06),
+            0 22px 48px -22px rgba(0, 51, 74, .55);
+    }
+
+
+
+    .ss-cal__nav {
+        @apply grid h-8 w-8 place-items-center rounded-full text-muted transition
+               hover:bg-white/80 hover:text-ink focus:outline-none focus:ring-2 focus:ring-brand-deep/25;
+    }
+
+    .ss-cal__day {
+        @apply grid h-9 w-full place-items-center rounded-xl text-[13px] font-medium text-ink
+               transition duration-150 ease-out-soft
+               hover:bg-brand-light/20 focus:outline-none focus:ring-2 focus:ring-brand-deep/25
+               disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent;
+    }
+
+    .ss-cal__day.is-past {
+        @apply text-muted/70;
+    }
+
+    /* วันนี้ใช้วงแหวน ส่วนวันที่เลือกใช้พื้นทึบ จะได้แยกกันออกแม้เป็นวันเดียวกัน */
+    .ss-cal__day.is-today {
+        box-shadow: inset 0 0 0 1.5px rgba(0, 117, 149, .45);
+    }
+
+    .ss-cal__day.is-selected {
+        @apply font-bold text-white;
+        background-image: linear-gradient(160deg, #007595 0%, #00516f 100%);
+        box-shadow: 0 6px 14px -8px rgba(0, 81, 111, .8);
+    }
+
+    .ss-cal__today {
+        @apply rounded-full px-3 py-1.5 text-[12px] font-semibold text-brand-deep transition
+               hover:bg-brand-light/20 focus:outline-none focus:ring-2 focus:ring-brand-deep/25;
+    }
+
+    /* ---------- การ์ดแจ้งเตือนก่อนถึงรอบ ----------
+       มือถือยึดเหนือแถบเมนูล่าง เดสก์ท็อปลอยมุมขวาบนใต้เมนู
+       z ต่ำกว่าโมดัล (80) และกล่องยืนยัน (90) เพื่อไม่ไปบังสิ่งที่ผู้ใช้กำลังทำอยู่ */
+    .reminder {
+        @apply fixed z-[60] overflow-hidden rounded-[22px];
+        inset-inline: 0.75rem;
+        bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+        background-color: rgba(255, 255, 255, .80);
+        backdrop-filter: blur(24px) saturate(190%);
+        -webkit-backdrop-filter: blur(24px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, .8);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(28, 47, 58, .06),
+            0 20px 44px -20px rgba(0, 51, 74, .55);
+    }
+
+    @media (min-width: 640px) {
+        .reminder {
+            inset-inline: auto 1.25rem;
+            bottom: auto;
+            top: calc(var(--nav-h, 72px) + 1rem);
+            width: 22rem;
+        }
+    }
+
+    .reminder__bar {
+        @apply absolute inset-x-0 top-0 block h-1;
+        background-image: linear-gradient(90deg, var(--mine) 0%, var(--brand-light) 55%, var(--accent) 100%);
+    }
+
+    .reminder__icon {
+        @apply mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-mine-ink;
+        background-color: rgba(207, 106, 38, .14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+    }
+
+    /* ---------- รูปโปรไฟล์ ----------
+       ไม่มีรูปก็ยังดูตั้งใจ ใช้อักษรย่อบนพื้นไล่สีประจำตัว
+       สีมาจากพาเลตต์เดียวกับสีกลุ่ม ทุกคนจึงอยู่ในโทนแบรนด์และไม่ซ้ำกันจนสับสน */
+    .ss-avatar {
+        background-image: linear-gradient(145deg, var(--a-soft, var(--mist)) 0%, color-mix(in oklab, var(--a-base, var(--brand)) 26%, var(--a-soft, var(--mist))) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75);
+    }
+
+    .ss-avatar__initials {
+        @apply font-bold uppercase leading-none;
+        color: var(--a-ink, var(--brand-dark));
+        letter-spacing: .01em;
+    }
+
+    /* เบราว์เซอร์ที่ไม่มี color-mix ยังได้พื้นเรียบสีอ่อนของตัวเอง ไม่ตกเป็นสีเทา */
+    @supports not (color: color-mix(in oklab, red, blue)) {
+        .ss-avatar {
+            background-image: none;
+            background-color: var(--a-soft, var(--mist));
+        }
+    }
+
+    /* ---------- หน้าแรก: แถบไอคอนเลื่อน ----------
+       ทำซ้ำรายการสองชุดแล้วเลื่อนไปครึ่งหนึ่งพอดี ภาพจึงวนต่อเนื่องไม่มีรอยต่อ */
+    .marquee {
+        @apply relative overflow-hidden;
+        mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    }
+
+    .marquee__track {
+        @apply flex w-max items-center gap-4 sm:gap-6;
+        animation: marquee-scroll 32s linear infinite;
+    }
+
+    .marquee__name {
+        @apply shrink-0 font-display text-[1.4rem] font-extrabold tracking-tight text-muted/50
+               sm:text-[1.75rem];
+    }
+
+    .marquee__name.is-strong {
+        @apply text-ink;
+    }
+
+    .marquee__sep {
+        @apply h-4 w-5 shrink-0 self-center text-brand-deep;
+    }
+
+    @keyframes marquee-scroll {
+        from { transform: translateX(0); }
+        to   { transform: translateX(-50%); }
+    }
+
+    /* กรอบไอคอนของสถานีที่เลือก เป็นจุดนำสายตาของการ์ดรายละเอียด */
+    .station-badge {
+        @apply grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-brand-deep;
+        background-image: linear-gradient(150deg, rgba(255, 255, 255, .9) 0%, rgba(43, 187, 215, .18) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 0 0 1px rgba(0, 117, 149, .12);
+    }
+
+    /* ---------- หน้าแรก: ลำดับ 8 สถานี ----------
+       จุดตัวเลขเชื่อมกันด้วยเส้นบาง ชื่อสถานีอยู่ใต้จุด
+       เส้นวาดด้วย ::before ของแต่ละขั้น ลากจากจุดก่อนหน้ามาหาตัวเอง
+       จึงไม่ต้องมี element เส้นแยกและไม่มีเส้นเกินท้ายแถว */
+    .route-scroll {
+        @apply -mx-1 overflow-x-auto pb-1;
+        scrollbar-width: none;
+    }
+
+    .route-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    .route-steps {
+        @apply flex min-w-[54rem] items-start px-1;
+    }
+
+    .route-step {
+        @apply relative flex flex-1 flex-col items-center gap-2.5;
+    }
+
+    .route-step::before {
+        content: '';
+        @apply absolute h-0.5;
+        top: 1.375rem;
+        left: -50%;
+        right: 50%;
+        background-color: var(--line);
+    }
+
+    .route-step:first-child::before {
+        display: none;
+    }
+
+    .route-step__dot {
+        @apply relative z-10 grid h-11 w-11 place-items-center rounded-full border bg-paper
+               font-display text-[15px] font-bold text-muted
+               transition duration-200 ease-out-soft;
+        border-color: var(--line);
+    }
+
+    .route-step__dot:hover {
+        border-color: rgba(0, 117, 149, .45);
+        color: var(--brand-dark);
+    }
+
+    .route-step__dot.is-active {
+        @apply border-transparent text-white;
+        background-color: var(--brand-dark);
+        /* วงแหวนรอบนอกบอกตำแหน่งปัจจุบันโดยไม่ทำให้จุดใหญ่ขึ้นจนเส้นเบี้ยว */
+        box-shadow: 0 0 0 4px rgba(43, 187, 215, .35);
+    }
+
+    .route-step__label {
+        @apply whitespace-nowrap text-center text-[13px] leading-tight text-muted transition-colors duration-200;
+    }
+
+    .route-step__label.is-active {
+        @apply font-semibold text-ink;
+    }
+
+    /* แผงรายละเอียด พื้นอุ่นกว่าการ์ดเล็กน้อย ให้แยกชั้นจากกรอบนอก */
+    .route-panel {
+        @apply mt-8 rounded-[22px] p-5 sm:p-7;
+        background-color: #f4f5ef;
+    }
+
+    .route-panel__eyebrow {
+        @apply text-[13px] font-medium text-brand-deep;
+    }
+
+    /* ปุ่มทึบสำหรับจุดที่ต้องเด่นกว่าปุ่มอื่นในกรอบเดียวกัน
+       ใช้เฉพาะที่นี่ ไม่แตะ .btn-primary ซึ่งตั้งใจให้เป็นแนวกระจกใสทั้งระบบ */
+    .btn-solid {
+        @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-6 py-2.5
+               text-sm font-semibold text-white transition duration-300 ease-out-soft
+               hover:-translate-y-px focus:outline-none focus:ring-2 focus:ring-brand-deep/40;
+        background-color: var(--brand-dark);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 8px 20px -10px rgba(0, 51, 74, .7);
+    }
+
+    .btn-solid:hover {
+        background-color: var(--brand-deep);
+    }
+
+    /* รายการทั้งเส้นทางตอนกางดู */
+    .route-all {
+        @apply flex w-full items-center gap-3 rounded-2xl border border-line bg-white/70 px-3.5 py-2.5
+               transition duration-200 ease-out-soft hover:border-brand/40;
+    }
+
+    .route-all.is-active {
+        border-color: rgba(0, 117, 149, .45);
+        background-color: rgba(0, 117, 149, .08);
+    }
+
+    .route-all__n {
+        @apply grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mist
+               font-display text-[13px] font-bold text-brand-dark;
+    }
+
+    .route-all.is-active .route-all__n {
+        @apply bg-brand-dark text-white;
+    }
+
+    /* ---------- หน้าแรก: แถบเลื่อนสัดส่วนการฝึก ----------
+       วาดเองทั้งราง ไม่งั้นแต่ละเบราว์เซอร์จะแสดงคนละแบบ */
+    .mix-slider {
+        @apply h-2 w-full cursor-pointer appearance-none rounded-full;
+        background-image: linear-gradient(90deg, var(--brand) 0%, var(--brand-light) 45%, var(--accent) 100%);
+        outline: none;
+    }
+
+    .mix-slider::-webkit-slider-thumb {
+        @apply h-6 w-6 appearance-none rounded-full border-2 border-white bg-brand-dark;
+        box-shadow: 0 4px 12px -4px rgba(0, 51, 74, .7);
+    }
+
+    .mix-slider::-moz-range-thumb {
+        @apply h-6 w-6 rounded-full border-2 border-white bg-brand-dark;
+        box-shadow: 0 4px 12px -4px rgba(0, 51, 74, .7);
+    }
+
+    .mix-slider:focus-visible {
+        outline: 2px solid rgba(0, 117, 149, .5);
+        outline-offset: 4px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .marquee__track { animation: none; }
+    }
+
+    /* ---------- โครงโมดัล ----------
+       เว้นที่ว่างด้านบนไว้เสมอ ให้เห็นว่ามีหน้าอยู่ข้างหลังและกดนอกกล่องได้
+       มือถือเป็น bottom sheet จึงเว้นเฉพาะด้านบน ส่วนเดสก์ท็อปจัดกลางแล้วเว้นรอบ
+       ใช้ dvh เพราะแถบ URL ของเบราว์เซอร์มือถือทำให้ vh เพี้ยน */
+    .modal-scrim {
+        @apply fixed inset-0 flex items-end justify-center bg-ink/40 pt-24 backdrop-blur-md
+               sm:items-center sm:p-8;
+    }
+
+    /* จอเล็กมีแถบเมนูล่างลอยอยู่ ต้องดันโมดัลขึ้นมาให้พ้น
+       ไม่งั้นปุ่มแถวล่างสุดของโมดัลจะถูกแถบทับ */
+    @media (max-width: 639px) {
+        .modal-scrim {
+            padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
+    .modal-panel {
+        @apply flex w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] sm:rounded-[28px];
+        max-height: calc(100vh - 6rem);
+        max-height: calc(100dvh - 6rem);
+    }
+
+    @media (min-width: 640px) {
+        .modal-panel {
+            max-height: min(78vh, 760px);
+        }
+    }
+
+    /* ---------- พื้นผิวกระจกสำหรับโมดัล ----------
+       เบลอแรงกว่าปุ่มเพราะเนื้อหาด้านหลังมีรายละเอียดเยอะกว่า */
+    .glass-panel {
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, .90) 0%, rgba(243, 246, 248, .82) 100%);
+        backdrop-filter: blur(28px) saturate(180%);
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(28, 47, 58, .07),
+            0 32px 70px -24px rgba(0, 51, 74, .45);
+    }
+
+    /* หัวโมดัลกระจก ใช้เส้นแบรนด์บางด้านบนชุดเดียวกับ .card-head */
+    .glass-head {
+        @apply relative px-5 py-4;
+        border-bottom: 1px solid rgba(28, 47, 58, .08);
+        background-image: linear-gradient(100deg, rgba(43, 187, 215, .16) 0%, rgba(252, 229, 154, .26) 55%, rgba(255, 255, 255, 0) 100%);
+    }
+
+    .glass-head::before {
+        content: '';
+        @apply absolute inset-x-0 top-0 h-[3px];
+        background-image: linear-gradient(90deg, #00516f 0%, #2bbbd7 55%, #ffd758 100%);
+    }
+
+    .glass-foot {
+        @apply px-5 py-4;
+        border-top: 1px solid rgba(28, 47, 58, .08);
+        background-image: linear-gradient(0deg, rgba(255, 255, 255, .85) 0%, rgba(255, 255, 255, .45) 100%);
+    }
+
+    /* แถวเลือกลูกทีม สถานะ "เลือกแล้ว" ใช้วงแหวนสีแบรนด์ อ่านง่ายกว่าเปลี่ยนพื้นทั้งแถว */
+    .glass-row {
+        @apply relative flex items-center gap-3 rounded-2xl border px-3 py-2.5
+               transition duration-300 ease-out-soft;
+        border-color: rgba(255, 255, 255, .6);
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, .72) 0%, rgba(255, 255, 255, .34) 100%);
+        backdrop-filter: blur(12px) saturate(170%);
+        -webkit-backdrop-filter: blur(12px) saturate(170%);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .85),
+            0 0 0 1px rgba(28, 47, 58, .05);
+    }
+
+    .glass-row:hover {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(28, 47, 58, .10),
+            0 6px 16px -10px rgba(28, 47, 58, .40);
+    }
+
+    .glass-row-on,
+    .glass-row-on:hover {
+        background-image: linear-gradient(165deg, rgba(43, 187, 215, .22) 0%, rgba(43, 187, 215, .07) 100%);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .9),
+            0 0 0 1.5px rgba(0, 117, 149, .55),
+            0 8px 20px -12px rgba(0, 81, 111, .60);
+    }
+
+    .glass-row-off {
+        @apply cursor-not-allowed opacity-45;
+    }
+
+    .glass-pill {
+        @apply inline-flex min-h-[38px] items-center gap-2 rounded-full border px-4 text-[13px] text-ink
+               transition duration-300 ease-out-soft hover:-translate-y-px;
+        border-color: rgba(255, 255, 255, .6);
+        background-image: linear-gradient(165deg, rgba(255, 255, 255, .75) 0%, rgba(255, 255, 255, .38) 100%);
+        backdrop-filter: blur(12px) saturate(170%);
+        -webkit-backdrop-filter: blur(12px) saturate(170%);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .85),
+            0 0 0 1px rgba(28, 47, 58, .06);
+    }
+
+    .glass-pill:hover {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, .95),
+            0 0 0 1px rgba(0, 117, 149, .35),
+            0 8px 18px -10px rgba(28, 47, 58, .40);
+    }
+}
+
+/* เบราว์เซอร์ที่ไม่รองรับ backdrop-filter จะเห็นพื้นโปร่งลอยบนพื้นหลังโดยไม่มีการเบลอ
+   ซึ่งคอนทราสต์ไม่พอ จึงเพิ่มความทึบของพื้นให้ตัวอักษรอ่านออก */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .btn-primary {
+        background-color: #dceef4;
+    }
+
+    .btn-ghost {
+        background-color: #fff;
+    }
+
+    .btn-grad {
+        background-image: none;
+        background-color: #dceef4;
+    }
+
+    .btn-grad-soft {
+        background-color: var(--g-soft, var(--mist));
+    }
+}
+
+/* ---------- หน้า auth ระดับพรีเมียม ---------- */
+
+@layer components {
+    /* ช่องกรอกแบบ floating label: ป้ายลอยขึ้นเมื่อโฟกัสหรือมีค่าแล้ว
+       ต้องใส่ placeholder=" " ให้ input เพื่อให้ :placeholder-shown ทำงาน */
+    .field {
+        @apply relative;
+    }
+
+    /* ต้องใส่คลาส peer ที่ markup เอง เพราะ Tailwind ไม่อนุญาตให้ @apply peer */
+    .field-input {
+        @apply block w-full rounded-2xl border border-line bg-white/70 px-4 pb-2.5 pt-6
+               text-[15px] text-ink shadow-sm outline-none transition
+               placeholder:text-transparent
+               focus:border-brand-deep focus:bg-white focus:ring-4 focus:ring-brand-deep/10
+               disabled:bg-mist disabled:text-muted;
+    }
+
+    .field-label {
+        @apply pointer-events-none absolute left-4 top-1/2 origin-left -translate-y-1/2
+               text-[15px] text-muted transition-all duration-200 ease-out-soft
+               peer-focus:top-3.5 peer-focus:text-[11px] peer-focus:font-medium peer-focus:text-brand-deep
+               peer-[:not(:placeholder-shown)]:top-3.5
+               peer-[:not(:placeholder-shown)]:text-[11px]
+               peer-[:not(:placeholder-shown)]:font-medium;
+    }
+
+    .field-error {
+        @apply mt-1.5 flex items-start gap-1.5 text-[13px] text-red-700;
+    }
+
+    /* การ์ดตัวเลือกแบบกดได้ ใช้กับการเลือกประเภทเทรนเนอร์ */
+    .choice-card {
+        @apply relative cursor-pointer rounded-2xl border-2 border-line bg-white/70 p-4
+               transition duration-200 ease-out-soft hover:border-brand/60 hover:bg-white;
+    }
+
+    .choice-card-active {
+        @apply border-brand-deep bg-white shadow-soft;
+    }
+
+    /* ปุ่มรูปตาในช่องรหัสผ่าน ขยายพื้นที่แตะให้ครบ 44px โดยไม่เปลี่ยนขนาดไอคอน */
+    .field-toggle {
+        @apply absolute right-1.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center
+               rounded-full text-muted transition hover:bg-mist hover:text-ink
+               focus:outline-none focus:ring-2 focus:ring-brand-deep/30;
+    }
+
+    .step-dot {
+        @apply grid h-8 w-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold
+               transition duration-300 ease-out-soft;
+    }
+}
+
+@layer utilities {
+    /* หัวเรื่องภาษาไทย ใช้แทน tracking-tight
+       เขียนเป็น h1.heading-th เพื่อเพิ่มความจำเพาะเป็น (0,1,1)
+       เพราะคลาสขนาดอย่าง text-5xl พ่วง line-height: 1 มาด้วย และตัวที่มี sm:/lg:
+       จะอยู่ใน media query ที่มาทีหลัง ถ้าความจำเพาะเท่ากันจะแพ้ตลอด
+       แล้ววรรณยุกต์ไทยก็จะกลับไปชนบรรทัดบนเหมือนเดิม */
+    h1.heading-th,
+    h2.heading-th,
+    h3.heading-th,
+    p.heading-th,
+    span.heading-th {
+        letter-spacing: normal;
+        line-height: 1.28;
+    }
+
+
+    /* ก้อนแสงเบลอที่เคลื่อนช้าๆ ด้านหลังแผงแบรนด์ */
+    .orb {
+        @apply pointer-events-none absolute rounded-full blur-3xl;
+        animation: drift 18s ease-in-out infinite;
+    }
+
+    .orb-slow { animation-duration: 26s; }
+    .orb-delay { animation-delay: -9s; }
+
+    /* เนื้อหาไล่กันเข้ามาทีละชิ้น ทำให้หน้าแรกดูมีจังหวะ */
+    .fade-up {
+        animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    .d-1 { animation-delay: 0.06s; }
+    .d-2 { animation-delay: 0.12s; }
+    .d-3 { animation-delay: 0.18s; }
+    .d-4 { animation-delay: 0.24s; }
+    .d-5 { animation-delay: 0.30s; }
+    .d-6 { animation-delay: 0.36s; }
+
+    .grid-lines {
+        background-image:
+            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 56px 56px;
+    }
+}
+
+@keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(6%, -8%, 0) scale(1.08); }
+    66%      { transform: translate3d(-5%, 6%, 0) scale(0.95); }
+}
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-3px); }
+    40%, 60% { transform: translateX(3px); }
+}
+
+.shake { animation: shake 0.45s both; }
+
+/* เคารพการตั้งค่าผู้ใช้ที่ขอให้ลดการเคลื่อนไหว */
+@media (prefers-reduced-motion: reduce) {
+    .orb, .fade-up, .shake {
+        animation: none !important;
+    }
+
+    .fade-up { opacity: 1; transform: none; }
+
+    *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ---------- เส้นแบ่งแบบคลื่นของหน้า auth ---------- */
+
+/* เลื่อนขึ้น 1 คาบพอดี (400 หน่วยใน viewBox) ภาพจึงต่อเนื่องแบบวนลูป
+   ใช้ความเร็วต่างกันในแต่ละชั้นเพื่อให้เกิดมิติแบบ parallax */
+@keyframes wave-scroll {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-400px); }
+}
+
+.wave-fill   { animation: wave-scroll 24s linear infinite; }
+.wave-edge   { animation: wave-scroll 24s linear infinite; }
+.wave-line-1 { animation: wave-scroll 34s linear infinite; }
+.wave-line-2 { animation: wave-scroll 44s linear infinite reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+    .wave-fill, .wave-edge, .wave-line-1, .wave-line-2 { animation: none !important; }
+}
+
+/* คลื่นแนวนอนของแถบแบรนด์บนมือถือ เลื่อนครบ 1 คาบ (480 หน่วย) จึงวนได้ไม่มีรอยต่อ */
+@keyframes hwave-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-480px); }
+}
+
+.hwave-fill   { animation: hwave-scroll 20s linear infinite; }
+.hwave-edge   { animation: hwave-scroll 20s linear infinite; }
+.hwave-line-1 { animation: hwave-scroll 30s linear infinite; }
+.hwave-line-2 { animation: hwave-scroll 40s linear infinite reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+    .hwave-fill, .hwave-edge, .hwave-line-1, .hwave-line-2 { animation: none !important; }
+}
+
+
+/* ---------- พื้นหลังส่วนหัวแบบไล่เฉด ---------- */
+
+/*
+   ไม่ไล่เป็นเส้นตรงจากฟ้าสดไปน้ำเงินเข้มโดยตรง เพราะช่วงสีกว้างขนาดนั้น
+   จะเห็นเป็นชั้นสี (banding) บนจอ 8 บิต และขอบบนจะอ่านเป็นแถบแข็ง
+
+   ใช้วิธีเดียวกับที่งานออกแบบจริงใช้แทน คือพื้นเข้มที่ไล่ช่วงแคบ
+   แล้ววางแสงนุ่มแบบรัศมีจากขอบบนทับ ทำให้ดูเหมือนมีแหล่งแสงอยู่ด้านบน
+   พร้อมเกรนบางๆ อีกชั้นเพื่อสลายขอบชั้นสีที่เหลือ
+*/
+.hero-surface {
+    background-color: #00334a;
+    background-image:
+        radial-gradient(125% 75% at 50% -25%, rgba(43, 187, 215, .62) 0%, rgba(43, 187, 215, .22) 38%, rgba(43, 187, 215, 0) 68%),
+        radial-gradient(70% 60% at 88% -10%, rgba(255, 215, 88, .12) 0%, rgba(255, 215, 88, 0) 72%),
+        linear-gradient(180deg, #0a5c7d 0%, #004a68 42%, #00334a 100%);
+}
+
+/* เบราว์เซอร์ที่รองรับ ให้ไล่เฉดในปริภูมิสีที่ตาคนรับรู้เป็นเชิงเส้น จะเนียนกว่า sRGB */
+@supports (background-image: linear-gradient(in oklab, red, blue)) {
+    .hero-surface {
+        background-image:
+            radial-gradient(125% 75% at 50% -25%, rgba(43, 187, 215, .62) 0%, rgba(43, 187, 215, .22) 38%, rgba(43, 187, 215, 0) 68%),
+            radial-gradient(70% 60% at 88% -10%, rgba(255, 215, 88, .12) 0%, rgba(255, 215, 88, 0) 72%),
+            linear-gradient(180deg in oklab, #0a5c7d 0%, #004a68 42%, #00334a 100%);
+    }
+}
+
+.hero-grain {
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22%2F%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%2F%3E%3C%2Fsvg%3E");
+    background-size: 160px 160px;
+    opacity: .055;
+    mix-blend-mode: overlay;
+}

@@ -1,0 +1,598 @@
+/* =============================================================
+   ธีมหลังบ้าน Srisawan Hybrid Workout
+   เป้าหมาย: ให้หลังบ้านใช้สี ฟอนต์ ความโค้ง และผิวกระจกชุดเดียวกับหน้าบ้าน
+   เขียนเป็น CSS ธรรมดา ไม่ผ่าน Tailwind เพราะ Filament คอมไพล์ CSS ของตัวเองมาแล้ว
+   สีทั้งหมดล้อ resources/css/app.css ของหน้าบ้าน
+   ============================================================= */
+
+:root {
+    --ssw-ink: #1c2f3a;
+    --ssw-muted: #5b676c;
+    --ssw-paper: #f3f6f8;
+    --ssw-mist: #e8eef1;
+    --ssw-line: #d6dcde;
+    --ssw-brand: #218dae;
+    --ssw-brand-deep: #007595;
+    --ssw-brand-light: #2bbbd7;
+    --ssw-brand-dark: #00516f;
+    --ssw-brand-deepest: #00334a;
+    --ssw-accent: #ffd758;
+    --ssw-accent-light: #fce59a;
+    --ssw-accent-ink: #966c00;
+
+    --ssw-radius: 18px;
+    --ssw-radius-lg: 26px;
+    --ssw-glass: blur(16px) saturate(180%);
+    --ssw-display: 'Plus Jakarta Sans', 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ---------- หน้าเข้าสู่ระบบ ---------- */
+
+.ssw-auth {
+    display: grid;
+    min-height: 100dvh;
+    background-color: var(--ssw-paper);
+}
+
+@media (min-width: 1024px) {
+    .ssw-auth {
+        grid-template-columns: 1.05fr 1fr;
+    }
+}
+
+.ssw-auth__brand {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    padding: 3rem 2rem 4rem;
+    color: #fff;
+    /* ไล่สีฐานเข้ม + แสงนวลจากมุมบน ให้ผิวเนียนกว่าการไล่สีเส้นตรงเฉย ๆ */
+    background-color: var(--ssw-brand-deepest);
+    background-image:
+        radial-gradient(120% 90% at 18% 0%, rgba(43, 187, 215, .34) 0%, rgba(43, 187, 215, 0) 58%),
+        linear-gradient(168deg, #0a5c7d 0%, #004a68 44%, #00334a 100%);
+}
+
+@supports (background-image: linear-gradient(in oklab, red, blue)) {
+    .ssw-auth__brand {
+        background-image:
+            radial-gradient(120% 90% at 18% 0%, rgba(43, 187, 215, .34) 0%, rgba(43, 187, 215, 0) 58%),
+            linear-gradient(168deg in oklab, #0a5c7d 0%, #004a68 44%, #00334a 100%);
+    }
+}
+
+/* เกรนบาง ๆ กันไล่สีเป็นแถบบนจอที่สีตื้น */
+.ssw-auth__brand::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .05;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- ชั้นตกแต่งของแผงแบรนด์ ----------
+   คลิปในตัวเอง ไม่งั้นก้อนแสงจะดันให้หน้าเลื่อนแนวนอนได้ */
+.ssw-deco {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* เส้นตารางจาง ๆ ให้พื้นไม่เรียบจนแบน */
+.ssw-deco__grid {
+    position: absolute;
+    inset: 0;
+    opacity: .3;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
+    background-size: 44px 44px;
+}
+
+.ssw-deco__orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(80px);
+}
+
+.ssw-deco__orb--1 {
+    top: -6rem;
+    left: -7rem;
+    width: 30rem;
+    height: 30rem;
+    background-color: rgba(33, 141, 174, .30);
+}
+
+.ssw-deco__orb--2 {
+    right: -6rem;
+    bottom: -9rem;
+    width: 34rem;
+    height: 34rem;
+    background-color: rgba(255, 215, 88, .18);
+}
+
+.ssw-deco__icon {
+    position: absolute;
+    color: rgba(255, 255, 255, .055);
+}
+
+.ssw-deco__icon--1 {
+    top: 4rem;
+    left: -2.5rem;
+    width: 14rem;
+    height: 14rem;
+    transform: rotate(-12deg);
+}
+
+.ssw-deco__icon--2 {
+    top: 33%;
+    right: 1.5rem;
+    width: 11rem;
+    height: 11rem;
+    transform: rotate(6deg);
+}
+
+.ssw-deco__icon--3 {
+    bottom: -2.5rem;
+    left: 25%;
+    width: 15rem;
+    height: 15rem;
+    transform: rotate(-6deg);
+}
+
+/* ชื่อแบรนด์ตัวใหญ่วางเฉียง ใช้เส้นขอบตัวอักษรไม่ใช่ตัวทึบ
+   จะได้ไม่ไปยกความสว่างของพื้นจนข้อความจริงอ่านยาก */
+.ssw-deco__wordmark {
+    position: absolute;
+    right: -3%;
+    top: 62%;
+    text-align: right;
+    white-space: nowrap;
+    font-family: var(--ssw-display);
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 800;
+    line-height: .82;
+    letter-spacing: -.045em;
+    text-transform: uppercase;
+    transform: translateY(-50%) rotate(-7deg);
+    transform-origin: right center;
+    color: transparent;
+    -webkit-text-stroke: 1.5px rgba(255, 255, 255, .10);
+    user-select: none;
+}
+
+.ssw-auth__brandinner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    width: 100%;
+    max-width: 30rem;
+    margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+    .ssw-auth__brandinner {
+        margin-inline: 0 auto;
+        padding-inline-start: 2rem;
+    }
+}
+
+.ssw-auth__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: .625rem;
+    text-decoration: none;
+}
+
+.ssw-auth__logo img {
+    height: 2.5rem;
+    width: auto;
+}
+
+.ssw-auth__logo span {
+    font-family: var(--ssw-display);
+    font-size: .8125rem;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -.01em;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.ssw-auth__eyebrow {
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(43, 187, 215, .85);
+}
+
+.ssw-auth__title {
+    margin-top: .625rem;
+    font-family: var(--ssw-display);
+    font-size: clamp(2.25rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -.02em;
+}
+
+.ssw-auth__title span {
+    color: var(--ssw-accent);
+}
+
+.ssw-auth__lead {
+    margin-top: 1rem;
+    max-width: 26rem;
+    font-size: .9375rem;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, .72);
+}
+
+.ssw-auth__points {
+    margin-top: 1.75rem;
+    display: grid;
+    gap: .75rem;
+    list-style: none;
+    padding: 0;
+}
+
+.ssw-auth__points li {
+    position: relative;
+    padding-inline-start: 1.75rem;
+    font-size: .875rem;
+    color: rgba(255, 255, 255, .80);
+}
+
+.ssw-auth__points li::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: .45rem;
+    width: .875rem;
+    height: .875rem;
+    border-radius: 999px;
+    background-color: rgba(43, 187, 215, .30);
+    box-shadow: inset 0 0 0 2px rgba(43, 187, 215, .85);
+}
+
+.ssw-auth__stats {
+    display: flex;
+    gap: 2.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    margin: 0;
+}
+
+.ssw-auth__stats dt {
+    font-size: .6875rem;
+    color: rgba(43, 187, 215, .70);
+}
+
+.ssw-auth__stats dd {
+    margin: .25rem 0 0;
+    font-family: var(--ssw-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.ssw-auth__wave {
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 2.5rem;
+    width: 100%;
+    color: var(--ssw-paper);
+}
+
+@media (min-width: 1024px) {
+    .ssw-auth__wave {
+        display: none;
+    }
+}
+
+.ssw-auth__panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+}
+
+.ssw-auth__form {
+    width: 100%;
+    max-width: 24rem;
+}
+
+.ssw-auth__formhead h2 {
+    font-family: var(--ssw-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ssw-ink);
+}
+
+.ssw-auth__formhead p {
+    margin-top: .375rem;
+    font-size: .9375rem;
+    color: var(--ssw-muted);
+}
+
+/* เว้นระยะเฉพาะสกีมาชั้นนอกสุด
+   Filament ซ้อน .fi-sc ถึงสามชั้น ถ้าใส่ margin ทุกชั้นระยะจะบวกกันสามเท่า
+   กลายเป็นช่องว่างก้อนใหญ่ใต้หัวเรื่องและเหนือปุ่ม */
+.ssw-auth__form > .fi-sc {
+    margin-top: 1.5rem;
+}
+
+/* ฟอร์มเข้าสู่ระบบมีไม่กี่ช่อง ใช้ระยะมาตรฐาน 24px แล้วหน้ายืดเกินจำเป็น */
+.ssw-auth__form .fi-sc-has-gap {
+    gap: 1rem;
+}
+
+/* ช่องกรอกเตี้ยลงเล็กน้อย แต่ยังสูงพอให้แตะง่ายบนมือถือ */
+.ssw-auth__form .fi-input {
+    padding-block: 0.5rem;
+}
+
+.ssw-auth__form .fi-fo-field-wrp-label {
+    margin-bottom: 0.125rem;
+}
+
+.ssw-auth__hint {
+    margin-top: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 117, 149, .18);
+    background-color: rgba(0, 117, 149, .06);
+    padding: .75rem 1rem;
+    font-size: .8125rem;
+    line-height: 1.6;
+    color: var(--ssw-muted);
+}
+
+.ssw-auth__hint a {
+    color: var(--ssw-brand-deep);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ssw-auth__hint a:hover {
+    text-decoration: underline;
+}
+
+.ssw-auth__back {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: .8125rem;
+}
+
+.ssw-auth__back a {
+    color: var(--ssw-muted);
+    text-decoration: none;
+}
+
+.ssw-auth__back a:hover {
+    color: var(--ssw-brand-deep);
+}
+
+/* หน้าเข้าสู่ระบบไม่ต้องมีกรอบการ์ดของ Filament ซ้อนอีกชั้น */
+.ssw-auth .fi-simple-main,
+.ssw-auth .fi-simple-page {
+    background: none;
+    box-shadow: none;
+    border: 0;
+    padding: 0;
+    max-width: none;
+}
+
+/* ---------- โครงหน้าหลังบ้าน ---------- */
+
+html:not(.dark) .fi-body {
+    background-color: var(--ssw-paper);
+}
+
+/* หัวข้อทุกระดับใช้ฟอนต์ display ชุดเดียวกับหน้าบ้าน */
+/* ภาษาไทยมีสระบนและวรรณยุกต์ซ้อนขึ้นไป บีบระยะตัวอักษรติดลบแล้วจะเบียดกันจนอ่านยาก
+   และ line-height ต่ำเกินไปจะทำให้วรรณยุกต์ชนบรรทัดบน */
+.fi-header-heading,
+.fi-modal-heading,
+.fi-section-header-heading,
+.fi-wi-stats-overview-stat-value,
+.fi-wi-stats-overview-stat-label {
+    font-family: var(--ssw-display);
+    letter-spacing: normal;
+    line-height: 1.35;
+}
+
+.fi-header-heading {
+    font-weight: 800;
+}
+
+/* แถบบนแบบกระจก ให้เนื้อหาไหลลอดใต้ได้เหมือนหน้าบ้าน */
+html:not(.dark) .fi-topbar > nav {
+    background-color: rgba(255, 255, 255, .78);
+    backdrop-filter: var(--ssw-glass);
+    -webkit-backdrop-filter: var(--ssw-glass);
+    border-bottom: 1px solid rgba(28, 47, 58, .08);
+    box-shadow: none;
+}
+
+/* เส้นไล่สีแบรนด์คาดใต้แถบบน เป็นตัวเชื่อมสายตากับหัวการ์ดหน้าบ้าน */
+html:not(.dark) .fi-topbar > nav::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 2px;
+    background-image: linear-gradient(90deg, var(--ssw-brand-dark) 0%, var(--ssw-brand-light) 55%, var(--ssw-accent) 100%);
+    opacity: .55;
+}
+
+html:not(.dark) .fi-sidebar,
+html:not(.dark) .fi-sidebar-header {
+    background-color: rgba(255, 255, 255, .72);
+    backdrop-filter: var(--ssw-glass);
+    -webkit-backdrop-filter: var(--ssw-glass);
+    border-inline-end: 1px solid rgba(28, 47, 58, .07);
+    box-shadow: none;
+}
+
+/* เมนูที่เลือกอยู่ใช้สีแบรนด์เคลือบบาง ๆ แทนพื้นทึบ ให้เข้าชุดกับปุ่มกระจกหน้าบ้าน */
+html:not(.dark) .fi-sidebar-item-btn {
+    border-radius: 999px;
+    font-weight: 500;
+}
+
+html:not(.dark) .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+    background-color: rgba(0, 117, 149, .13);
+    box-shadow: inset 0 0 0 1px rgba(0, 117, 149, .26);
+    color: var(--ssw-brand-dark);
+}
+
+html:not(.dark) .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+    color: var(--ssw-brand-deep);
+}
+
+html:not(.dark) .fi-sidebar-group-label {
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ssw-muted);
+}
+
+/* ---------- พื้นผิวการ์ดและตาราง ---------- */
+
+html:not(.dark) .fi-section,
+html:not(.dark) .fi-ta-ctn,
+html:not(.dark) .fi-wi-stats-overview-stat {
+    border-radius: var(--ssw-radius);
+    border: 1px solid rgba(28, 47, 58, .08);
+    background-color: rgba(255, 255, 255, .82);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    box-shadow: 0 10px 30px -22px rgba(0, 51, 74, .45);
+}
+
+/* หัวตารางไล่สีจาง ๆ ชุดเดียวกับ .card-head ของหน้าบ้าน
+   ต้องโค้งมุมบนให้เท่ากับกรอบตาราง ไม่งั้นพื้นสีจะเป็นสี่เหลี่ยมทับมุมโค้งของกรอบ
+   ใส่ overflow:hidden ที่กรอบไม่ได้ เพราะ dropdown ของตัวกรองเป็น position:absolute
+   อยู่ข้างใน มันจะถูกตัดหายไปด้วย */
+html:not(.dark) .fi-ta-header-ctn {
+    background-image: linear-gradient(100deg, rgba(43, 187, 215, .10) 0%, rgba(252, 229, 154, .22) 52%, rgba(255, 255, 255, 0) 100%);
+    border-start-start-radius: var(--ssw-radius);
+    border-start-end-radius: var(--ssw-radius);
+}
+
+html:not(.dark) .fi-ta-header-cell {
+    background-color: rgba(250, 252, 253, .92);
+    font-weight: 600;
+}
+
+/* ตารางที่ไม่มีแถบค้นหา/ตัวกรอง แถวหัวจะเป็นตัวบนสุดเอง จึงต้องโค้งมุมด้วย */
+html:not(.dark) .fi-ta-header-ctn + .fi-ta-content .fi-ta-header-cell:first-child,
+html:not(.dark) .fi-ta-content:first-child .fi-ta-header-cell:first-child {
+    border-start-start-radius: var(--ssw-radius);
+}
+
+html:not(.dark) .fi-ta-content:first-child .fi-ta-header-cell:last-child {
+    border-start-end-radius: var(--ssw-radius);
+}
+
+/* แถวสุดท้ายตอน hover พื้นสีจะทับมุมล่างของกรอบ ถ้าไม่มีแถบแบ่งหน้าคั่นอยู่ */
+html:not(.dark) .fi-ta-row:last-child .fi-ta-cell:first-child {
+    border-end-start-radius: var(--ssw-radius);
+}
+
+html:not(.dark) .fi-ta-row:last-child .fi-ta-cell:last-child {
+    border-end-end-radius: var(--ssw-radius);
+}
+
+html:not(.dark) .fi-ta-row:hover {
+    background-color: rgba(43, 187, 215, .06);
+}
+
+/* ---------- ปุ่มและช่องกรอก ---------- */
+
+.fi-btn {
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-link) {
+    /* ปลายไล่สีต้องเข้มพอให้ตัวอักษรขาวอ่านออก ตอน hover พื้นหลังเลื่อนไปโผล่ปลายขวา
+       ถ้าใช้ brand-light (#2bbbd7) คอนทราสต์จะเหลือราว 2.2:1 ซึ่งไม่ผ่าน */
+    background-image: linear-gradient(110deg, #00334a 0%, #00516f 50%, #0b7597 100%);
+    background-size: 200% 100%;
+    background-position: 0% 50%;
+    transition: background-position .5s cubic-bezier(.22, 1, .36, 1), box-shadow .3s;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 6px 18px -8px rgba(0, 51, 74, .55);
+    /* พื้นถูกเปลี่ยนเป็นไล่สีเข้ม สีตัวอักษรที่ Filament คำนวณไว้สำหรับพื้นอ่อนจึงจมหาย
+       ต้องบังคับเป็นขาวเองทั้งตัวอักษรและไอคอน */
+    color: #fff;
+}
+
+html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-link) svg,
+html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-link) .fi-icon,
+html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-link) span {
+    color: inherit;
+}
+
+html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-link):hover {
+    background-position: 100% 50%;
+    color: #fff;
+}
+
+/* ปุ่มสีอื่นที่พื้นเข้ม Filament ทำสีตัวอักษรมาถูกอยู่แล้ว
+   แต่กันไว้เผื่อธีมนี้ไปทับความสว่างของพื้นในอนาคต */
+html:not(.dark) .fi-btn.fi-color-danger:not(.fi-outlined):not(.fi-link),
+html:not(.dark) .fi-btn.fi-color-success:not(.fi-outlined):not(.fi-link),
+html:not(.dark) .fi-btn.fi-color-warning:not(.fi-outlined):not(.fi-link),
+html:not(.dark) .fi-btn.fi-color-info:not(.fi-outlined):not(.fi-link) {
+    text-shadow: none;
+}
+
+html:not(.dark) .fi-input-wrp {
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, .72);
+}
+
+html:not(.dark) .fi-fieldset,
+html:not(.dark) .fi-modal-window {
+    border-radius: var(--ssw-radius-lg);
+}
+
+/* ---------- การ์ดสถิติบนแดชบอร์ด ---------- */
+
+html:not(.dark) .fi-wi-stats-overview-stat-value {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: var(--ssw-ink);
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat-label {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--ssw-muted);
+}
+
+/* แถบสีบาง ๆ ด้านบนการ์ดสถิติ บอกโทนของตัวเลขโดยไม่ต้องระบายทั้งใบ */
+html:not(.dark) .fi-wi-stats-overview-stat {
+    position: relative;
+    overflow: hidden;
+}
+
+html:not(.dark) .fi-wi-stats-overview-stat::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 3px;
+    background-image: linear-gradient(90deg, var(--ssw-brand-dark) 0%, var(--ssw-brand-light) 55%, var(--ssw-accent) 100%);
+}
