@@ -17,33 +17,14 @@
             <x-station-icon name="ski" class="ssw-deco__icon ssw-deco__icon--1" stroke="1" />
             <x-station-icon name="sled" class="ssw-deco__icon ssw-deco__icon--2" stroke="1" />
             <x-station-icon name="wallball" class="ssw-deco__icon ssw-deco__icon--3" stroke="1" />
-
-            <span class="ssw-deco__wordmark">Hybrid<br>Workout</span>
         </div>
 
+        {{-- แผงแบรนด์มีแค่โลโก้ ข้อความขายของไม่จำเป็นในหน้าที่แอดมินเข้าทุกวัน
+             บนจอแคบแผงนี้ย่อเหลือเป็นหัวเตี้ย ๆ ให้ฟอร์มขึ้นมาอยู่ในจอแรก --}}
         <div class="ssw-auth__brandinner">
             <a href="{{ url('/') }}" class="ssw-auth__logo">
                 <img src="{{ asset('img/brand-light.png') }}" alt="Hybrid SSW" width="465" height="168">
             </a>
-
-            <div>
-                <p class="ssw-auth__eyebrow">ระบบหลังบ้าน</p>
-                <h1 class="ssw-auth__title">
-                    คุมทุกรอบ<br>
-                    <span>จากที่เดียว</span>
-                </h1>
-                <p class="ssw-auth__lead">
-                    ตั้งเวลาเปิดปิดรอบ อนุมัติเทรนเนอร์ ดูอัตราการใช้ที่นั่ง
-                    และแก้การจองแทนหน้าเคาน์เตอร์ได้จากหน้าเดียว
-                </p>
-
-                <ul class="ssw-auth__points">
-                    <li>ตารางรอบต่อสาขา เปิดปิดตามช่วงเวลาที่กำหนด</li>
-                    <li>อนุมัติเทรนเนอร์และคุมเพดานลูกทีมต่อกลุ่ม</li>
-                    <li>ฮีตแมปการจอง บอกว่าควรเปิดรอบเพิ่มตรงไหน</li>
-                </ul>
-            </div>
-
         </div>
 
         {{-- คลื่นคั่นแบบเดียวกับหน้าบ้าน โผล่เฉพาะตอนวางซ้อนกันบนจอแคบ --}}

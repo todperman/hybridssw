@@ -45,8 +45,10 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     overflow: hidden;
-    padding: 3rem 2rem 4rem;
+    /* จอแคบ: หัวเตี้ย ๆ มีแค่โลโก้ เผื่อด้านล่างให้คลื่น */
+    padding: 2.25rem 1.5rem 3.25rem;
     color: #fff;
     /* ไล่สีฐานเข้ม + แสงนวลจากมุมบน ให้ผิวเนียนกว่าการไล่สีเส้นตรงเฉย ๆ */
     background-color: var(--ssw-brand-deepest);
@@ -145,146 +147,39 @@
     transform: rotate(-6deg);
 }
 
-/* ชื่อแบรนด์ตัวใหญ่วางเฉียง ใช้เส้นขอบตัวอักษรไม่ใช่ตัวทึบ
-   จะได้ไม่ไปยกความสว่างของพื้นจนข้อความจริงอ่านยาก */
-.ssw-deco__wordmark {
-    position: absolute;
-    right: -3%;
-    top: 62%;
-    text-align: right;
-    white-space: nowrap;
-    font-family: var(--ssw-display);
-    font-size: clamp(3rem, 7vw, 6rem);
-    font-weight: 800;
-    line-height: .82;
-    letter-spacing: -.045em;
-    text-transform: uppercase;
-    transform: translateY(-50%) rotate(-7deg);
-    transform-origin: right center;
-    color: transparent;
-    -webkit-text-stroke: 1.5px rgba(255, 255, 255, .10);
-    user-select: none;
-}
-
 .ssw-auth__brandinner {
     position: relative;
     z-index: 1;
     display: flex;
-    flex-direction: column;
-    gap: 2.5rem;
+    justify-content: center;
     width: 100%;
-    max-width: 30rem;
-    margin-inline: auto;
-}
-
-@media (min-width: 1024px) {
-    .ssw-auth__brandinner {
-        margin-inline: 0 auto;
-        padding-inline-start: 2rem;
-    }
 }
 
 .ssw-auth__logo {
     display: inline-flex;
-    align-items: center;
-    gap: .625rem;
     text-decoration: none;
 }
 
+/* โลโก้กว้างกว่าสูงเกือบสามเท่า คุมด้วยความกว้างจะพอดีกว่าคุมด้วยความสูง */
 .ssw-auth__logo img {
-    height: 3rem;
-    width: auto;
+    display: block;
+    width: clamp(9.5rem, 46vw, 12rem);
+    height: auto;
 }
 
-.ssw-auth__logo span {
-    font-family: var(--ssw-display);
-    font-size: .8125rem;
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -.01em;
-    text-transform: uppercase;
-    color: #fff;
-}
+@media (min-width: 1024px) {
+    .ssw-auth__brand {
+        padding: 3rem;
+    }
 
-.ssw-auth__eyebrow {
-    font-size: .6875rem;
-    font-weight: 600;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: rgba(43, 187, 215, .85);
-}
-
-.ssw-auth__title {
-    margin-top: .625rem;
-    font-family: var(--ssw-display);
-    font-size: clamp(2.25rem, 4vw, 3rem);
-    font-weight: 800;
-    line-height: 1.08;
-    letter-spacing: -.02em;
-}
-
-.ssw-auth__title span {
-    color: var(--ssw-accent);
-}
-
-.ssw-auth__lead {
-    margin-top: 1rem;
-    max-width: 26rem;
-    font-size: .9375rem;
-    line-height: 1.75;
-    color: rgba(255, 255, 255, .72);
-}
-
-.ssw-auth__points {
-    margin-top: 1.75rem;
-    display: grid;
-    gap: .75rem;
-    list-style: none;
-    padding: 0;
-}
-
-.ssw-auth__points li {
-    position: relative;
-    padding-inline-start: 1.75rem;
-    font-size: .875rem;
-    color: rgba(255, 255, 255, .80);
-}
-
-.ssw-auth__points li::before {
-    content: '';
-    position: absolute;
-    inset-inline-start: 0;
-    top: .45rem;
-    width: .875rem;
-    height: .875rem;
-    border-radius: 999px;
-    background-color: rgba(43, 187, 215, .30);
-    box-shadow: inset 0 0 0 2px rgba(43, 187, 215, .85);
-}
-
-.ssw-auth__stats {
-    display: flex;
-    gap: 2.5rem;
-    padding-top: 1.75rem;
-    border-top: 1px solid rgba(255, 255, 255, .12);
-    margin: 0;
-}
-
-.ssw-auth__stats dt {
-    font-size: .6875rem;
-    color: rgba(43, 187, 215, .70);
-}
-
-.ssw-auth__stats dd {
-    margin: .25rem 0 0;
-    font-family: var(--ssw-display);
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff;
+    .ssw-auth__logo img {
+        width: clamp(16rem, 24vw, 22rem);
+    }
 }
 
 .ssw-auth__wave {
     position: absolute;
+    z-index: 2;
     inset-inline: 0;
     bottom: -1px;
     height: 2.5rem;
@@ -343,6 +238,25 @@
 
 .ssw-auth__form .fi-fo-field-wrp-label {
     margin-bottom: 0.125rem;
+}
+
+/* ปุ่มเข้าสู่ระบบเดิมสูงราว 34px เตี้ยกว่าช่องกรอกและแตะยากบนมือถือ
+   ให้สูง 48px เท่าปุ่มเข้าสู่ระบบของหน้าบ้าน */
+.ssw-auth__form .fi-btn {
+    min-height: 3rem;
+    font-size: .9375rem;
+}
+
+/* จอแคบหัวเรื่องฟอร์มไม่ต้องใหญ่เท่าจอกว้าง ไม่งั้นกินที่จนฟอร์มตกจอ */
+@media (max-width: 1023px) {
+    .ssw-auth__panel {
+        align-items: flex-start;
+        padding: 1.75rem 1.25rem 2.5rem;
+    }
+
+    .ssw-auth__formhead h2 {
+        font-size: 1.5rem;
+    }
 }
 
 .ssw-auth__hint {
