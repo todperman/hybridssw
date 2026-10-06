@@ -23,8 +23,7 @@
 
         <div class="ssw-auth__brandinner">
             <a href="{{ url('/') }}" class="ssw-auth__logo">
-                <img src="{{ asset('img/logo@180.png') }}" alt="Srisawan Hybrid Workout" width="180" height="183">
-                <span>Hybrid<br>Workout</span>
+                <img src="{{ asset('img/brand-light.png') }}" alt="Hybrid SSW" width="465" height="168">
             </a>
 
             <div>

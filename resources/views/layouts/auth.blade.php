@@ -60,7 +60,7 @@
 
                 <div class="relative flex h-full flex-col justify-between p-12 xl:p-16">
                     <a href="{{ route('home') }}" wire:navigate class="fade-up w-fit">
-                        <x-application-logo dark />
+                        <x-application-logo dark size="lg" />
                     </a>
 
                     <div class="max-w-lg">

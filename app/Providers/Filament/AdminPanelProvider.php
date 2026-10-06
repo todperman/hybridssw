@@ -33,8 +33,10 @@ class AdminPanelProvider extends PanelProvider
             ->login(\App\Filament\Auth\Login::class)
             ->brandName('Srisawan Hybrid Workout')
             ->favicon(asset('favicon.png'))
-            ->brandLogo(asset('img/logo@180.png'))
-            ->brandLogoHeight('2rem')
+            // สัญลักษณ์เป็นสีดำ โหมดมืดจึงต้องใช้ไฟล์ที่เปลี่ยนส่วนดำเป็นขาว
+            ->brandLogo(asset('img/brand.png'))
+            ->darkModeBrandLogo(asset('img/brand-light.png'))
+            ->brandLogoHeight('2.25rem')
             // ฟอนต์และสีชุดเดียวกับหน้าบ้านและ hybridssw.srisawan.com
             ->font('IBM Plex Sans Thai', provider: GoogleFontProvider::class)
             ->colors([

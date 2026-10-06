@@ -3,7 +3,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="theme-color" content="#00516f">
 <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-<link rel="apple-touch-icon" href="{{ asset('img/logo@180.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('img/apple-touch-icon.png') }}">
 
 <title>{{ $title ?? config('app.name') }}</title>
 
