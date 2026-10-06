@@ -25,15 +25,15 @@ new class extends Component
             'eyebrow' => 'ยินดีต้อนรับกลับ',
             'heading' => 'พร้อมเทรน',
             'headingAccent' => 'อีกครั้งแล้วใช่ไหม',
-            'lead' => 'เข้าสู่ระบบเพื่อดูตารางรอบ จัดการทีม และจองชั่วโมงให้ลูกทีมของคุณ',
+            'lead' => 'เข้าสู่ระบบเพื่อจองรอบ ดูคิวของคุณ หรือจัดการทีมสำหรับเทรนเนอร์',
             'points' => [
                 'เห็นที่นั่งว่างของทุกรอบแบบเรียลไทม์',
-                'จองให้ลูกทีมหลายคนพร้อมกันในคลิกเดียว',
-                'เต็มแล้วต่อคิวสำรอง ระบบเลื่อนคิวให้อัตโนมัติ',
+                'แต่ละรอบรับจำนวนจำกัด จองแล้วได้ที่นั่งแน่นอน',
+                'เทรนเนอร์จองให้ลูกทีมหลายคนพร้อมกันได้ในคลิกเดียว',
             ],
-            'altHref' => route('trainer.register'),
+            'altHref' => \App\Support\BookingRules::publicRegistrationOpen() ? route('register') : route('trainer.register'),
             'altLabel' => 'ยังไม่มีบัญชี',
-            'altCta' => 'สมัครเทรนเนอร์',
+            'altCta' => \App\Support\BookingRules::publicRegistrationOpen() ? 'สมัครสมาชิก' : 'สมัครเทรนเนอร์',
         ];
     }
 
@@ -122,8 +122,22 @@ new class extends Component
         </button>
     </form>
 
-    <p class="fade-up d-5 mt-8 text-center text-sm text-muted sm:hidden">
-        ยังไม่มีบัญชี
-        <a href="{{ route('trainer.register') }}" wire:navigate class="font-medium text-brand-deep hover:underline">สมัครเทรนเนอร์</a>
-    </p>
+    {{-- หน้าแรกพามาที่หน้านี้ จึงต้องมีทางไปสมัครครบทุกแบบตรงนี้ ไม่ใช่แค่ปุ่มมุมบน --}}
+    <div class="fade-up d-5 mt-8 border-t border-line pt-6 text-center">
+        <p class="text-sm text-muted">ยังไม่มีบัญชี</p>
+
+        <div class="mt-3 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+            @if (\App\Support\BookingRules::publicRegistrationOpen())
+                <a href="{{ route('register') }}" wire:navigate class="btn-ghost justify-center px-6 py-3">
+                    @svg('lucide-user-plus', 'h-4 w-4', ['stroke-width' => '1.9'])
+                    สมัครสมาชิก
+                </a>
+            @endif
+
+            <a href="{{ route('trainer.register') }}" wire:navigate class="btn-ghost justify-center px-6 py-3">
+                @svg('lucide-users', 'h-4 w-4', ['stroke-width' => '1.9'])
+                สมัครเป็นเทรนเนอร์
+            </a>
+        </div>
+    </div>
 </div>

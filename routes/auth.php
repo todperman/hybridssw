@@ -5,9 +5,8 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware('guest')->group(function () {
-    // ไม่มีหน้าสมัครแบบทั่วไป เพราะจะได้บัญชีที่ไม่มีทั้งโปรไฟล์เทรนเนอร์และลูกทีม
-    // ซึ่งเข้ามาแล้วทำอะไรไม่ได้
-    // เทรนเนอร์สมัครที่ /register/trainer ส่วนลูกทีมเข้าผ่านลิงก์ชวนของเทรนเนอร์
+    // หน้าสมัครทั้งสามแบบอยู่ใน routes/web.php
+    // /register สมาชิกทั่วไป, /register/trainer เทรนเนอร์, /team/join/{token} ลิงก์ชวนเข้าทีม
 
     Volt::route('login', 'pages.auth.login')
         ->name('login');

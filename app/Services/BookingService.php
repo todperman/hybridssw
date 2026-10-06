@@ -11,6 +11,7 @@ use App\Models\MemberPackage;
 use App\Models\Trainer;
 use App\Models\User;
 use App\Models\WorkoutSession;
+use App\Support\BookingRules;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,8 @@ class BookingService
     /**
      * เทรนเนอร์จองที่นั่งให้ลูกทีมหนึ่งคน
      * ถ้าเต็มและ $allowWaitlist เป็นจริงจะได้คิวสำรองแทน
+     *
+     * $requireCredit เว้นเป็น null = ทำตาม config gym.booking.require_credits
      */
     public function book(
         WorkoutSession $session,
@@ -33,8 +36,10 @@ class BookingService
         Trainer $trainer,
         ?User $actor = null,
         bool $allowWaitlist = true,
-        bool $requireCredit = true,
+        ?bool $requireCredit = null,
     ): Booking {
+        $requireCredit ??= BookingRules::creditsRequired();
+
         return DB::transaction(function () use ($session, $member, $trainer, $actor, $allowWaitlist, $requireCredit) {
             // ล็อกรอบก่อนตัดสินใจเรื่องที่นั่ง แล้วอ่านค่าล่าสุดจาก DB ไม่ใช่จากอ็อบเจ็กต์ที่ส่งเข้ามา
             $session = WorkoutSession::whereKey($session->getKey())->lockForUpdate()->firstOrFail();
@@ -64,7 +69,13 @@ class BookingService
                 $package = $this->consumeCredit($member);
             }
 
-            $booking = $this->createBooking($session, $member, $trainer, $actor, $isWaitlist, $package);
+            $status = match (true) {
+                $isWaitlist => BookingStatus::Waitlisted,
+                BookingRules::needsApproval(selfBooked: false) => BookingStatus::Pending,
+                default => BookingStatus::Booked,
+            };
+
+            $booking = $this->createBooking($session, $member, $trainer, $actor, $status, $package);
 
             if ($isWaitlist) {
                 $session->increment('waitlist_count');
@@ -74,6 +85,126 @@ class BookingService
             }
 
             return $booking->fresh(['workoutSession', 'member', 'trainer']);
+        });
+    }
+
+    /**
+     * สมาชิกจองที่นั่งให้ตัวเอง ไม่ผ่านเทรนเนอร์
+     *
+     * ต่างจากการจองของเทรนเนอร์สามข้อ
+     * - ไม่มีคิวสำรอง รอบเต็มคือจองไม่ได้ จะได้ไม่มีคำขอค้างที่ไม่มีทางได้ที่นั่ง
+     * - จองรอบเหมาไม่ได้ เพราะรอบเหมาสงวนไว้ให้เทรนเนอร์คนเดียว
+     * - ปกติต้องรอแอดมินอนุมัติ แต่ถือที่นั่งไว้ตั้งแต่ตอนขอ จึงอนุมัติเกินจำนวนไม่ได้
+     */
+    public function bookSelf(WorkoutSession $session, Member $member, ?User $actor = null): Booking
+    {
+        $requireCredit = BookingRules::creditsRequired();
+
+        return DB::transaction(function () use ($session, $member, $actor, $requireCredit) {
+            $session = WorkoutSession::whereKey($session->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $session->status->acceptsBookings()) {
+                throw BookingException::sessionNotOpen();
+            }
+
+            if ($session->hasStarted()) {
+                throw BookingException::sessionStarted();
+            }
+
+            if ($session->mode === \App\Enums\SessionMode::Exclusive) {
+                throw BookingException::selfBookingNotAllowed();
+            }
+
+            $days = BookingRules::selfAdvanceDays();
+
+            if ($session->starts_at->gt(now()->addDays($days)->endOfDay())) {
+                throw BookingException::beyondAdvanceWindow($days);
+            }
+
+            $this->assertMemberEligible($session, $member);
+
+            if ($session->booked_count >= $session->capacity) {
+                throw BookingException::sessionFull();
+            }
+
+            $package = $requireCredit ? $this->consumeCredit($member) : null;
+
+            $status = BookingRules::needsApproval(selfBooked: true)
+                ? BookingStatus::Pending
+                : BookingStatus::Booked;
+
+            $booking = $this->createBooking($session, $member, null, $actor, $status, $package);
+
+            $session->increment('booked_count');
+
+            return $booking->fresh(['workoutSession', 'member']);
+        });
+    }
+
+    /** แอดมินอนุมัติการจองที่รออยู่ ที่นั่งถูกถือไว้แล้วตั้งแต่ตอนขอ จึงไม่ต้องนับใหม่ */
+    public function approve(Booking $booking, ?User $actor = null): Booking
+    {
+        return DB::transaction(function () use ($booking, $actor) {
+            $session = WorkoutSession::whereKey($booking->workout_session_id)->lockForUpdate()->firstOrFail();
+            $booking = Booking::whereKey($booking->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($booking->status !== BookingStatus::Pending) {
+                throw BookingException::notPending();
+            }
+
+            if ($session->hasStarted()) {
+                throw BookingException::sessionStarted();
+            }
+
+            $booking->update([
+                'status' => BookingStatus::Booked,
+                'approved_at' => now(),
+                'approved_by_user_id' => $actor?->id,
+            ]);
+
+            return $booking->fresh();
+        });
+    }
+
+    /**
+     * แอดมินปฏิเสธการจองที่รออยู่ คืนที่นั่งแล้วเลื่อนคิวสำรองถ้ามี
+     * คืนเครดิตเต็มเสมอ เพราะสมาชิกไม่ได้เป็นฝ่ายยกเลิก
+     */
+    public function reject(Booking $booking, ?User $actor = null, ?string $reason = null): Booking
+    {
+        return DB::transaction(function () use ($booking, $actor, $reason) {
+            $session = WorkoutSession::whereKey($booking->workout_session_id)->lockForUpdate()->firstOrFail();
+            $booking = Booking::whereKey($booking->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($booking->status !== BookingStatus::Pending) {
+                throw BookingException::notPending();
+            }
+
+            $this->releasePendingSeat($session, $booking, $actor, $reason ?? 'แอดมินไม่อนุมัติ');
+
+            if ($session->isBookable()) {
+                $this->promoteFromWaitlist($session);
+            }
+
+            return $booking->fresh();
+        });
+    }
+
+    /**
+     * ปิดคำขอที่ไม่ได้รับการอนุมัติจนรอบเริ่มไปแล้ว
+     * เรียกจาก job ไม่ต้องเลื่อนคิวสำรอง เพราะรอบเริ่มแล้วดันคนเข้าไปก็ไม่มีความหมาย
+     */
+    public function expireUnapproved(Booking $booking): Booking
+    {
+        return DB::transaction(function () use ($booking) {
+            $session = WorkoutSession::whereKey($booking->workout_session_id)->lockForUpdate()->firstOrFail();
+            $booking = Booking::whereKey($booking->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($booking->status === BookingStatus::Pending) {
+                $this->releasePendingSeat($session, $booking, null, 'ไม่ได้รับการอนุมัติก่อนรอบเริ่ม');
+            }
+
+            return $booking->fresh();
         });
     }
 
@@ -90,7 +221,7 @@ class BookingService
         Trainer $trainer,
         ?User $actor = null,
         bool $allowWaitlist = true,
-        bool $requireCredit = true,
+        ?bool $requireCredit = null,
     ): array {
         $booked = [];
         $failed = [];
@@ -120,8 +251,11 @@ class BookingService
                 throw BookingException::notCancellable();
             }
 
-            $wasSeated = $booking->status === BookingStatus::Booked;
-            $isLate = now()->diffInMinutes($session->starts_at, false) < $session->branch->cancellation_cutoff_hours * 60;
+            $wasSeated = in_array($booking->status, [BookingStatus::Booked, BookingStatus::Pending], true);
+
+            // ถอนคำขอที่ยังไม่ได้รับอนุมัติไม่นับเป็นการยกเลิกกระชั้น เพราะยังไม่เคยได้ที่นั่งจริง
+            $isLate = $booking->status !== BookingStatus::Pending
+                && now()->diffInMinutes($session->starts_at, false) < $session->branch->cancellation_cutoff_hours * 60;
 
             // ยกเลิกทันเวลาได้เครดิตคืน ยกเลิกกระชั้นถือว่าใช้ไปแล้ว
             if ($booking->credit_consumed && ! $isLate) {
@@ -176,21 +310,26 @@ class BookingService
 
         $package = null;
 
-        try {
-            $package = $this->consumeCredit($next->member);
-        } catch (BookingException) {
-            // เครดิตหมดระหว่างรอคิว ข้ามคนนี้ไปก่อนและปล่อยให้แอดมินตามเก็บ
-            $next->update(['notes' => trim(($next->notes ?? '').' เลื่อนคิวไม่สำเร็จ: เครดิตไม่พอ')]);
+        if (BookingRules::creditsRequired()) {
+            try {
+                $package = $this->consumeCredit($next->member);
+            } catch (BookingException) {
+                // เครดิตหมดระหว่างรอคิว ข้ามคนนี้ไปก่อนและปล่อยให้แอดมินตามเก็บ
+                $next->update(['notes' => trim(($next->notes ?? '').' เลื่อนคิวไม่สำเร็จ: เครดิตไม่พอ')]);
 
-            return null;
+                return null;
+            }
         }
 
+        // ต้องอนุมัติก่อนก็ไม่ต้องให้ยืนยันสิทธิ์ เพราะยังไม่ได้ที่นั่งจริงจนกว่าแอดมินจะกด
+        $pending = BookingRules::needsApproval($next->isSelfBooked());
+
         $next->update([
-            'status' => BookingStatus::Booked,
+            'status' => $pending ? BookingStatus::Pending : BookingStatus::Booked,
             'active_member_key' => $next->member_id,
             'waitlist_position' => null,
             'promoted_at' => now(),
-            'confirm_deadline_at' => now()->addMinutes($session->branch->waitlist_confirm_minutes),
+            'confirm_deadline_at' => $pending ? null : now()->addMinutes($session->branch->waitlist_confirm_minutes),
             'member_package_id' => $package?->id,
             'credit_consumed' => $package !== null,
         ]);
@@ -326,6 +465,21 @@ class BookingService
 
     protected function assertMemberCanBook(WorkoutSession $session, Member $member, Trainer $trainer): void
     {
+        $inTeam = $trainer->teamMemberships()
+            ->where('member_id', $member->id)
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $inTeam) {
+            throw BookingException::memberNotInTeam();
+        }
+
+        $this->assertMemberEligible($session, $member);
+    }
+
+    /** เงื่อนไขของตัวสมาชิกเอง ใช้ร่วมกันทั้งตอนเทรนเนอร์จองให้และตอนจองเอง */
+    protected function assertMemberEligible(WorkoutSession $session, Member $member): void
+    {
         if ($member->branch_id !== $session->branch_id) {
             throw BookingException::branchMismatch();
         }
@@ -336,15 +490,6 @@ class BookingService
 
         if ($member->status !== MemberStatus::Active) {
             throw BookingException::memberInactive();
-        }
-
-        $inTeam = $trainer->teamMemberships()
-            ->where('member_id', $member->id)
-            ->where('status', 'active')
-            ->exists();
-
-        if (! $inTeam) {
-            throw BookingException::memberNotInTeam();
         }
 
         $duplicate = Booking::where('workout_session_id', $session->id)
@@ -363,7 +508,7 @@ class BookingService
     {
         $conflict = Booking::query()
             ->where('member_id', $member->id)
-            ->whereIn('status', [BookingStatus::Booked->value, BookingStatus::CheckedIn->value])
+            ->whereIn('status', [BookingStatus::Pending->value, BookingStatus::Booked->value, BookingStatus::CheckedIn->value])
             ->whereHas('workoutSession', function ($q) use ($session) {
                 $q->where('id', '!=', $session->id)
                     ->where('starts_at', '<', $session->ends_at)
@@ -424,18 +569,22 @@ class BookingService
     protected function createBooking(
         WorkoutSession $session,
         Member $member,
-        Trainer $trainer,
+        ?Trainer $trainer,
         ?User $actor,
-        bool $isWaitlist,
+        BookingStatus $status,
         ?MemberPackage $package,
     ): Booking {
+        $isWaitlist = $status === BookingStatus::Waitlisted;
+
         try {
             return Booking::create([
                 'workout_session_id' => $session->id,
                 'member_id' => $member->id,
-                'trainer_id' => $trainer->id,
+                'trainer_id' => $trainer?->id,
                 'booked_by_user_id' => $actor?->id,
-                'status' => $isWaitlist ? BookingStatus::Waitlisted : BookingStatus::Booked,
+                'status' => $status,
+                // ไม่ต้องอนุมัติก็นับว่าอนุมัติแล้วตั้งแต่ตอนจอง ประวัติจะได้ไม่มีช่องว่าง
+                'approved_at' => $status === BookingStatus::Booked ? now() : null,
                 // คิวสำรองไม่กินคีย์ unique จึงเว้น active_member_key ไว้เป็น NULL
                 'active_member_key' => $isWaitlist ? null : $member->id,
                 'waitlist_position' => $isWaitlist ? $this->nextWaitlistPosition($session) : null,
@@ -480,7 +629,7 @@ class BookingService
     /** คืนรอบเหมาให้ว่างเมื่อเทรนเนอร์ยกเลิกที่นั่งสุดท้ายของตัวเอง */
     protected function releaseExclusiveClaim(WorkoutSession $session, Booking $booking): void
     {
-        if ($session->claimed_by_trainer_id !== $booking->trainer_id) {
+        if ($booking->trainer_id === null || $session->claimed_by_trainer_id !== $booking->trainer_id) {
             return;
         }
 
@@ -489,6 +638,29 @@ class BookingService
         if ($remaining === 0) {
             $session->update(['claimed_by_trainer_id' => null]);
         }
+    }
+
+    /**
+     * คืนที่นั่งของคำขอที่ยังรออนุมัติ
+     * เรียกได้เฉพาะตอนที่ถือ lock ทั้งแถว session และแถว booking อยู่แล้วเท่านั้น
+     */
+    protected function releasePendingSeat(WorkoutSession $session, Booking $booking, ?User $actor, string $reason): void
+    {
+        if ($booking->credit_consumed) {
+            $this->refundCredit($booking);
+        }
+
+        $booking->update([
+            'status' => BookingStatus::Cancelled,
+            'active_member_key' => null,
+            'cancelled_at' => now(),
+            'cancelled_by_user_id' => $actor?->id,
+            'cancellation_reason' => $reason,
+            'cancelled_late' => false,
+        ]);
+
+        $session->decrement('booked_count');
+        $this->releaseExclusiveClaim($session, $booking);
     }
 
     protected function isDuplicateKey(QueryException $e): bool

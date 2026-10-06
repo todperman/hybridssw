@@ -1,5 +1,7 @@
 <div class="pb-16">
     @php($member = $this->member())
+    @php($credits = \App\Support\BookingRules::creditsRequired())
+    @php($pendingCount = $this->upcoming->where('status', \App\Enums\BookingStatus::Pending)->count())
 
     <x-page-hero :eyebrow="$member->member_code" title="คิวของฉัน" pattern="stopwatch" pattern-alt="box"
                  :subtitle="$member->branch->name">
@@ -10,7 +12,7 @@
         <x-slot:stats>
             <dl class="mt-5 grid max-w-md grid-cols-3 gap-2 sm:gap-3">
                 @foreach ([
-                    ['เครดิตคงเหลือ', $member->availableCredits()],
+                    $credits ? ['เครดิตคงเหลือ', $member->availableCredits()] : ['รออนุมัติ', $pendingCount],
                     ['คิวที่จะถึง', $this->upcoming->count()],
                     ['ไม่มาตามนัด', $member->no_show_count],
                 ] as [$label, $value])
@@ -36,12 +38,13 @@
             <div class="card-head flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="font-display text-[17px] font-bold text-grad">คิวที่กำลังจะถึง</h2>
-                    <p class="mt-0.5 text-[13px] text-muted">เทรนเนอร์เป็นคนจองให้ คุณยืนยันหรือยกเลิกได้ที่นี่</p>
+                    <p class="mt-0.5 text-[13px] text-muted">ดูสถานะ ยืนยัน ถอนคำขอ หรือยกเลิกได้ที่นี่</p>
                 </div>
 
-                @if ($this->upcoming->isNotEmpty())
-                    <span class="chip bg-brand-light/40 text-brand-dark">{{ $this->upcoming->count() }} คิว</span>
-                @endif
+                <a href="{{ route('member.schedule') }}" wire:navigate class="btn-primary px-4 py-2 text-[13px]">
+                    @svg('lucide-calendar-plus', 'h-4 w-4', ['stroke-width' => '2'])
+                    จองรอบ
+                </a>
             </div>
 
             @if ($this->upcoming->isEmpty())
@@ -50,13 +53,15 @@
                         <x-station-icon name="stopwatch" class="h-7 w-7 text-brand-deep" />
                     </span>
                     <p class="mt-4 font-display text-lg font-bold text-ink">ยังไม่มีคิว</p>
-                    <p class="mt-1 text-sm text-muted">ติดต่อเทรนเนอร์ของคุณเพื่อจองให้</p>
+                    <p class="mt-1 text-sm text-muted">เลือกวันและเวลาที่สะดวกแล้วจองได้เลย</p>
+                    <a href="{{ route('member.schedule') }}" wire:navigate class="btn-primary mt-5 inline-flex px-6 py-2.5">ไปหน้าจองรอบ</a>
                 </div>
             @else
                 <div class="grid gap-3 p-3 sm:grid-cols-2 sm:p-4">
                     @foreach ($this->upcoming as $booking)
                         @php($session = $booking->workoutSession)
-                        @php($waitlisted = $booking->status === \App\Enums\BookingStatus::Waitlisted)
+                        @php($pending = $booking->status === \App\Enums\BookingStatus::Pending)
+                        @php($waitlisted = $booking->status === \App\Enums\BookingStatus::Waitlisted || $pending)
                         @php($needsConfirm = (bool) $booking->confirm_deadline_at)
 
                         <div wire:key="upcoming-{{ $booking->id }}"
@@ -81,17 +86,31 @@
                                     </p>
 
                                     <div class="mt-2 flex items-center gap-2">
-                                        <x-avatar :user="$booking->trainer->user" size="h-6 w-6" text="text-[10px]" />
-                                        <span class="truncate text-[12px] text-muted">{{ $booking->trainer->user->name }}</span>
+                                        @if ($booking->trainer)
+                                            <x-avatar :user="$booking->trainer->user" size="h-6 w-6" text="text-[10px]" />
+                                            <span class="truncate text-[12px] text-muted">{{ $booking->trainer->user->name }}</span>
+                                        @else
+                                            <span class="grid h-6 w-6 place-items-center rounded-full bg-mist text-brand-deep">
+                                                @svg('lucide-user', 'h-3.5 w-3.5', ['stroke-width' => '2'])
+                                            </span>
+                                            <span class="truncate text-[12px] text-muted">จองด้วยตัวเอง</span>
+                                        @endif
                                     </div>
                                 </div>
 
                                 <span class="chip shrink-0 text-[11px] sm:text-xs {{ $waitlisted ? 'bg-accent-light text-accent-ink' : 'bg-brand-light/40 text-brand-dark' }}">
-                                    {{ $booking->status->label() }}@if ($waitlisted) · คิวที่ {{ $booking->waitlist_position }} @endif
+                                    {{ $booking->status->label() }}@if ($booking->waitlist_position) · คิวที่ {{ $booking->waitlist_position }} @endif
                                 </span>
                             </div>
 
                             <p class="mt-2.5 font-mono text-[11px] text-muted/60">{{ $booking->reference }}</p>
+
+                            @if ($pending)
+                                <p class="mt-3 flex items-start gap-2 rounded-xl border border-accent/60 bg-accent-light/50 px-3.5 py-2.5 text-[13px] text-accent-ink">
+                                    @svg('lucide-hourglass', 'mt-0.5 h-4 w-4 shrink-0', ['stroke-width' => '2'])
+                                    รอแอดมินยืนยัน ที่นั่งถูกกันไว้ให้คุณแล้ว
+                                </p>
+                            @endif
 
                             {{-- ได้เลื่อนขึ้นจากคิวสำรองแล้ว ต้องกดยืนยันไม่งั้นที่นั่งถูกปล่อย --}}
                             @if ($needsConfirm)
@@ -109,17 +128,20 @@
                                 <div class="mt-3 flex justify-center border-t border-line pt-3">
                                     <button type="button" class="btn-ghost text-[13px]"
                                             @click="$store.confirm.ask({
-                                                title: 'ยกเลิกคิวนี้',
+                                                title: @js($pending ? 'ถอนคำขอจองนี้' : 'ยกเลิกคิวนี้'),
                                                 body: @js($session->starts_at->format('d/m/Y').' · '.$session->timeLabel()),
-                                                notes: @js($booking->wouldBeLateCancellation()
-                                                    ? ['เลยกำหนดยกเลิกฟรีแล้ว เครดิตจะถูกหัก 1 ครั้ง', 'ที่นั่งจะถูกปล่อยให้คนในคิวสำรอง']
-                                                    : ['ยกเลิกทันเวลา เครดิตจะถูกคืนให้เต็มจำนวน', 'ที่นั่งจะถูกปล่อยให้คนในคิวสำรอง']),
+                                                notes: @js(match (true) {
+                                                    $pending => ['ที่นั่งที่กันไว้จะถูกปล่อยให้คนอื่นจองได้'],
+                                                    ! $credits => ['ที่นั่งจะถูกปล่อยให้คนอื่นจองได้'],
+                                                    $booking->wouldBeLateCancellation() => ['เลยกำหนดยกเลิกฟรีแล้ว เครดิตจะถูกหัก 1 ครั้ง', 'ที่นั่งจะถูกปล่อยให้คนในคิวสำรอง'],
+                                                    default => ['ยกเลิกทันเวลา เครดิตจะถูกคืนให้เต็มจำนวน', 'ที่นั่งจะถูกปล่อยให้คนในคิวสำรอง'],
+                                                }),
                                                 tone: 'danger',
-                                                confirmLabel: 'ยกเลิกคิว',
+                                                confirmLabel: @js($pending ? 'ถอนคำขอ' : 'ยกเลิกคิว'),
                                                 cancelLabel: 'เก็บไว้ก่อน',
                                                 action: () => $wire.cancel({{ $booking->id }}),
                                             })">
-                                        ยกเลิกคิว
+                                        {{ $pending ? 'ถอนคำขอ' : 'ยกเลิกคิว' }}
                                     </button>
                                 </div>
                             @endif
@@ -145,11 +167,17 @@
                             <span class="flex min-w-0 items-center gap-3">
                                 <span class="h-2 w-2 shrink-0 rounded-full {{ $good ? 'bg-brand-deep' : ($bad ? 'bg-red-500' : 'bg-line') }}"></span>
 
-                                <x-avatar :user="$booking->trainer->user" size="h-8 w-8" text="text-[11px]" />
+                                @if ($booking->trainer)
+                                    <x-avatar :user="$booking->trainer->user" size="h-8 w-8" text="text-[11px]" />
+                                @else
+                                    <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mist text-brand-deep">
+                                        @svg('lucide-user', 'h-4 w-4', ['stroke-width' => '2'])
+                                    </span>
+                                @endif
 
                                 <span class="min-w-0">
                                     <span class="block truncate text-[14px] text-ink">{{ $booking->workoutSession->starts_at->format('d/m/Y H:i') }}</span>
-                                    <span class="block truncate text-[12px] text-muted">{{ $booking->trainer->user->name }}</span>
+                                    <span class="block truncate text-[12px] text-muted">{{ $booking->trainer?->user->name ?? 'จองด้วยตัวเอง' }}</span>
                                 </span>
                             </span>
 

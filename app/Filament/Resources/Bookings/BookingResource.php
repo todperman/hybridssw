@@ -7,6 +7,7 @@ use App\Filament\Resources\Bookings\Pages\EditBooking;
 use App\Filament\Resources\Bookings\Pages\ListBookings;
 use App\Filament\Resources\Bookings\Schemas\BookingForm;
 use App\Filament\Resources\Bookings\Tables\BookingsTable;
+use App\Enums\BookingStatus;
 use App\Models\Booking;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -32,6 +33,24 @@ class BookingResource extends Resource
     protected static ?string $pluralModelLabel = 'การจอง';
 
     protected static ?string $recordTitleAttribute = 'reference';
+
+    /** ตัวเลขบนเมนูบอกว่ามีคำขอจองรออนุมัติกี่รายการ */
+    public static function getNavigationBadge(): ?string
+    {
+        $pending = Booking::where('status', BookingStatus::Pending->value)->count();
+
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'คำขอจองรออนุมัติ';
+    }
 
     public static function form(Schema $schema): Schema
     {

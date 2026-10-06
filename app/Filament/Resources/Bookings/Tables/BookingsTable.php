@@ -6,7 +6,9 @@ use App\Enums\BookingStatus;
 use App\Exceptions\BookingException;
 use App\Models\Booking;
 use App\Services\BookingService;
+use App\Support\BookingRules;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -15,6 +17,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class BookingsTable
 {
@@ -41,6 +44,7 @@ class BookingsTable
 
                 TextColumn::make('trainer.user.name')
                     ->label('เทรนเนอร์')
+                    ->placeholder('จองเอง')
                     ->searchable()
                     ->toggleable(),
 
@@ -48,28 +52,42 @@ class BookingsTable
                     ->label('สถานะ')
                     ->badge(),
 
+                TextColumn::make('approved_at')
+                    ->label('อนุมัติเมื่อ')
+                    ->dateTime('d/m H:i')
+                    ->description(fn (Booking $r) => $r->approvedBy?->name)
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('created_at')
+                    ->label('ขอเมื่อ')
+                    ->since()
+                    ->dateTimeTooltip('d/m/Y H:i')
+                    ->toggleable(),
+
                 TextColumn::make('waitlist_position')
                     ->label('คิวที่')
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                // ซ่อนไว้ก่อน ให้ปุ่มอนุมัติ/ไม่อนุมัติมีที่พอบนจอโน้ตบุ๊ก เปิดดูได้จากปุ่มคอลัมน์
                 TextColumn::make('confirm_deadline_at')
                     ->label('ต้องยืนยันก่อน')
                     ->dateTime('d/m H:i')
                     ->placeholder('—')
                     ->color('warning')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('checked_in_at')
                     ->label('เช็คอิน')
                     ->dateTime('d/m H:i')
                     ->placeholder('—')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('cancelled_late')
                     ->label('ยกเลิกกระชั้น')
                     ->badge()
-                    ->formatStateUsing(fn ($state) => $state ? 'ใช่ หักเครดิต' : '—')
+                    ->formatStateUsing(fn ($state) => $state ? (BookingRules::creditsRequired() ? 'ใช่ หักเครดิต' : 'ใช่') : '—')
                     ->color(fn ($state) => $state ? 'danger' : 'gray')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -79,17 +97,60 @@ class BookingsTable
 
                 Filter::make('today')
                     ->label('เฉพาะรอบวันนี้')
-                    ->query(fn (Builder $q) => $q->whereHas(
+                    ->query(fn (Builder $query) => $query->whereHas(
                         'workoutSession',
                         fn ($s) => $s->whereDate('date', now()->toDateString())
                     )),
 
                 Filter::make('awaiting_confirmation')
                     ->label('รอยืนยันสิทธิ์จากคิวสำรอง')
-                    ->query(fn (Builder $q) => $q->whereNotNull('confirm_deadline_at')
+                    ->query(fn (Builder $query) => $query->whereNotNull('confirm_deadline_at')
                         ->where('status', BookingStatus::Booked->value)),
             ])
             ->recordActions([
+                Action::make('approve')
+                    ->label('อนุมัติ')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (Booking $r) => $r->status === BookingStatus::Pending)
+                    ->requiresConfirmation()
+                    ->modalHeading('อนุมัติการจองนี้')
+                    ->modalDescription(fn (Booking $r) => $r->member->user->name.' · '
+                        .$r->workoutSession->starts_at->format('d/m/Y').' '.$r->workoutSession->timeLabel())
+                    ->modalSubmitActionLabel('อนุมัติ')
+                    ->action(function (Booking $record, BookingService $bookings) {
+                        try {
+                            $bookings->approve($record, auth()->user());
+                            Notification::make()->title('อนุมัติแล้ว')->success()->send();
+                        } catch (BookingException $e) {
+                            Notification::make()->title('อนุมัติไม่ได้')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+
+                Action::make('reject')
+                    ->label('ไม่อนุมัติ')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Booking $r) => $r->status === BookingStatus::Pending)
+                    ->modalHeading('ไม่อนุมัติการจองนี้')
+                    ->modalDescription('ที่นั่งที่กันไว้จะถูกปล่อยให้คนอื่นจองได้ทันที')
+                    ->modalSubmitActionLabel('ยืนยันไม่อนุมัติ')
+                    ->schema([
+                        Textarea::make('reason')
+                            ->label('เหตุผล (สมาชิกจะเห็นข้อความนี้)')
+                            ->default('ไม่พบการชำระเงิน')
+                            ->required()
+                            ->rows(2),
+                    ])
+                    ->action(function (Booking $record, array $data, BookingService $bookings) {
+                        try {
+                            $bookings->reject($record, auth()->user(), $data['reason']);
+                            Notification::make()->title('ปฏิเสธคำขอแล้ว')->body('คืนที่นั่งให้รอบเรียบร้อย')->success()->send();
+                        } catch (BookingException $e) {
+                            Notification::make()->title('ดำเนินการไม่ได้')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+
                 Action::make('checkIn')
                     ->label('เช็คอิน')
                     ->icon('heroicon-o-check-circle')
@@ -134,9 +195,11 @@ class BookingsTable
 
                             Notification::make()
                                 ->title('ยกเลิกแล้ว')
-                                ->body($record->fresh()->cancelled_late
-                                    ? 'เลยกำหนดยกเลิกฟรี เครดิตถูกหัก'
-                                    : 'คืนเครดิตและเลื่อนคิวสำรองให้แล้ว')
+                                ->body(match (true) {
+                                    ! BookingRules::creditsRequired() => 'คืนที่นั่งและเลื่อนคิวสำรองให้แล้ว',
+                                    $record->fresh()->cancelled_late => 'เลยกำหนดยกเลิกฟรี เครดิตถูกหัก',
+                                    default => 'คืนเครดิตและเลื่อนคิวสำรองให้แล้ว',
+                                })
                                 ->success()
                                 ->send();
                         } catch (BookingException $e) {
@@ -145,7 +208,34 @@ class BookingsTable
                     }),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([]),
+                BulkActionGroup::make([
+                    BulkAction::make('approveSelected')
+                        ->label('อนุมัติที่เลือก')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalDescription('อนุมัติเฉพาะรายการที่รออนุมัติอยู่ รายการสถานะอื่นจะถูกข้าม')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records, BookingService $bookings) {
+                            $done = 0;
+                            $failed = [];
+
+                            foreach ($records->where('status', BookingStatus::Pending) as $record) {
+                                try {
+                                    $bookings->approve($record, auth()->user());
+                                    $done++;
+                                } catch (BookingException $e) {
+                                    $failed[] = $record->reference.': '.$e->getMessage();
+                                }
+                            }
+
+                            Notification::make()
+                                ->title("อนุมัติแล้ว {$done} รายการ")
+                                ->body($failed ? implode("\n", $failed) : null)
+                                ->{$failed ? 'warning' : 'success'}()
+                                ->send();
+                        }),
+                ]),
             ]);
     }
 }

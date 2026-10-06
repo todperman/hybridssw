@@ -8,17 +8,22 @@ use App\Services\BookingService;
 use Illuminate\Console\Command;
 
 /**
- * คนที่ถูกเลื่อนจากคิวสำรองมีเวลายืนยันจำกัด
- * ถ้าปล่อยให้เงียบไว้ ที่นั่งจะถูกจองค้างโดยคนที่อาจไม่มา คนถัดไปในคิวก็ไม่ได้สิทธิ์
+ * คืนที่นั่งที่ถูกถือค้างไว้โดยไม่มีใครใช้
+ *
+ * 1. คนที่ถูกเลื่อนจากคิวสำรองมีเวลายืนยันจำกัด ถ้าปล่อยให้เงียบไว้
+ *    ที่นั่งจะถูกจองค้างโดยคนที่อาจไม่มา คนถัดไปในคิวก็ไม่ได้สิทธิ์
+ * 2. คำขอที่รออนุมัติจนรอบเริ่มไปแล้ว ไม่มีทางได้รับอนุมัติอีก ปิดทิ้งให้สมาชิกเห็นสถานะจริง
  */
 class ReleaseUnconfirmedBookingsCommand extends Command
 {
     protected $signature = 'bookings:release-unconfirmed {--dry-run : แสดงผลอย่างเดียว ไม่บันทึก}';
 
-    protected $description = 'ปล่อยที่นั่งของคิวสำรองที่เลื่อนขึ้นแล้วไม่ยืนยันภายในเวลา';
+    protected $description = 'ปล่อยที่นั่งของคิวสำรองที่ไม่ยืนยัน และคำขอที่รออนุมัติจนรอบเริ่ม';
 
     public function handle(BookingService $bookings): int
     {
+        $this->expireUnapproved($bookings);
+
         $expired = Booking::query()
             ->where('status', BookingStatus::Booked->value)
             ->whereNotNull('confirm_deadline_at')
@@ -51,5 +56,23 @@ class ReleaseUnconfirmedBookingsCommand extends Command
         $this->info("รวม {$expired->count()} รายการ");
 
         return self::SUCCESS;
+    }
+
+    protected function expireUnapproved(BookingService $bookings): void
+    {
+        $stale = Booking::query()
+            ->where('status', BookingStatus::Pending->value)
+            ->whereHas('workoutSession', fn ($q) => $q->where('starts_at', '<=', now()))
+            ->get();
+
+        foreach ($stale as $booking) {
+            $this->line(sprintf(
+                '%s %s รอบเริ่มแล้วแต่ยังไม่ได้รับการอนุมัติ',
+                $this->option('dry-run') ? '[ทดลอง]' : '[ปิด]',
+                $booking->reference,
+            ));
+
+            $this->option('dry-run') || $bookings->expireUnapproved($booking);
+        }
     }
 }

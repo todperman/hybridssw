@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\EnsureUserIsTrainer;
 use App\Livewire\Member\MyBookings;
+use App\Livewire\Member\Schedule as MemberSchedule;
+use App\Livewire\MemberRegistration;
 use App\Livewire\TeamJoin;
 use App\Livewire\Trainer\BookingBoard;
 use App\Livewire\Trainer\Insights;
@@ -9,7 +11,17 @@ use App\Livewire\Trainer\TeamRoster;
 use App\Livewire\TrainerRegistration;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+// หน้าแรกพาไปหน้าเข้าสู่ระบบเลย คนที่ล็อกอินอยู่แล้วไปหน้าของบทบาทตัวเอง
+// หน้า landing เดิมยังอยู่ที่ resources/views/welcome.blade.php เปิดกลับได้ด้วย Route::view
+Route::get('/', fn () => auth()->check()
+    ? redirect()->route('dashboard')
+    : redirect()->route('login')
+)->name('home');
+
+// คนทั่วไปสมัครสมาชิกเอง แล้วจองรอบให้ตัวเอง (ปิดได้ด้วย GYM_REGISTRATION_PUBLIC=false)
+Route::get('register', MemberRegistration::class)
+    ->middleware('guest')
+    ->name('register');
 
 // สมัครเป็นเทรนเนอร์ (ภายในอนุมัติอัตโนมัติ ภายนอกรอแอดมินตรวจ)
 Route::get('register/trainer', TrainerRegistration::class)
@@ -47,6 +59,7 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
 });
 
 Route::middleware('auth')->prefix('member')->name('member.')->group(function () {
+    Route::get('schedule', MemberSchedule::class)->name('schedule');
     Route::get('bookings', MyBookings::class)->name('bookings');
 });
 

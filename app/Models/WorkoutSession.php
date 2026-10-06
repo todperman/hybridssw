@@ -68,14 +68,16 @@ class WorkoutSession extends Model
         return $this->hasMany(Booking::class);
     }
 
-    /** การจองที่ยังกินที่นั่งอยู่ */
+    /** การจองที่ยังกินที่นั่งอยู่ รวมที่รออนุมัติ */
     public function activeBookings(): HasMany
     {
-        return $this->bookings()->whereIn('status', [
-            BookingStatus::Booked->value,
-            BookingStatus::CheckedIn->value,
-            BookingStatus::Completed->value,
-        ]);
+        return $this->bookings()->whereIn('status', BookingStatus::seatHolding());
+    }
+
+    /** รับการจองที่สมาชิกจองให้ตัวเองได้หรือไม่ รอบเหมาสงวนไว้ให้เทรนเนอร์เท่านั้น */
+    public function acceptsSelfBooking(): bool
+    {
+        return $this->isBookable() && $this->mode === SessionMode::Shared;
     }
 
     public function waitlist(): HasMany

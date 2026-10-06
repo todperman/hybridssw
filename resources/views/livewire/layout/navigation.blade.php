@@ -31,6 +31,7 @@ new class extends Component
         }
 
         if ($user?->member) {
+            $links[] = ['route' => 'member.schedule', 'label' => 'จองรอบ', 'icon' => 'calendar-plus'];
             $links[] = ['route' => 'member.bookings', 'label' => 'คิวของฉัน', 'icon' => 'ticket'];
         }
 

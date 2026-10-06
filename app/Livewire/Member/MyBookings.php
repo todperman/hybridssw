@@ -7,6 +7,7 @@ use App\Exceptions\BookingException;
 use App\Models\Booking;
 use App\Models\Member;
 use App\Services\BookingService;
+use App\Support\BookingRules;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -27,7 +28,7 @@ class MyBookings extends Component
     public function upcoming(): Collection
     {
         return Booking::where('member_id', $this->member()->id)
-            ->whereIn('status', [BookingStatus::Booked->value, BookingStatus::Waitlisted->value, BookingStatus::CheckedIn->value])
+            ->whereIn('status', [BookingStatus::Pending->value, BookingStatus::Booked->value, BookingStatus::Waitlisted->value, BookingStatus::CheckedIn->value])
             ->whereHas('workoutSession', fn ($q) => $q->where('ends_at', '>=', now()))
             ->with(['workoutSession.branch', 'trainer.user'])
             ->get()
@@ -65,15 +66,23 @@ class MyBookings extends Component
     {
         $booking = $this->ownedBooking($bookingId);
 
+        $wasPending = $booking->status === BookingStatus::Pending;
+
         try {
-            $bookings->cancel($booking, auth()->user(), 'ลูกทีมยกเลิกเอง');
+            $bookings->cancel($booking, auth()->user(), $wasPending ? 'สมาชิกถอนคำขอเอง' : 'ลูกทีมยกเลิกเอง');
+
+            $late = $booking->fresh()->cancelled_late;
+            $credits = BookingRules::creditsRequired();
 
             $this->dispatch('toast',
-                tone: $booking->fresh()->cancelled_late ? 'warning' : 'success',
-                title: 'ยกเลิกคิวแล้ว',
-                body: $booking->fresh()->cancelled_late
-                    ? 'เลยกำหนดยกเลิกฟรี จึงถูกหักเครดิต'
-                    : 'คืนเครดิตให้เรียบร้อย',
+                tone: $late ? 'warning' : 'success',
+                title: $wasPending ? 'ถอนคำขอแล้ว' : 'ยกเลิกคิวแล้ว',
+                body: match (true) {
+                    $wasPending => 'ที่นั่งถูกปล่อยให้คนอื่นจองได้แล้ว',
+                    ! $credits => 'ที่นั่งถูกปล่อยให้คนอื่นจองได้แล้ว',
+                    $late => 'เลยกำหนดยกเลิกฟรี จึงถูกหักเครดิต',
+                    default => 'คืนเครดิตให้เรียบร้อย',
+                },
             );
         } catch (BookingException $e) {
             $this->dispatch('toast', tone: 'error', title: 'ยกเลิกไม่ได้', body: $e->getMessage());

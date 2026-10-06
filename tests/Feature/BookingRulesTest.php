@@ -104,6 +104,9 @@ class BookingRulesTest extends TestCase
     #[Test]
     public function cancelling_early_refunds_the_credit_and_promotes_the_waitlist(): void
     {
+        // เทสต์นี้ทดสอบการตัดเครดิตโดยตรง ต้องเปิดไว้ เพราะค่าเริ่มต้นของระบบปิดอยู่
+        config(['gym.booking.require_credits' => true]);
+
         $branch = $this->makeBranch(['default_capacity' => 1, 'cancellation_cutoff_hours' => 4]);
         $trainer = $this->makeTrainer($branch);
         $session = $this->makeSession($branch, ['starts_at' => now()->addDays(2)->setTime(18, 0)]);
@@ -136,6 +139,9 @@ class BookingRulesTest extends TestCase
     #[Test]
     public function cancelling_after_the_cutoff_keeps_the_credit_spent(): void
     {
+        // เทสต์นี้ทดสอบการตัดเครดิตโดยตรง ต้องเปิดไว้ เพราะค่าเริ่มต้นของระบบปิดอยู่
+        config(['gym.booking.require_credits' => true]);
+
         $branch = $this->makeBranch(['cancellation_cutoff_hours' => 4]);
         $trainer = $this->makeTrainer($branch);
         $member = $this->makeMember($branch, $trainer);

@@ -87,11 +87,11 @@ class WorkoutSessionsTable
                 Filter::make('upcoming')
                     ->label('เฉพาะรอบที่ยังไม่เริ่ม')
                     ->default()
-                    ->query(fn (Builder $q) => $q->where('starts_at', '>=', now())),
+                    ->query(fn (Builder $query) => $query->where('starts_at', '>=', now())),
 
                 Filter::make('has_waitlist')
                     ->label('มีคิวสำรองรออยู่')
-                    ->query(fn (Builder $q) => $q->where('waitlist_count', '>', 0)),
+                    ->query(fn (Builder $query) => $query->where('waitlist_count', '>', 0)),
             ])
             ->headerActions([
                 // ปุ่มสร้างรอบล่วงหน้า สำหรับกรณีเพิ่งแก้ตารางแล้วอยากเห็นผลทันทีไม่ต้องรอ cron

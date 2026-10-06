@@ -102,6 +102,16 @@ class BookingException extends Exception
         return new self('การจองนี้ยกเลิกไม่ได้แล้ว', 'not_cancellable');
     }
 
+    public static function notPending(): self
+    {
+        return new self('รายการนี้ไม่ได้อยู่ในสถานะรออนุมัติแล้ว', 'not_pending');
+    }
+
+    public static function selfBookingNotAllowed(): self
+    {
+        return new self('รอบนี้เปิดให้เทรนเนอร์จองเหมาเท่านั้น', 'self_booking_not_allowed');
+    }
+
     public static function branchMismatch(): self
     {
         return new self('เทรนเนอร์กับลูกทีมต้องอยู่สาขาเดียวกับรอบที่จอง', 'branch_mismatch');

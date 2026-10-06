@@ -80,7 +80,7 @@ class TrainersTable
 
                 Filter::make('certification_expiring')
                     ->label('ใบรับรองใกล้หมดอายุ / หมดแล้ว')
-                    ->query(fn (Builder $q) => $q->whereNotNull('certification_expires_at')
+                    ->query(fn (Builder $query) => $query->whereNotNull('certification_expires_at')
                         ->whereDate('certification_expires_at', '<=', now()->addDays(30))),
             ])
             ->recordActions([

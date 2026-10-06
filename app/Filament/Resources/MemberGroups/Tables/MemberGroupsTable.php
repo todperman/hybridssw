@@ -56,7 +56,7 @@ class MemberGroupsTable
 
                 Filter::make('has_override')
                     ->label('มีเพดานเฉพาะกลุ่ม')
-                    ->query(fn (Builder $q) => $q->whereNotNull('max_members')),
+                    ->query(fn (Builder $query) => $query->whereNotNull('max_members')),
             ])
             ->recordActions([
                 EditAction::make()->label('ตั้งเพดาน'),

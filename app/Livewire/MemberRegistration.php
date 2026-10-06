@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Livewire;
+
+use App\Enums\MemberStatus;
+use App\Enums\UserRole;
+use App\Models\Branch;
+use App\Models\Member;
+use App\Models\User;
+use App\Rules\ThaiPhone;
+use App\Support\BookingRules;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules;
+use Livewire\Component;
+
+/**
+ * คนทั่วไปสมัครสมาชิกเอง ไม่ต้องผ่านลิงก์ชวนของเทรนเนอร์
+ *
+ * สมาชิกแบบนี้ไม่สังกัดทีมใด จองรอบให้ตัวเองได้ที่หน้าจองรอบ
+ * แล้วรอแอดมินอนุมัติตามค่า gym.booking.approval
+ */
+class MemberRegistration extends Component
+{
+    public ?int $branch_id = null;
+
+    public string $first_name = '';
+    public string $last_name = '';
+    public string $nickname = '';
+    public string $email = '';
+    public string $phone = '';
+    public string $password = '';
+    public string $password_confirmation = '';
+    public string $emergency_contact_name = '';
+    public string $emergency_contact_phone = '';
+
+    public bool $accept = false;
+
+    public function mount(): void
+    {
+        abort_unless(BookingRules::publicRegistrationOpen(), 404);
+
+        // มีสาขาเดียวก็ผูกให้เลย ไม่ต้องให้เลือก
+        $this->branch_id = Branch::active()->value('id');
+    }
+
+    public function showsBranchSelector(): bool
+    {
+        return (bool) config('gym.registration.show_branch_selector', true)
+            && Branch::active()->count() > 1;
+    }
+
+    public function branches()
+    {
+        return Branch::active()->orderBy('name')->pluck('name', 'id');
+    }
+
+    public function register(): void
+    {
+        abort_unless(BookingRules::publicRegistrationOpen(), 404);
+
+        $data = $this->validate([
+            'branch_id' => ['required', Rule::exists('branches', 'id')->where('is_active', true)],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
+            'nickname' => ['nullable', 'string', 'max:60'],
+            'email' => ['required', 'string', 'email:rfc,filter', 'max:255', Rule::unique(User::class, 'email')],
+            'phone' => ['required', 'string', 'max:30', new ThaiPhone],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'emergency_contact_name' => ['required', 'string', 'max:255'],
+            'emergency_contact_phone' => ['required', 'string', 'max:30', new ThaiPhone],
+            'accept' => ['accepted'],
+        ], [
+            'branch_id.required' => 'กรุณาเลือกสาขา',
+            'accept.accepted' => 'กรุณายืนยันว่าข้อมูลที่กรอกเป็นความจริง',
+        ]);
+
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create([
+                'branch_id' => $data['branch_id'],
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'nickname' => $data['nickname'] ?: null,
+                'email' => $data['email'],
+                'phone' => ThaiPhone::digits($data['phone']),
+                'password' => $data['password'],
+                'role' => UserRole::Member,
+            ]);
+
+            Member::create([
+                'user_id' => $user->id,
+                'branch_id' => $data['branch_id'],
+                'primary_trainer_id' => null,
+                'status' => MemberStatus::Active,
+                'emergency_contact_name' => $data['emergency_contact_name'],
+                'emergency_contact_phone' => ThaiPhone::digits($data['emergency_contact_phone']),
+            ]);
+
+            return $user;
+        });
+
+        auth()->login($user);
+
+        $this->redirect(route('member.schedule'), navigate: true);
+    }
+
+    public function render()
+    {
+        $approval = BookingRules::needsApproval(selfBooked: true);
+
+        return view('livewire.member-registration')->layout('layouts.auth', [
+            'eyebrow' => 'สมัครสมาชิก',
+            'heading' => 'เริ่มเทรน',
+            'headingAccent' => 'กับเราวันนี้',
+            'lead' => 'สมัครครั้งเดียว แล้วเลือกจองรอบที่สะดวกได้เอง',
+            'points' => [
+                'เลือกวันและเวลาได้เองจากตารางรอบ',
+                'แต่ละรอบรับจำนวนจำกัด เห็นที่ว่างก่อนจองทุกครั้ง',
+                $approval
+                    ? 'ส่งคำขอจองแล้วรอแอดมินยืนยัน ที่นั่งถูกกันไว้ให้ระหว่างรอ'
+                    : 'จองแล้วได้ที่นั่งทันที',
+            ],
+            'altHref' => route('login'),
+            'altLabel' => 'มีบัญชีอยู่แล้ว',
+            'altCta' => 'เข้าสู่ระบบ',
+            'wide' => true,
+        ]);
+    }
+}

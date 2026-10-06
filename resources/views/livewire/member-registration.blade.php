@@ -1,12 +1,24 @@
 <div x-data="{ showPassword: false }">
     <div class="fade-up">
-        <h2 class="font-display text-3xl font-extrabold heading-th text-ink">สมัครเข้าทีม</h2>
+        <h2 class="font-display text-3xl font-extrabold heading-th text-ink">สมัครสมาชิก</h2>
         <p class="mt-2 text-[15px] text-muted">
-            กรอกข้อมูลครั้งเดียว จากนั้น {{ $trainer->user->name }} จะจองรอบให้คุณได้เลย
+            กรอกข้อมูลครั้งเดียว แล้วเลือกจองรอบที่สะดวกได้เลย
         </p>
     </div>
 
-    <form wire:submit="join" class="mt-8 space-y-4">
+    <form wire:submit="register" class="mt-8 space-y-4">
+
+        @if ($this->showsBranchSelector())
+            <div class="field fade-up d-1">
+                <select wire:model="branch_id" id="branch_id" class="peer field-input appearance-none">
+                    @foreach ($this->branches() as $id => $name)
+                        <option value="{{ $id }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+                <label for="branch_id" class="field-label !top-3.5 !text-[11px] !font-medium">สาขา</label>
+            </div>
+            @error('branch_id') <p class="field-error">{{ $message }}</p> @enderror
+        @endif
 
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="field fade-up d-1">
@@ -99,9 +111,9 @@
                        focus:outline-none focus:ring-4 focus:ring-brand-deep/25 disabled:opacity-60">
             <span class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
 
-            <span wire:loading.remove wire:target="join" class="relative">เข้าร่วมทีม</span>
+            <span wire:loading.remove wire:target="register" class="relative">สมัครสมาชิก</span>
 
-            <span wire:loading wire:target="join" class="relative flex items-center gap-2">
+            <span wire:loading wire:target="register" class="relative flex items-center gap-2">
                 <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
                     <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
@@ -110,4 +122,9 @@
             </span>
         </button>
     </form>
+
+    <p class="fade-up d-6 mt-6 text-center text-[13px] text-muted">
+        เป็นเทรนเนอร์?
+        <a href="{{ route('trainer.register') }}" wire:navigate class="font-medium text-brand-deep hover:underline">สมัครเป็นเทรนเนอร์ที่นี่</a>
+    </p>
 </div>

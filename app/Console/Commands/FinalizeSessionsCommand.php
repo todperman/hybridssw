@@ -39,12 +39,21 @@ class FinalizeSessionsCommand extends Command
 
         $completed = 0;
         $noShows = 0;
+        $unapproved = 0;
 
         foreach ($sessions as $session) {
             foreach ($session->bookings as $booking) {
                 if ($booking->status === BookingStatus::CheckedIn) {
                     $dry || $booking->update(['status' => BookingStatus::Completed]);
                     $completed++;
+
+                    continue;
+                }
+
+                // คำขอที่แอดมินไม่ทันอนุมัติไม่ใช่ความผิดของสมาชิก จึงไม่นับเป็นไม่มาตามนัด
+                if ($booking->status === BookingStatus::Pending) {
+                    $dry || $bookings->expireUnapproved($booking);
+                    $unapproved++;
 
                     continue;
                 }
@@ -71,7 +80,7 @@ class FinalizeSessionsCommand extends Command
         }
 
         $prefix = $dry ? '[ทดลอง] ' : '';
-        $this->info("{$prefix}ปิดรอบ {$sessions->count()} รอบ | มาเล่นจริง {$completed} | ไม่มาตามนัด {$noShows}");
+        $this->info("{$prefix}ปิดรอบ {$sessions->count()} รอบ | มาเล่นจริง {$completed} | ไม่มาตามนัด {$noShows} | ไม่ได้อนุมัติ {$unapproved}");
 
         return self::SUCCESS;
     }

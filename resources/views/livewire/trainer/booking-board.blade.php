@@ -355,9 +355,11 @@
                                                                             @click="$store.confirm.ask({
                                                                                 title: 'ยกเลิกการจอง',
                                                                                 body: '{{ $booking->member->user->name }} · {{ $session->timeLabel() }}',
-                                                                                notes: @js($booking->wouldBeLateCancellation()
-                                                                                    ? ['เลยกำหนดยกเลิกฟรีแล้ว เครดิตจะถูกหัก', 'ที่นั่งจะถูกปล่อยให้คิวสำรองทันที']
-                                                                                    : ['ยกเลิกทันเวลา เครดิตจะถูกคืนให้ลูกทีม', 'ที่นั่งจะถูกปล่อยให้คิวสำรองทันที']),
+                                                                                notes: @js(match (true) {
+                                                                                    ! \App\Support\BookingRules::creditsRequired() => ['ที่นั่งจะถูกปล่อยให้คิวสำรองทันที'],
+                                                                                    $booking->wouldBeLateCancellation() => ['เลยกำหนดยกเลิกฟรีแล้ว เครดิตจะถูกหัก', 'ที่นั่งจะถูกปล่อยให้คิวสำรองทันที'],
+                                                                                    default => ['ยกเลิกทันเวลา เครดิตจะถูกคืนให้ลูกทีม', 'ที่นั่งจะถูกปล่อยให้คิวสำรองทันที'],
+                                                                                }),
                                                                                 tone: 'danger',
                                                                                 confirmLabel: 'ยกเลิกการจอง',
                                                                                 cancelLabel: 'เก็บไว้ก่อน',
@@ -521,9 +523,11 @@
 
                                     <span class="flex-1 truncate text-sm font-medium text-ink">{{ $member->user->name }}</span>
 
-                                    <span class="chip shrink-0 {{ $taken ? 'bg-ink/10 text-muted' : 'bg-accent-light/80 text-accent-ink' }}">
-                                        {{ $taken ? 'จองแล้ว' : 'เครดิต '.$member->availableCredits() }}
-                                    </span>
+                                    @if ($taken)
+                                        <span class="chip shrink-0 bg-ink/10 text-muted">จองแล้ว</span>
+                                    @elseif (\App\Support\BookingRules::creditsRequired())
+                                        <span class="chip shrink-0 bg-accent-light/80 text-accent-ink">เครดิต {{ $member->availableCredits() }}</span>
+                                    @endif
                                 </label>
                             @endforeach
                         </div>
@@ -562,11 +566,12 @@
                                     body: @js($s->starts_at->locale('th')->isoFormat('dddd D MMM').' · '.$s->timeLabel()),
                                     notes: [
                                         'จองให้ลูกทีม ' + $wire.selectedMemberIds.length + ' คน',
-                                        'หักเครดิตของลูกทีมคนละ 1 ครั้ง',
+                                        @js(\App\Support\BookingRules::creditsRequired() ? 'หักเครดิตของลูกทีมคนละ 1 ครั้ง' : null),
+                                        @js(\App\Support\BookingRules::needsApproval(selfBooked: false) ? 'การจองต้องรอแอดมินอนุมัติ ที่นั่งถูกกันไว้ระหว่างรอ' : null),
                                         $wire.allowWaitlist
                                             ? 'ถ้าที่นั่งเต็ม ระบบจะต่อคิวสำรองให้อัตโนมัติ'
                                             : 'ถ้าที่นั่งเต็ม รายการนั้นจะจองไม่สำเร็จ',
-                                    ],
+                                    ].filter(Boolean),
                                     tone: 'info',
                                     confirmLabel: 'ยืนยันจอง',
                                     cancelLabel: 'กลับไปแก้',

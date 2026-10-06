@@ -358,7 +358,9 @@
                                         {{ $member->isSuspended() ? 'ระงับถึง '.$member->suspended_until?->format('d/m') : $member->status->label() }}
                                     </span>
 
-                                    <span class="chip bg-accent-light text-accent-ink">เครดิต {{ $member->availableCredits() }}</span>
+                                    @if (\App\Support\BookingRules::creditsRequired())
+                                        <span class="chip bg-accent-light text-accent-ink">เครดิต {{ $member->availableCredits() }}</span>
+                                    @endif
 
                                     @if ($member->no_show_count > 0)
                                         <span class="chip bg-red-50 text-red-700">ไม่มา {{ $member->no_show_count }}</span>

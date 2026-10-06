@@ -19,6 +19,8 @@ class Booking extends Model
         'trainer_id',
         'booked_by_user_id',
         'status',
+        'approved_at',
+        'approved_by_user_id',
         'waitlist_position',
         'promoted_at',
         'confirm_deadline_at',
@@ -39,6 +41,7 @@ class Booking extends Model
         return [
             'status' => BookingStatus::class,
             'waitlist_position' => 'integer',
+            'approved_at' => 'datetime',
             'promoted_at' => 'datetime',
             'confirm_deadline_at' => 'datetime',
             'checked_in_at' => 'datetime',
@@ -68,6 +71,17 @@ class Booking extends Model
     public function trainer(): BelongsTo
     {
         return $this->belongsTo(Trainer::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    /** สมาชิกจองให้ตัวเอง ไม่ได้ผ่านเทรนเนอร์ */
+    public function isSelfBooked(): bool
+    {
+        return $this->trainer_id === null;
     }
 
     public function bookedBy(): BelongsTo

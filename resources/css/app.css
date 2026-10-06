@@ -674,6 +674,16 @@
         display: none;
     }
 
+    /* แถบเลื่อนแนวนอนที่ไม่แสดง scrollbar เช่นแถบเลือกวันของหน้าจองรอบ
+       ยังเลื่อนด้วยนิ้ว ล้อเมาส์ หรือ trackpad ได้ตามปกติ */
+    .scroll-quiet {
+        scrollbar-width: none;
+    }
+
+    .scroll-quiet::-webkit-scrollbar {
+        display: none;
+    }
+
     .route-steps {
         @apply flex min-w-[54rem] items-start px-1;
     }

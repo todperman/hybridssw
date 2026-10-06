@@ -179,6 +179,9 @@ class BookingEligibilityTest extends TestCase
     #[Test]
     public function a_member_without_credits_cannot_be_booked(): void
     {
+        // เทสต์นี้ทดสอบการตัดเครดิตโดยตรง ต้องเปิดไว้ เพราะค่าเริ่มต้นของระบบปิดอยู่
+        config(['gym.booking.require_credits' => true]);
+
         $branch = $this->makeBranch();
         $trainer = $this->makeTrainer($branch);
         $member = $this->makeMember($branch, $trainer, credits: 0);

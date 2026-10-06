@@ -270,13 +270,10 @@ class BookingBoard extends Component
     }
 
     /** สถานะที่ถือว่ายังกินที่นั่งอยู่ ใช้ร่วมกันหลายคิวรี */
+    /** ชุดเดียวกับ WorkoutSession::activeBookings() ตัวกรองจะได้ไม่เห็นต่างจากแถบที่นั่ง */
     protected function seatStatuses(): array
     {
-        return [
-            BookingStatus::Booked->value,
-            BookingStatus::CheckedIn->value,
-            BookingStatus::Completed->value,
-        ];
+        return BookingStatus::seatHolding();
     }
 
     public function toggleOnlyMine(): void
@@ -463,9 +460,11 @@ class BookingBoard extends Component
             $this->dispatch('toast',
                 tone: 'success',
                 title: 'ยกเลิกการจองแล้ว',
-                body: $booking->fresh()->cancelled_late
-                    ? 'เลยกำหนดยกเลิกฟรี จึงถูกหักเครดิต'
-                    : 'คืนเครดิตให้ลูกทีมเรียบร้อย',
+                body: match (true) {
+                    ! \App\Support\BookingRules::creditsRequired() => 'ที่นั่งถูกปล่อยให้คนถัดไปแล้ว',
+                    $booking->fresh()->cancelled_late => 'เลยกำหนดยกเลิกฟรี จึงถูกหักเครดิต',
+                    default => 'คืนเครดิตให้ลูกทีมเรียบร้อย',
+                },
             );
         } catch (BookingException $e) {
             $this->dispatch('toast', tone: 'error', title: 'ยกเลิกไม่ได้', body: $e->getMessage());
