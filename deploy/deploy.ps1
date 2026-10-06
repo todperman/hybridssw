@@ -117,9 +117,6 @@ try {
         throw 'ดูก่อนว่าใครแก้และแก้อะไรด้วย git diff <ไฟล์> ถ้าเป็นการแก้ที่ต้องการ ให้แก้บน GitHub แทน'
     }
 
-    if ($keepLocal.Count -gt 0) {
-        Write-Note ('เก็บการแก้ของ Plesk ไว้ใส่กลับหลังอัปเดต: ' + ($keepLocal -join ', '))
-    }
 
     # เช็ค migration ค้างด้วย ไม่ดูแค่โค้ดใหม่ เพราะถ้ามีคน git pull มือไว้ก่อน
     # โค้ดจะดูเหมือนล่าสุดแล้ว แต่ฐานข้อมูลยังไม่ได้อัปเดต เว็บจะพังตอนเรียกคอลัมน์ใหม่
@@ -154,6 +151,7 @@ try {
 
         Write-Step 'ดึงโค้ด'
         if ($keepLocal.Count -gt 0) {
+            Write-Note ('เก็บการแก้ของ Plesk ไว้ใส่กลับหลังอัปเดต: ' + ($keepLocal -join ', '))
             Invoke-Native 'git stash' { git stash push --quiet -m 'deploy: การแก้ของ Plesk' -- @keepLocal }
         }
 
@@ -233,9 +231,23 @@ if (-not $failed -and $InstallScheduler) {
         -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
 
     Start-ScheduledTask -TaskName $taskName
-    Start-Sleep -Seconds 5
+
+    # รอให้รอบที่เพิ่งสั่งรันเสร็จก่อน ถ้าเช็คทันทีจะได้รหัส 267009 ซึ่งแปลว่ากำลังรันอยู่ ไม่ใช่ error
+    $deadline = (Get-Date).AddSeconds(60)
+    while ((Get-ScheduledTask -TaskName $taskName).State -eq 'Running' -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 2
+    }
+
     $info = Get-ScheduledTaskInfo -TaskName $taskName
-    Write-Ok ('ตั้งแล้ว รันล่าสุด ' + $info.LastRunTime + ' ผล ' + $info.LastTaskResult + ' (0 = สำเร็จ)')
+    if ($info.LastTaskResult -eq 0) {
+        Write-Ok ('ตั้งแล้ว รันล่าสุด ' + $info.LastRunTime + ' สำเร็จ รอบถัดไป ' + $info.NextRunTime)
+    }
+    elseif ($info.LastTaskResult -eq 267009) {
+        Write-Ok ('ตั้งแล้ว กำลังรันรอบแรกอยู่ รอบถัดไป ' + $info.NextRunTime)
+    }
+    else {
+        Write-Host ('    ตั้งแล้วแต่รอบแรกจบด้วยรหัส ' + $info.LastTaskResult + ' ลองรัน php artisan schedule:run เองดูว่าฟ้องอะไร') -ForegroundColor Yellow
+    }
 }
 
 # ---------- ตรวจความพร้อม ----------
