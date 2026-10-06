@@ -91,7 +91,8 @@ class MemberRegistration extends Component
                 'user_id' => $user->id,
                 'branch_id' => $data['branch_id'],
                 'primary_trainer_id' => null,
-                'status' => MemberStatus::Active,
+                'status' => BookingRules::memberRegistrationNeedsApproval() ? MemberStatus::Pending : MemberStatus::Active,
+                'approved_at' => BookingRules::memberRegistrationNeedsApproval() ? null : now(),
                 'emergency_contact_name' => $data['emergency_contact_name'],
                 'emergency_contact_phone' => ThaiPhone::digits($data['emergency_contact_phone']),
             ]);
@@ -101,25 +102,27 @@ class MemberRegistration extends Component
 
         auth()->login($user);
 
-        $this->redirect(route('member.schedule'), navigate: true);
+        $this->redirect(route(BookingRules::memberRegistrationNeedsApproval() ? 'member.pending' : 'member.schedule'), navigate: true);
     }
 
     public function render()
     {
         $approval = BookingRules::needsApproval(selfBooked: true);
+        $reviewed = BookingRules::memberRegistrationNeedsApproval();
 
         return view('livewire.member-registration')->layout('layouts.auth', [
             'eyebrow' => 'สมัครสมาชิก',
             'heading' => 'เริ่มเทรน',
             'headingAccent' => 'กับเราวันนี้',
             'lead' => 'สมัครครั้งเดียว แล้วเลือกจองรอบที่สะดวกได้เอง',
-            'points' => [
+            'points' => array_values(array_filter([
+                $reviewed ? 'สมัครแล้วรอแอดมินอนุมัติบัญชีก่อน ครั้งเดียวจบ' : null,
                 'เลือกวันและเวลาได้เองจากตารางรอบ',
                 'แต่ละรอบรับจำนวนจำกัด เห็นที่ว่างก่อนจองทุกครั้ง',
                 $approval
                     ? 'ส่งคำขอจองแล้วรอแอดมินยืนยัน ที่นั่งถูกกันไว้ให้ระหว่างรอ'
                     : 'จองแล้วได้ที่นั่งทันที',
-            ],
+            ])),
             'altHref' => route('login'),
             'altLabel' => 'มีบัญชีอยู่แล้ว',
             'altCta' => 'เข้าสู่ระบบ',

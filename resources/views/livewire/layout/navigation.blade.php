@@ -31,8 +31,13 @@ new class extends Component
         }
 
         if ($user?->member) {
-            $links[] = ['route' => 'member.schedule', 'label' => 'จองรอบ', 'icon' => 'calendar-plus'];
-            $links[] = ['route' => 'member.bookings', 'label' => 'คิวของฉัน', 'icon' => 'ticket'];
+            // ยังไม่อนุมัติ กดหน้าจองไปก็ถูกพากลับมาหน้าสถานะอยู่ดี
+            if ($user->member->awaitsApproval()) {
+                $links[] = ['route' => 'member.pending', 'label' => 'สถานะการสมัคร', 'icon' => 'clock'];
+            } else {
+                $links[] = ['route' => 'member.schedule', 'label' => 'จองรอบ', 'icon' => 'calendar-plus'];
+                $links[] = ['route' => 'member.bookings', 'label' => 'คิวของฉัน', 'icon' => 'ticket'];
+            }
         }
 
         if ($user?->role?->canAccessAdminPanel()) {

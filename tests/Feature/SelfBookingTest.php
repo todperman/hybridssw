@@ -26,6 +26,10 @@ class SelfBookingTest extends TestCase
         parent::setUp();
 
         $this->bookings = app(BookingService::class);
+
+        // ไฟล์นี้ทดสอบกลไกอนุมัติการจองโดยตรง ค่าเริ่มต้นของระบบตอนนี้ไม่ต้องอนุมัติแล้ว
+        // จึงต้องเปิดโหมด self ไว้ เทสต์ที่ดูค่าเริ่มต้นจริงอยู่ใน MemberApprovalTest
+        config(['gym.booking.approval' => 'self']);
     }
 
     // --- เครดิต ---

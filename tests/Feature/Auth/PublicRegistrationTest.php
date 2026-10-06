@@ -49,7 +49,7 @@ class PublicRegistrationTest extends TestCase
         $this->fill(Livewire::test(MemberRegistration::class))
             ->call('register')
             ->assertHasNoErrors()
-            ->assertRedirect(route('member.schedule'));
+            ->assertRedirect(route('member.pending'));
 
         $user = User::where('email', 'somchai@example.test')->firstOrFail();
 

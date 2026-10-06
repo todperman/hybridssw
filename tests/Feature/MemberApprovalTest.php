@@ -1,0 +1,215 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\BookingStatus;
+use App\Enums\MemberStatus;
+use App\Enums\UserRole;
+use App\Exceptions\BookingException;
+use App\Filament\Resources\Members\MemberResource;
+use App\Filament\Resources\Members\Pages\ListMembers;
+use App\Livewire\Member\Schedule;
+use App\Livewire\MemberRegistration;
+use App\Livewire\TeamJoin;
+use App\Models\Branch;
+use App\Models\User;
+use App\Services\BookingService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\Support\BuildsGym;
+use Tests\TestCase;
+
+/**
+ * คัดคนตั้งแต่ตอนสมัคร แทนการอนุมัติทีละการจอง
+ * คนทั่วไปสมัครแล้วรออนุมัติ ผ่านแล้วจองได้ทันทีโดยไม่ต้องรออีก
+ */
+class MemberApprovalTest extends TestCase
+{
+    use BuildsGym, RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->travelTo(now()->setTime(8, 0));
+    }
+
+    protected function register(): User
+    {
+        Branch::first() ?? Branch::create(['code' => 'B1', 'name' => 'สาขาทดสอบ']);
+
+        Livewire::test(MemberRegistration::class)
+            ->set('first_name', 'สมชาย')->set('last_name', 'ใจดี')
+            ->set('phone', '0812345678')->set('email', 'somchai@example.test')
+            ->set('password', 'Hybrid#2026ssw')->set('password_confirmation', 'Hybrid#2026ssw')
+            ->set('emergency_contact_name', 'สมหญิง')->set('emergency_contact_phone', '0898765432')
+            ->set('accept', true)
+            ->call('register')
+            ->assertHasNoErrors();
+
+        return User::where('email', 'somchai@example.test')->firstOrFail();
+    }
+
+    protected function admin(): User
+    {
+        return User::create([
+            'branch_id' => Branch::firstOrFail()->id, 'first_name' => 'แอด', 'last_name' => 'มิน',
+            'email' => 'admin@example.test', 'password' => 'password', 'role' => UserRole::Admin,
+        ])->refresh();
+    }
+
+    // --- การจองไม่ต้องอนุมัติแล้ว ---
+
+    #[Test]
+    public function by_default_a_self_booking_gets_its_seat_immediately(): void
+    {
+        $branch = $this->makeBranch();
+
+        $booking = app(BookingService::class)->bookSelf($this->makeSession($branch), $this->makeMember($branch));
+
+        $this->assertSame(BookingStatus::Booked, $booking->status);
+        $this->assertNotNull($booking->approved_at);
+    }
+
+    #[Test]
+    public function the_schedule_page_says_the_seat_is_confirmed(): void
+    {
+        $branch = $this->makeBranch();
+        $session = $this->makeSession($branch, ['starts_at' => now()->setTime(18, 0)]);
+        $member = $this->makeMember($branch);
+
+        Livewire::actingAs($member->user)
+            ->test(Schedule::class)
+            ->assertSee('กดจองแล้วได้ที่นั่งทันที')
+            ->call('book', $session->id)
+            ->assertDispatched('toast', tone: 'success', title: 'จองสำเร็จ')
+            ->assertSee('จองแล้ว');
+    }
+
+    // --- การสมัครต้องอนุมัติ ---
+
+    #[Test]
+    public function a_public_sign_up_waits_for_approval(): void
+    {
+        $user = $this->register();
+
+        $this->assertSame(MemberStatus::Pending, $user->member->status);
+        $this->assertNull($user->member->approved_at);
+    }
+
+    #[Test]
+    public function an_unapproved_member_only_sees_the_status_page(): void
+    {
+        $user = $this->register();
+
+        $this->actingAs($user);
+
+        $this->get(route('member.schedule'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.bookings'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.pending'))->assertOk()->assertSee('รอแอดมินอนุมัติ')->assertSee('สถานะการสมัคร');
+    }
+
+    #[Test]
+    public function an_unapproved_member_is_refused_by_the_booking_service_too(): void
+    {
+        $user = $this->register();
+        $session = $this->makeSession(Branch::firstOrFail(), ['starts_at' => now()->setTime(18, 0)]);
+
+        $this->expectExceptionObject(BookingException::memberNotApproved());
+
+        app(BookingService::class)->bookSelf($session, $user->member);
+    }
+
+    #[Test]
+    public function the_admin_sees_new_sign_ups_first_and_can_approve_them(): void
+    {
+        $member = $this->register()->member;
+        $admin = $this->admin();
+
+        $this->assertSame('1', MemberResource::getNavigationBadge());
+
+        $this->actingAs($admin);
+
+        Livewire::test(ListMembers::class)
+            ->assertSet('activeTab', 'pending')
+            ->assertCanSeeTableRecords([$member])
+            ->callTableAction('approve', $member);
+
+        $member->refresh();
+        $this->assertSame(MemberStatus::Active, $member->status);
+        $this->assertSame($admin->id, $member->approved_by_user_id);
+        $this->assertNull(MemberResource::getNavigationBadge());
+    }
+
+    #[Test]
+    public function an_approved_member_can_book_and_leaves_the_status_page(): void
+    {
+        $user = $this->register();
+        $user->member->approve();
+
+        $this->actingAs($user);
+
+        $this->get(route('member.pending'))->assertRedirect(route('member.schedule'));
+        $this->get(route('member.schedule'))->assertOk();
+
+        $session = $this->makeSession(Branch::firstOrFail(), ['starts_at' => now()->setTime(18, 0)]);
+        $booking = app(BookingService::class)->bookSelf($session, $user->member->fresh());
+
+        $this->assertSame(BookingStatus::Booked, $booking->status);
+    }
+
+    #[Test]
+    public function a_rejected_member_sees_the_reason_and_still_cannot_book(): void
+    {
+        $member = $this->register()->member;
+
+        $this->actingAs($this->admin());
+
+        Livewire::test(ListMembers::class)
+            ->callTableAction('reject', $member, data: ['note' => 'ไม่พบหลักฐานการชำระเงิน']);
+
+        $member->refresh();
+        $this->assertSame(MemberStatus::Rejected, $member->status);
+
+        $this->actingAs($member->user);
+        $this->get(route('member.schedule'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.pending'))->assertSee('การสมัครยังไม่ผ่าน')->assertSee('ไม่พบหลักฐานการชำระเงิน');
+    }
+
+    #[Test]
+    public function members_invited_by_a_trainer_skip_approval(): void
+    {
+        $branch = $this->makeBranch();
+        $trainer = $this->makeTrainer($branch, ['invite_token' => 'invite-token-123']);
+
+        Livewire::test(TeamJoin::class, ['token' => 'invite-token-123'])
+            ->set('first_name', 'ลูก')->set('last_name', 'ทีม')
+            ->set('phone', '0811111111')->set('email', 'invited@example.test')
+            ->set('password', 'Hybrid#2026ssw')->set('password_confirmation', 'Hybrid#2026ssw')
+            ->set('emergency_contact_name', 'แม่')->set('emergency_contact_phone', '0822222222')
+            ->set('accept', true)
+            ->call('join')
+            ->assertHasNoErrors();
+
+        $this->assertSame(MemberStatus::Active, User::where('email', 'invited@example.test')->first()->member->status);
+    }
+
+    #[Test]
+    public function sign_up_approval_can_be_switched_off(): void
+    {
+        config(['gym.registration.member_approval' => false]);
+
+        $this->assertSame(MemberStatus::Active, $this->register()->member->status);
+    }
+
+    #[Test]
+    public function a_pending_member_gets_the_status_link_instead_of_booking_links(): void
+    {
+        $this->actingAs($this->register());
+
+        $this->get(route('member.pending'))
+            ->assertSee('สถานะการสมัคร')
+            ->assertDontSee(route('member.schedule'));
+    }
+}

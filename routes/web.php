@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureMemberIsApproved;
 use App\Http\Middleware\EnsureUserIsTrainer;
 use App\Livewire\Member\MyBookings;
 use App\Livewire\Member\Schedule as MemberSchedule;
@@ -58,7 +59,10 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
     Route::get('insights', Insights::class)->name('insights');
 });
 
-Route::middleware('auth')->prefix('member')->name('member.')->group(function () {
+Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->name('member.')->group(function () {
+    // หน้าสถานะการสมัคร middleware ปล่อยผ่านหน้านี้หน้าเดียวตอนยังไม่อนุมัติ
+    Route::get('pending', \App\Livewire\Member\PendingApproval::class)->name('pending');
+
     Route::get('schedule', MemberSchedule::class)->name('schedule');
     Route::get('bookings', MyBookings::class)->name('bookings');
 });

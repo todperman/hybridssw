@@ -29,11 +29,18 @@ class BookingRules
      */
     public static function needsApproval(bool $selfBooked): bool
     {
-        return match (config('gym.booking.approval', self::APPROVAL_SELF)) {
+        return match (config('gym.booking.approval', self::APPROVAL_NONE)) {
             self::APPROVAL_ALL => true,
             self::APPROVAL_NONE => false,
-            default => $selfBooked,
+            self::APPROVAL_SELF => $selfBooked,
+            default => false,
         };
+    }
+
+    /** คนทั่วไปที่สมัครเองต้องรอแอดมินอนุมัติก่อนจองได้หรือไม่ */
+    public static function memberRegistrationNeedsApproval(): bool
+    {
+        return (bool) config('gym.registration.member_approval', true);
     }
 
     /** สมาชิกจองให้ตัวเองล่วงหน้าได้กี่วัน */

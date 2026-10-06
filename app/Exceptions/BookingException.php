@@ -102,6 +102,11 @@ class BookingException extends Exception
         return new self('การจองนี้ยกเลิกไม่ได้แล้ว', 'not_cancellable');
     }
 
+    public static function memberNotApproved(): self
+    {
+        return new self('บัญชีนี้ยังไม่ผ่านการอนุมัติ จองได้หลังแอดมินอนุมัติการสมัคร', 'member_not_approved');
+    }
+
     public static function notPending(): self
     {
         return new self('รายการนี้ไม่ได้อยู่ในสถานะรออนุมัติแล้ว', 'not_pending');

@@ -484,6 +484,10 @@ class BookingService
             throw BookingException::branchMismatch();
         }
 
+        if ($member->awaitsApproval()) {
+            throw BookingException::memberNotApproved();
+        }
+
         if ($member->isSuspended()) {
             throw BookingException::memberSuspended($member->suspended_until?->format('d/m/Y'));
         }

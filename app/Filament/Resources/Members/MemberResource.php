@@ -8,6 +8,7 @@ use App\Filament\Resources\Members\Pages\ListMembers;
 use App\Filament\Resources\Members\RelationManagers\PackagesRelationManager;
 use App\Filament\Resources\Members\Schemas\MemberForm;
 use App\Filament\Resources\Members\Tables\MembersTable;
+use App\Enums\MemberStatus;
 use App\Models\Member;
 use BackedEnum;
 use App\Filament\Concerns\ScopesToBranch;
@@ -30,13 +31,36 @@ class MemberResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'ลูกทีม';
+    protected static ?string $navigationLabel = 'สมาชิก';
 
-    protected static ?string $modelLabel = 'ลูกทีม';
+    protected static ?string $modelLabel = 'สมาชิก';
 
-    protected static ?string $pluralModelLabel = 'ลูกทีม';
+    protected static ?string $pluralModelLabel = 'สมาชิก';
 
     protected static ?string $recordTitleAttribute = 'member_code';
+
+    /** จำนวนคนที่สมัครเองแล้วรออนุมัติ นับผ่านขอบเขตสาขาเดียวกับตาราง */
+    public static function pendingCount(): int
+    {
+        return static::getEloquentQuery()->where('status', MemberStatus::Pending->value)->count();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $pending = static::pendingCount();
+
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'สมัครใหม่รออนุมัติ';
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -55,7 +79,7 @@ class MemberResource extends Resource
         ];
     }
 
-    /** ลูกทีมเข้าระบบผ่านลิงก์ชวนของเทรนเนอร์ หลังบ้านทำหน้าที่ดูแลสถานะและแพ็กเกจ */
+    /** สมาชิกสมัครเองหรือเข้าผ่านลิงก์ชวน หลังบ้านทำหน้าที่อนุมัติ ดูแลสถานะ และแพ็กเกจ */
     public static function canCreate(): bool
     {
         return false;

@@ -94,14 +94,15 @@ class GymDoctorCommand extends Command
     protected function checkSettings(): void
     {
         $this->info(sprintf(
-            '  เครดิต: %s | ต้องอนุมัติ: %s | สมัครเองได้: %s | จองล่วงหน้าเองได้ %d วัน',
+            '  เครดิต: %s | อนุมัติการจอง: %s | สมัครเองได้: %s | อนุมัติการสมัคร: %s | จองล่วงหน้าเองได้ %d วัน',
             BookingRules::creditsRequired() ? 'เปิด (ต้องมีแพ็กเกจ)' : 'ปิด',
-            match (config('gym.booking.approval', BookingRules::APPROVAL_SELF)) {
+            match (config('gym.booking.approval', BookingRules::APPROVAL_NONE)) {
                 BookingRules::APPROVAL_ALL => 'ทุกการจอง',
-                BookingRules::APPROVAL_NONE => 'ไม่ต้อง',
-                default => 'เฉพาะที่สมาชิกจองเอง',
+                BookingRules::APPROVAL_SELF => 'เฉพาะที่สมาชิกจองเอง',
+                default => 'ไม่ต้อง',
             },
             BookingRules::publicRegistrationOpen() ? 'ใช่' : 'ไม่',
+            BookingRules::memberRegistrationNeedsApproval() ? 'ต้องอนุมัติ' : 'ไม่ต้อง',
             BookingRules::selfAdvanceDays(),
         ));
     }
@@ -189,6 +190,12 @@ class GymDoctorCommand extends Command
 
     protected function checkPending(): void
     {
+        $registrations = Member::where('status', \App\Enums\MemberStatus::Pending->value)->count();
+
+        $registrations === 0
+            ? $this->ok('ไม่มีการสมัครค้างอนุมัติ')
+            : $this->caution("มีคนสมัครรออนุมัติ {$registrations} คน ยังจองไม่ได้จนกว่าจะอนุมัติ", 'หลังบ้าน → สมาชิก → แท็บรออนุมัติ');
+
         $pending = Booking::where('status', BookingStatus::Pending->value)->count();
 
         $pending === 0

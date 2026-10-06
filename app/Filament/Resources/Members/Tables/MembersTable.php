@@ -2,12 +2,18 @@
 
 namespace App\Filament\Resources\Members\Tables;
 
+use App\Models\Member;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Collection;
 use App\Enums\MemberStatus;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -115,10 +121,58 @@ class MembersTable
                     ->label('ที่ถูกลบ'),
             ])
             ->recordActions([
+                Action::make('approve')
+                    ->label('อนุมัติ')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (Member $record) => $record->awaitsApproval())
+                    ->requiresConfirmation()
+                    ->modalHeading('อนุมัติการสมัครนี้')
+                    ->modalDescription(fn (Member $record) => $record->user->name.' · '.$record->user->phone.' · '.$record->user->email)
+                    ->modalSubmitActionLabel('อนุมัติ')
+                    ->action(function (Member $record) {
+                        $record->approve(auth()->user());
+                        Notification::make()->title('อนุมัติแล้ว')->body($record->user->name.' จองรอบได้แล้ว')->success()->send();
+                    }),
+
+                Action::make('reject')
+                    ->label('ไม่อนุมัติ')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Member $record) => $record->status === MemberStatus::Pending)
+                    ->modalHeading('ไม่อนุมัติการสมัครนี้')
+                    ->modalDescription('บัญชีจะยังเข้าสู่ระบบได้ แต่จองไม่ได้ และจะเห็นเหตุผลนี้ที่หน้าสถานะการสมัคร')
+                    ->modalSubmitActionLabel('ยืนยันไม่อนุมัติ')
+                    ->schema([
+                        Textarea::make('note')
+                            ->label('เหตุผล (สมาชิกจะเห็นข้อความนี้)')
+                            ->default('ข้อมูลไม่ครบหรือยืนยันตัวตนไม่ได้ กรุณาติดต่อเจ้าหน้าที่')
+                            ->required()
+                            ->rows(2),
+                    ])
+                    ->action(function (Member $record, array $data) {
+                        $record->reject(auth()->user(), $data['note']);
+                        Notification::make()->title('ไม่อนุมัติแล้ว')->success()->send();
+                    }),
+
                 EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('approveSelected')
+                        ->label('อนุมัติที่เลือก')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalDescription('อนุมัติเฉพาะคนที่ยังรออนุมัติอยู่ คนอื่นจะถูกข้าม')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records) {
+                            $waiting = $records->filter(fn (Member $m) => $m->awaitsApproval());
+                            $waiting->each(fn (Member $m) => $m->approve(auth()->user()));
+
+                            Notification::make()->title('อนุมัติแล้ว '.$waiting->count().' คน')->success()->send();
+                        }),
+
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),

@@ -7,6 +7,9 @@ use Filament\Support\Contracts\HasLabel;
 
 enum MemberStatus: string implements HasColor, HasLabel
 {
+    /** สมัครเองแล้ว รอแอดมินอนุมัติก่อนจองได้ */
+    case Pending = 'pending';
+    case Rejected = 'rejected';
     case Active = 'active';
     case Suspended = 'suspended';
     case Inactive = 'inactive';
@@ -14,6 +17,8 @@ enum MemberStatus: string implements HasColor, HasLabel
     public function label(): string
     {
         return match ($this) {
+            self::Pending => 'รออนุมัติ',
+            self::Rejected => 'ไม่ผ่านการอนุมัติ',
             self::Active => 'ปกติ',
             self::Suspended => 'ถูกระงับสิทธิ์',
             self::Inactive => 'ไม่ใช้งาน',
@@ -23,10 +28,18 @@ enum MemberStatus: string implements HasColor, HasLabel
     public function color(): string
     {
         return match ($this) {
+            self::Pending => 'warning',
+            self::Rejected => 'danger',
             self::Active => 'success',
             self::Suspended => 'danger',
             self::Inactive => 'gray',
         };
+    }
+
+    /** ยังไม่ผ่านการอนุมัติการสมัคร ใช้หน้าจองไม่ได้ เห็นได้แค่หน้าสถานะการสมัคร */
+    public function awaitsApproval(): bool
+    {
+        return in_array($this, [self::Pending, self::Rejected], true);
     }
 
     public static function options(): array

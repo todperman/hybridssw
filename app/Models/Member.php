@@ -21,6 +21,9 @@ class Member extends Model
         'branch_id',
         'primary_trainer_id',
         'member_code',
+        'approved_at',
+        'approved_by_user_id',
+        'review_note',
         'date_of_birth',
         'gender',
         'emergency_contact_name',
@@ -40,6 +43,7 @@ class Member extends Model
     {
         return [
             'status' => MemberStatus::class,
+            'approved_at' => 'datetime',
             'date_of_birth' => 'date',
             'parq_answers' => 'array',
             'parq_signed_at' => 'datetime',
@@ -111,6 +115,39 @@ class Member extends Model
         }
 
         return false;
+    }
+
+    /** สมัครเองแล้วยังไม่ผ่านการอนุมัติ */
+    public function awaitsApproval(): bool
+    {
+        return $this->status->awaitsApproval();
+    }
+
+    public function approvedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    /** แอดมินอนุมัติการสมัคร จองได้ทันทีหลังจากนี้ */
+    public function approve(?User $by = null): void
+    {
+        $this->update([
+            'status' => MemberStatus::Active,
+            'approved_at' => now(),
+            'approved_by_user_id' => $by?->id,
+            'review_note' => null,
+        ]);
+    }
+
+    /** แอดมินไม่อนุมัติ เหตุผลจะแสดงให้สมาชิกเห็นที่หน้าสถานะการสมัคร */
+    public function reject(?User $by, string $note): void
+    {
+        $this->update([
+            'status' => MemberStatus::Rejected,
+            'approved_at' => null,
+            'approved_by_user_id' => $by?->id,
+            'review_note' => $note,
+        ]);
     }
 
     public function isActive(): bool

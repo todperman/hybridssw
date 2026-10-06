@@ -32,6 +32,9 @@ class SelfBookingPagesTest extends TestCase
 
         // ตรึงเวลาตอนเช้า รอบตอนเย็นวันเดียวกันจึงยังไม่เริ่มเสมอ
         $this->travelTo(now()->setTime(8, 0));
+
+        // หน้าที่ทดสอบในไฟล์นี้ต้องมีคำขอรออนุมัติให้แสดง จึงเปิดโหมดอนุมัติการจองเองไว้
+        config(['gym.booking.approval' => 'self']);
     }
 
     protected function admin($branch): User
