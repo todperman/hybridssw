@@ -73,4 +73,21 @@ class GymDoctorTest extends TestCase
             ->expectsOutputToContain('ไม่มีรอบที่สมาชิกจองเองได้')
             ->assertFailed();
     }
+
+    #[Test]
+    public function only_recent_errors_count_as_a_warning(): void
+    {
+        $log = storage_path('logs/laravel.log');
+        $backup = is_file($log) ? file_get_contents($log) : null;
+
+        try {
+            file_put_contents($log, '['.now()->subDays(12)->format('Y-m-d H:i:s').'] production.ERROR: เก่าแล้ว'.PHP_EOL);
+            $this->artisan('gym:doctor')->expectsOutputToContain('ไม่มีข้อผิดพลาดใหม่ใน 24 ชั่วโมง');
+
+            file_put_contents($log, '['.now()->subMinutes(5)->format('Y-m-d H:i:s').'] production.ERROR: เพิ่งเกิด'.PHP_EOL);
+            $this->artisan('gym:doctor')->expectsOutputToContain('ข้อผิดพลาดล่าสุด');
+        } finally {
+            $backup === null ? @unlink($log) : file_put_contents($log, $backup);
+        }
+    }
 }

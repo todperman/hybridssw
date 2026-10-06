@@ -230,6 +230,16 @@ class GymDoctorCommand extends Command
         }
 
         $last = end($m);
+        $when = \Carbon\Carbon::parse($last[1]);
+
+        // ข้อผิดพลาดเก่าที่ไม่เกิดซ้ำแล้วไม่ใช่ปัญหาตอนนี้ แจ้งไว้เป็นประวัติเฉย ๆ ไม่นับเป็นคำเตือน
+        // log ก่อนแก้ timezone บันทึกเป็น UTC จึงเผื่อเวลาไว้หนึ่งวันเต็ม
+        if ($when->lt(now()->subDay())) {
+            $this->ok('ไม่มีข้อผิดพลาดใหม่ใน 24 ชั่วโมง (ล่าสุดเมื่อ '.$when->format('d/m/Y H:i').')');
+
+            return;
+        }
+
         $this->caution('ข้อผิดพลาดล่าสุด ['.$last[1].'] '.trim($last[3]), 'ดูทั้งหมดที่ storage/logs/laravel.log');
     }
 

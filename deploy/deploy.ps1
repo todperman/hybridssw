@@ -103,20 +103,44 @@ try {
     $before = (git rev-parse HEAD).Trim()
     $target = (git rev-parse '@{u}').Trim()
 
-    $dirty = git status --porcelain --untracked-files=no
-    if ($dirty) {
+    # ไฟล์ที่ Plesk เขียนเพิ่มเองตอนตั้งค่าเว็บ เช่น handler ของ PHP
+    # ห้ามทิ้งการแก้ของ Plesk เด็ดขาด เว็บอาจหยุดรัน PHP ได้ จึงเก็บพักไว้แล้วใส่กลับหลัง pull
+    $hostManaged = @('public/web.config')
+
+    $dirtyFiles = @(git status --porcelain --untracked-files=no | ForEach-Object { $_.Substring(3).Trim() })
+    $unexpected = @($dirtyFiles | Where-Object { $_ -notin $hostManaged })
+    $keepLocal = @($dirtyFiles | Where-Object { $_ -in $hostManaged })
+
+    if ($unexpected.Count -gt 0) {
         Write-Host '    มีไฟล์ที่ถูกแก้บนเซิร์ฟเวอร์โดยตรง git pull จะไม่ยอมทับ:' -ForegroundColor Yellow
-        $dirty | ForEach-Object { Write-Host ('      ' + $_) -ForegroundColor Yellow }
-        throw 'แก้บน GitHub แทน แล้วล้างการแก้ไขบนเครื่องนี้ด้วย git checkout -- <ไฟล์>'
+        $unexpected | ForEach-Object { Write-Host ('      ' + $_) -ForegroundColor Yellow }
+        throw 'ดูก่อนว่าใครแก้และแก้อะไรด้วย git diff <ไฟล์> ถ้าเป็นการแก้ที่ต้องการ ให้แก้บน GitHub แทน'
     }
 
-    if ($before -eq $target -and -not $Force) {
-        Write-Ok ('โค้ดล่าสุดอยู่แล้ว (' + $before.Substring(0, 7) + ') ข้ามการอัปเดต ใช้ -Force ถ้าต้องการรันทุกขั้นใหม่')
+    if ($keepLocal.Count -gt 0) {
+        Write-Note ('เก็บการแก้ของ Plesk ไว้ใส่กลับหลังอัปเดต: ' + ($keepLocal -join ', '))
+    }
+
+    # เช็ค migration ค้างด้วย ไม่ดูแค่โค้ดใหม่ เพราะถ้ามีคน git pull มือไว้ก่อน
+    # โค้ดจะดูเหมือนล่าสุดแล้ว แต่ฐานข้อมูลยังไม่ได้อัปเดต เว็บจะพังตอนเรียกคอลัมน์ใหม่
+    # --pending=1 ต้องมีค่า ถ้าใส่แค่ --pending คำสั่งจะคืน 0 เสมอแม้มีค้าง
+    & $Php 'artisan' 'migrate:status' '--pending=1' | Out-Null
+    $hasPendingMigrations = $LASTEXITCODE -ne 0
+    $hasNewCode = $before -ne $target
+
+    if (-not $hasNewCode -and -not $hasPendingMigrations -and -not $Force) {
+        Write-Ok ('โค้ดล่าสุดอยู่แล้ว (' + $before.Substring(0, 7) + ') และไม่มี migration ค้าง ข้ามการอัปเดต ใช้ -Force ถ้าต้องการรันทุกขั้นใหม่')
     }
     else {
         $changed = @(git diff --name-only $before $target)
-        Write-Ok ($before.Substring(0, 7) + ' -> ' + $target.Substring(0, 7) + '  เปลี่ยน ' + $changed.Count + ' ไฟล์')
-        git log --oneline ($before + '..' + $target) | ForEach-Object { Write-Note $_ }
+
+        if ($hasNewCode) {
+            Write-Ok ($before.Substring(0, 7) + ' -> ' + $target.Substring(0, 7) + '  เปลี่ยน ' + $changed.Count + ' ไฟล์')
+            git log --oneline ($before + '..' + $target) | ForEach-Object { Write-Note $_ }
+        }
+        elseif ($hasPendingMigrations) {
+            Write-Host '    โค้ดล่าสุดอยู่แล้ว แต่ยังมี migration ค้าง จะอัปเดตฐานข้อมูลให้' -ForegroundColor Yellow
+        }
 
         $needComposer = $Force -or -not (Test-Path 'vendor\autoload.php') -or ($changed -contains 'composer.lock')
         $needNpmCi = $Force -or -not (Test-Path 'node_modules') -or ($changed -contains 'package-lock.json')
@@ -129,7 +153,29 @@ try {
         $wentDown = $true
 
         Write-Step 'ดึงโค้ด'
+        if ($keepLocal.Count -gt 0) {
+            Invoke-Native 'git stash' { git stash push --quiet -m 'deploy: การแก้ของ Plesk' -- @keepLocal }
+        }
+
         Invoke-Native 'git pull' { git pull --ff-only --quiet }
+
+        if ($keepLocal.Count -gt 0) {
+            # ไม่ redirect stderr (2>$null) เพราะบน PowerShell 5.1 ที่ตั้ง ErrorActionPreference = Stop
+            # ข้อความ stderr ของ git จะกลายเป็น error ที่หยุดสคริปต์ทันที ปล่อยออกหน้าจอตามปกติแทน
+            git stash pop --quiet
+            if ($LASTEXITCODE -ne 0) {
+                # ชนกัน = โค้ดใหม่แก้บรรทัดเดียวกับที่ Plesk แก้ไว้ ไฟล์จะมีเครื่องหมาย conflict ค้างอยู่
+                # web.config ที่อ่านไม่ออกทำให้ IIS ตอบ 500 ทั้งเว็บ จึงคืนไฟล์ของ Plesk ที่ใช้งานได้ก่อน
+                # ส่วนที่โค้ดใหม่เปลี่ยนต้องรวมเองทีหลัง สำเนายังอยู่ใน git stash
+                git checkout --quiet 'stash@{0}' -- @keepLocal
+                git reset --quiet -- @keepLocal
+                Write-Host ('    ' + ($keepLocal -join ', ') + ' ชนกับโค้ดใหม่ คืนไฟล์ของ Plesk ไว้ให้เว็บใช้งานได้ก่อน') -ForegroundColor Yellow
+                Write-Host '    ส่วนที่โค้ดใหม่เปลี่ยนยังไม่ถูกใส่ ดูด้วย git diff HEAD -- public/web.config แล้วรวมเอง' -ForegroundColor Yellow
+            }
+            else {
+                Write-Ok 'ใส่การแก้ของ Plesk กลับแล้ว'
+            }
+        }
         Write-Ok ('ตอนนี้อยู่ที่ ' + (git log -1 --format='%h %s'))
 
         if ($needComposer) {
