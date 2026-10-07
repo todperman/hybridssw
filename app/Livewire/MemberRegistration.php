@@ -107,19 +107,11 @@ class MemberRegistration extends Component
 
     public function render()
     {
-        $reviewed = RegistrationRules::memberRegistrationNeedsApproval();
-
         return view('livewire.member-registration')->layout('layouts.auth', [
             'eyebrow' => 'สมัครสมาชิก',
             'heading' => 'เริ่มเทรน',
             'headingAccent' => 'กับเราวันนี้',
             'lead' => 'สมัครครั้งเดียว แล้วจองยิมทั้งยิมเป็นรายชั่วโมงได้เอง',
-            'points' => array_values(array_filter([
-                $reviewed ? 'สมัครแล้วรอแอดมินอนุมัติบัญชีก่อน ครั้งเดียวจบ' : null,
-                'เลือกวัน เวลา และ Trainer ที่ว่างได้เอง',
-                'ชวนเพื่อนมาเข้ากลุ่มเดียวกันได้ในการจองเดียว',
-                'ชำระเงินแล้วการจองยืนยันทันที',
-            ])),
             'altHref' => route('login'),
             'altLabel' => 'มีบัญชีอยู่แล้ว',
             'altCta' => 'เข้าสู่ระบบ',
