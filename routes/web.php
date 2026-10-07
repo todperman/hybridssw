@@ -69,4 +69,7 @@ Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->na
 
 Route::view('profile', 'profile')->middleware(['auth'])->name('profile');
 
+// Omise แจ้งผลชำระ ยกเว้น CSRF ไว้ใน bootstrap/app.php
+Route::post('webhooks/omise', \App\Http\Controllers\OmiseWebhookController::class)->name('webhooks.omise');
+
 require __DIR__.'/auth.php';

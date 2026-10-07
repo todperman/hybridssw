@@ -13,7 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Omise เรียก webhook จากเซิร์ฟเวอร์ของเขาเอง ไม่มี CSRF token
+        // ปลอดภัยเพราะตัวรับไม่เชื่อ payload เลย ดึงผลจาก Omise ด้วย secret key มาตรวจทุกครั้ง
+        $middleware->validateCsrfTokens(except: ['webhooks/omise']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         /*

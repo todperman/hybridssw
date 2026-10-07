@@ -16,6 +16,10 @@ class Member extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $attributes = [
+        'can_book_without_trainer' => false,
+    ];
+
     protected $fillable = [
         'user_id',
         'branch_id',
@@ -24,6 +28,7 @@ class Member extends Model
         'approved_at',
         'approved_by_user_id',
         'review_note',
+        'can_book_without_trainer',
         'date_of_birth',
         'gender',
         'emergency_contact_name',
@@ -44,6 +49,7 @@ class Member extends Model
         return [
             'status' => MemberStatus::class,
             'approved_at' => 'datetime',
+            'can_book_without_trainer' => 'boolean',
             'date_of_birth' => 'date',
             'parq_answers' => 'array',
             'parq_signed_at' => 'datetime',
@@ -115,6 +121,17 @@ class Member extends Model
         }
 
         return false;
+    }
+
+    public function reservations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Reservation::class, 'reservation_participants')->withTimestamps();
+    }
+
+    /** เพิ่มชื่อในการจองได้: อนุมัติการสมัครแล้ว สถานะปกติ และไม่ถูกระงับ */
+    public function canJoinReservations(): bool
+    {
+        return $this->isActive() && ! $this->awaitsApproval();
     }
 
     /** สมัครเองแล้วยังไม่ผ่านการอนุมัติ */

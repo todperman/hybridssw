@@ -85,6 +85,44 @@ return [
         'self_advance_days' => env('GYM_SELF_ADVANCE_DAYS', 7),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | ระบบจอง Private Gym
+    |--------------------------------------------------------------------------
+    | ราคา จำนวนคนต่อกลุ่ม ระยะจองล่วงหน้า และชั่วโมงสูงสุด ตั้งรายสาขาในหลังบ้าน
+    | ค่าข้างล่างเป็นกติกาที่ใช้ทั้งระบบ
+    */
+    'reservation' => [
+        /* เวลากันช่วงไว้รอชำระเงิน (นาที) */
+        'hold_minutes' => env('GYM_HOLD_MINUTES', 30),
+
+        /*
+        | ข้อ 13 ยังไม่ยืนยัน: จองก่อนเริ่มไม่ถึง 30 นาที
+        | true = หมดเวลาชำระเมื่อครบ 30 นาทีหรือถึงเวลาเริ่ม แล้วแต่อะไรถึงก่อน (ข้อเสนอในเอกสาร)
+        */
+        'hold_ends_at_start' => env('GYM_HOLD_ENDS_AT_START', true),
+
+        /*
+        | ข้อ 13 ยังไม่ยืนยัน: กลุ่มที่ไม่มี Trainer
+        | all = ผู้เข้าร่วมทุกคนต้องมีสิทธิ์พิเศษ (ข้อเสนอในเอกสาร)
+        | any = มีอย่างน้อยหนึ่งคนที่มีสิทธิ์ก็พอ
+        */
+        'no_trainer_rule' => env('GYM_NO_TRAINER_RULE', 'all'),
+    ],
+
+    'notifications' => [
+        /* ส่งแจ้งเตือนทางอีเมลด้วย (เก็บในเว็บเสมอ) ตั้งค่าเมลใน .env ส่วน MAIL_* */
+        'mail' => env('GYM_NOTIFY_MAIL', true),
+    ],
+
+    'payments' => [
+        /*
+        | manual = แอดมินบันทึกรับชำระเองในหลังบ้าน (ใช้ระหว่างรอ Omise)
+        | omise  = ชำระออนไลน์ผ่าน Omise ต้องตั้ง OMISE_PUBLIC_KEY / OMISE_SECRET_KEY ด้วย
+        */
+        'driver' => env('GYM_PAYMENT_DRIVER', 'manual'),
+    ],
+
     'reminder' => [
         'lead_minutes' => env('GYM_REMINDER_LEAD_MINUTES', 90),
         'grace_minutes' => env('GYM_REMINDER_GRACE_MINUTES', 15),

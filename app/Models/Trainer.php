@@ -16,12 +16,18 @@ class Trainer extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** ค่าเริ่มต้นตรงกับฐานข้อมูล อ็อบเจกต์ที่เพิ่งสร้างจะได้ไม่เห็นเป็น null แล้วถูกนับว่าปิดรับงาน */
+    protected $attributes = [
+        'accepts_bookings' => true,
+    ];
+
     protected $fillable = [
         'user_id',
         'branch_id',
         'code',
         'type',
         'status',
+        'accepts_bookings',
         'bio',
         'specialties',
         'certification_name',
@@ -48,7 +54,32 @@ class Trainer extends Model
             'contract_starts_at' => 'date',
             'contract_ends_at' => 'date',
             'approved_at' => 'datetime',
+            'accepts_bookings' => 'boolean',
         ];
+    }
+
+    public function availabilities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(TrainerAvailability::class);
+    }
+
+    public function timeOffs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(TrainerTimeOff::class);
+    }
+
+    public function reservations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    /** รับงานจองได้: อนุมัติแล้ว เปิดรับงาน สัญญายังมีผล และใบรับรองยังไม่หมดอายุ */
+    public function canTakeReservations(): bool
+    {
+        return $this->isApproved()
+            && $this->accepts_bookings
+            && $this->isContractActive()
+            && ! $this->hasCertificationExpired();
     }
 
     protected static function booted(): void

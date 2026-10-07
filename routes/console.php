@@ -2,18 +2,9 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-// เลื่อนขอบเขตการจองไปข้างหน้าทุกวันตอนตีสอง
-Schedule::command('sessions:generate')
-    ->dailyAt('02:00')
-    ->withoutOverlapping()
-    ->onOneServer();
-
-// คืนที่นั่งของคิวสำรองที่เลื่อนขึ้นแล้วไม่ยืนยัน ต้องถี่พอจะคืนสิทธิ์ให้คนถัดไปทัน
-Schedule::command('bookings:release-unconfirmed')
-    ->everyFiveMinutes()
-    ->withoutOverlapping();
-
-// สรุปผลคาบที่จบแล้วและบันทึกผู้ที่ไม่มาตามนัด
-Schedule::command('sessions:finalize')
-    ->everyFifteenMinutes()
+// ปิดรายการรอชำระที่เลยเวลาและคืนช่วงเวลาให้คนอื่นจองได้
+// การจองใหม่ก็ปล่อยรายการค้างที่ขวางทางเองอยู่แล้ว job นี้มีไว้ให้สถานะในหน้าเว็บตรงกับความจริง
+// และแจ้งผู้ชำระเงินว่ารายการหมดอายุ
+Schedule::command('reservations:expire-holds')
+    ->everyMinute()
     ->withoutOverlapping();
