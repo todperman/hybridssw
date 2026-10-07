@@ -52,6 +52,17 @@ class User extends Authenticatable implements FilamentUser
         'remember_token',
     ];
 
+    /**
+     * เก็บเบอร์เป็นตัวเลขล้วนเสมอ ไม่ว่าจะกรอกจากหน้าไหน
+     * การค้นหาเพื่อนด้วยเบอร์โทรเทียบแบบตรงทุกตัว ถ้ามีขีดหรือช่องว่างปนจะหาไม่เจอ
+     */
+    protected function phone(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::set(
+            fn ($value) => blank($value) ? null : \App\Rules\ThaiPhone::digits($value),
+        );
+    }
+
     protected function casts(): array
     {
         return [

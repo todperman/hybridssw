@@ -148,3 +148,52 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 });
+
+/**
+ * กล่องยืนยันกลางของแอป ใช้คู่กับ <x-app-dialog /> ใน layouts.app
+ *
+ * ลงทะเบียนที่นี่แทนใน Blade เพราะ alpine:init เกิดครั้งเดียวตอนโหลดหน้าแรก
+ * ผู้ใช้ที่ล็อกอินแล้วถูกพาเข้าแอปด้วย wire:navigate จะไม่ได้ store ถ้าฝังไว้ในหน้า
+ */
+document.addEventListener('alpine:init', () => {
+    Alpine.store('confirm', {
+        open: false,
+        title: '',
+        body: '',
+        notes: [],
+        tone: 'info',
+        confirmLabel: 'ยืนยัน',
+        cancelLabel: 'ยกเลิก',
+        action: null,
+
+        ask(options = {}) {
+            this.title = options.title ?? 'ยืนยันการทำรายการ';
+            this.body = options.body ?? '';
+            this.notes = options.notes ?? [];
+            this.tone = options.tone ?? 'info';
+            this.confirmLabel = options.confirmLabel ?? 'ยืนยัน';
+            this.cancelLabel = options.cancelLabel ?? 'ยกเลิก';
+            this.action = options.action ?? null;
+            this.open = true;
+
+            // กันหน้าเลื่อนอยู่ข้างหลังกล่อง
+            document.body.style.overflow = 'hidden';
+        },
+
+        accept() {
+            const run = this.action;
+            this.close();
+            if (typeof run === 'function') run();
+        },
+
+        dismiss() {
+            this.close();
+        },
+
+        close() {
+            this.open = false;
+            this.action = null;
+            document.body.style.overflow = '';
+        },
+    });
+});

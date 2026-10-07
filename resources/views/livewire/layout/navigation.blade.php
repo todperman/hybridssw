@@ -22,9 +22,10 @@ new class extends Component
         if ($user?->trainer) {
             // ยังไม่อนุมัติก็เข้าหน้าพวกนี้ไม่ได้ ขึ้นเมนูไว้มีแต่จะกดแล้วเด้งกลับ
             if ($user->trainer->isApproved()) {
-                $links[] = ['route' => 'trainer.schedule', 'label' => 'ตารางจอง', 'icon' => 'calendar-days'];
-                $links[] = ['route' => 'trainer.team', 'label' => 'ทีมของฉัน', 'icon' => 'users'];
-                $links[] = ['route' => 'trainer.insights', 'label' => 'สถิติ', 'icon' => 'chart-column'];
+                $links[] = ['route' => 'trainer.jobs', 'label' => 'งาน', 'icon' => 'clipboard-list'];
+                $links[] = ['route' => 'trainer.book', 'label' => 'จองให้ลูกเทรน', 'icon' => 'calendar-plus'];
+                $links[] = ['route' => 'trainer.availability', 'label' => 'เวลาว่าง', 'icon' => 'clock'];
+                $links[] = ['route' => 'trainer.team', 'label' => 'ทีม', 'icon' => 'users'];
             } else {
                 $links[] = ['route' => 'trainer.pending', 'label' => 'สถานะใบสมัคร', 'icon' => 'clock'];
             }
@@ -35,8 +36,8 @@ new class extends Component
             if ($user->member->awaitsApproval()) {
                 $links[] = ['route' => 'member.pending', 'label' => 'สถานะการสมัคร', 'icon' => 'clock'];
             } else {
-                $links[] = ['route' => 'member.schedule', 'label' => 'จองรอบ', 'icon' => 'calendar-plus'];
-                $links[] = ['route' => 'member.bookings', 'label' => 'คิวของฉัน', 'icon' => 'ticket'];
+                $links[] = ['route' => 'member.book', 'label' => 'จองยิม', 'icon' => 'calendar-plus'];
+                $links[] = ['route' => 'member.reservations', 'label' => 'การจองของฉัน', 'icon' => 'ticket'];
             }
         }
 
@@ -83,7 +84,10 @@ new class extends Component
                 </div>
             </div>
 
-            {{-- เมนูผู้ใช้ --}}
+            {{-- แจ้งเตือนเห็นทั้งจอเล็กและจอใหญ่ เมนูผู้ใช้บนมือถืออยู่ที่แถบล่าง --}}
+            <div class="flex items-center gap-2">
+                <livewire:notification-bell />
+
             <div class="hidden items-center sm:flex">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
@@ -107,6 +111,7 @@ new class extends Component
                         </button>
                     </x-slot>
                 </x-dropdown>
+            </div>
             </div>
 
         </div>

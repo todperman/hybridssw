@@ -26,7 +26,7 @@ class EnsureMemberIsApproved
         }
 
         if (! $member->awaitsApproval() && $request->routeIs('member.pending')) {
-            return redirect()->route('member.schedule');
+            return redirect()->route('member.book');
         }
 
         return $next($request);

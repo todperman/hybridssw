@@ -254,10 +254,17 @@ class PaymentService
 
         $chargeId = data_get($event, 'data.id');
 
-        if (! $chargeId) {
-            return;
+        if ($chargeId) {
+            $this->syncOmiseCharge($chargeId);
         }
+    }
 
+    /**
+     * ดึงสถานะ charge จาก Omise แล้วบันทึกผล ใช้ทั้งจาก webhook และหน้าการจองที่รอผลอยู่
+     * เผื่อ webhook มาช้าหรือไม่มาเลย ผู้จ่ายจะได้เห็นผลทันทีที่จ่ายเสร็จ
+     */
+    public function syncOmiseCharge(string $chargeId): void
+    {
         $charge = app(OmiseGateway::class)->fetchCharge($chargeId);
         $reference = data_get($charge, 'metadata.reservation');
         $reservation = $reference ? Reservation::where('reference', $reference)->first() : null;

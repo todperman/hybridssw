@@ -5,6 +5,9 @@ use App\Http\Middleware\EnsureUserIsTrainer;
 use App\Livewire\Member\MyBookings;
 use App\Livewire\Member\Schedule as MemberSchedule;
 use App\Livewire\MemberRegistration;
+use App\Livewire\Reservations\BookingWizard;
+use App\Livewire\Reservations\ReservationDetail;
+use App\Livewire\Reservations\ReservationList;
 use App\Livewire\TeamJoin;
 use App\Livewire\Trainer\BookingBoard;
 use App\Livewire\Trainer\Insights;
@@ -43,9 +46,9 @@ Route::get('dashboard', function () {
     return match (true) {
         $user->role?->canAccessAdminPanel() => redirect('/admin'),
         $user->trainer !== null => redirect()->route(
-            $user->trainer->isApproved() ? 'trainer.schedule' : 'trainer.pending'
+            $user->trainer->isApproved() ? 'trainer.jobs' : 'trainer.pending'
         ),
-        $user->member !== null => redirect()->route('member.bookings'),
+        $user->member !== null => redirect()->route('member.reservations'),
         default => view('dashboard'),
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -55,6 +58,9 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
     Route::get('pending', \App\Livewire\Trainer\PendingApproval::class)->name('pending');
 
     Route::get('schedule', BookingBoard::class)->name('schedule');
+    Route::get('jobs', ReservationList::class)->name('jobs');
+    Route::get('book', BookingWizard::class)->name('book');
+    Route::get('availability', \App\Livewire\Trainer\AvailabilityPlanner::class)->name('availability');
     Route::get('team', TeamRoster::class)->name('team');
     Route::get('insights', Insights::class)->name('insights');
 });
@@ -65,7 +71,14 @@ Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->na
 
     Route::get('schedule', MemberSchedule::class)->name('schedule');
     Route::get('bookings', MyBookings::class)->name('bookings');
+    Route::get('book', BookingWizard::class)->name('book');
+    Route::get('reservations', ReservationList::class)->name('reservations');
 });
+
+// หน้าการจองหนึ่งรายการ ใช้ร่วมกันทุกบทบาท คอมโพเนนต์ตรวจเองว่าผู้ชมเกี่ยวข้องกับการจองนี้
+Route::get('reservations/{reference}', ReservationDetail::class)
+    ->middleware('auth')
+    ->name('reservations.show');
 
 Route::view('profile', 'profile')->middleware(['auth'])->name('profile');
 

@@ -26,7 +26,7 @@ class EnsureUserIsTrainer
 
         // อนุมัติแล้วไม่ต้องมาค้างที่หน้ารอผล
         if ($trainer->isApproved() && $request->routeIs('trainer.pending')) {
-            return redirect()->route('trainer.schedule');
+            return redirect()->route('trainer.jobs');
         }
 
         return $next($request);

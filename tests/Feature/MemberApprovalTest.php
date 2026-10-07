@@ -105,7 +105,7 @@ class MemberApprovalTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->get(route('member.schedule'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.book'))->assertRedirect(route('member.pending'));
         $this->get(route('member.bookings'))->assertRedirect(route('member.pending'));
         $this->get(route('member.pending'))->assertOk()->assertSee('รอแอดมินอนุมัติ')->assertSee('สถานะการสมัคร');
     }
@@ -150,8 +150,8 @@ class MemberApprovalTest extends TestCase
 
         $this->actingAs($user);
 
-        $this->get(route('member.pending'))->assertRedirect(route('member.schedule'));
-        $this->get(route('member.schedule'))->assertOk();
+        $this->get(route('member.pending'))->assertRedirect(route('member.book'));
+        $this->get(route('member.book'))->assertOk();
 
         $session = $this->makeSession(Branch::firstOrFail(), ['starts_at' => now()->setTime(18, 0)]);
         $booking = app(BookingService::class)->bookSelf($session, $user->member->fresh());
@@ -173,7 +173,7 @@ class MemberApprovalTest extends TestCase
         $this->assertSame(MemberStatus::Rejected, $member->status);
 
         $this->actingAs($member->user);
-        $this->get(route('member.schedule'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.book'))->assertRedirect(route('member.pending'));
         $this->get(route('member.pending'))->assertSee('การสมัครยังไม่ผ่าน')->assertSee('ไม่พบหลักฐานการชำระเงิน');
     }
 
@@ -210,6 +210,6 @@ class MemberApprovalTest extends TestCase
 
         $this->get(route('member.pending'))
             ->assertSee('สถานะการสมัคร')
-            ->assertDontSee(route('member.schedule'));
+            ->assertDontSee(route('member.book'));
     }
 }

@@ -157,7 +157,8 @@ class ReservationService
         return $count;
     }
 
-    protected function expire(int $reservationId, bool $notify = true): bool
+    /** ปิดรายการรอชำระหนึ่งรายการถ้าเลยเวลาแล้วจริง คืน false ถ้ายังไม่หมดเวลาหรือถูกปิดไปแล้ว */
+    public function expire(int $reservationId, bool $notify = true): bool
     {
         $reservation = DB::transaction(function () use ($reservationId) {
             $r = Reservation::whereKey($reservationId)->lockForUpdate()->first();

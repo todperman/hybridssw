@@ -18,7 +18,7 @@ class PendingTrainerAccessTest extends TestCase
         $branch = $this->makeBranch();
         $trainer = $this->makeTrainer($branch, ['status' => TrainerStatus::Pending]);
 
-        foreach (['trainer.schedule', 'trainer.team', 'trainer.insights'] as $route) {
+        foreach (['trainer.jobs', 'trainer.book', 'trainer.availability', 'trainer.team'] as $route) {
             $this->actingAs($trainer->user)
                 ->get(route($route))
                 ->assertRedirect(route('trainer.pending'));
@@ -45,10 +45,10 @@ class PendingTrainerAccessTest extends TestCase
 
         $this->actingAs($trainer->user)
             ->get(route('trainer.pending'))
-            ->assertRedirect(route('trainer.schedule'));
+            ->assertRedirect(route('trainer.jobs'));
 
         $this->actingAs($trainer->user)
-            ->get(route('trainer.schedule'))
+            ->get(route('trainer.jobs'))
             ->assertOk();
     }
 
@@ -70,7 +70,7 @@ class PendingTrainerAccessTest extends TestCase
         $trainer = $this->makeTrainer($branch, ['status' => TrainerStatus::Suspended]);
 
         $this->actingAs($trainer->user)
-            ->get(route('trainer.schedule'))
+            ->get(route('trainer.jobs'))
             ->assertRedirect(route('trainer.pending'));
 
         $this->actingAs($trainer->user)

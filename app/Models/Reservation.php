@@ -153,6 +153,30 @@ class Reservation extends Model
         return $this->participants()->whereKey($member->id)->exists();
     }
 
+    /** เห็นการจองนี้ได้: ผู้เข้าร่วม ผู้ชำระ Trainer ประจำงาน ผู้สร้างรายการ และแอดมิน */
+    public function isVisibleTo(User $user): bool
+    {
+        if ($user->role?->canAccessAdminPanel() || $user->id === $this->created_by_user_id) {
+            return true;
+        }
+
+        if ($this->trainer_id && $user->trainer?->id === $this->trainer_id) {
+            return true;
+        }
+
+        return $user->member !== null
+            && ($user->member->id === $this->payer_member_id || $this->isParticipant($user->member));
+    }
+
+    /** จัดการได้ (เลื่อน/ขอเลื่อน): ตรงกับที่ ReservationService ตรวจ */
+    public function isManageableBy(User $user): bool
+    {
+        return (bool) $user->role?->canAccessAdminPanel()
+            || ($this->trainer_id && $user->trainer?->id === $this->trainer_id)
+            || ($user->member && $user->member->id === $this->payer_member_id)
+            || $user->id === $this->created_by_user_id;
+    }
+
     public function timeLabel(): string
     {
         return $this->starts_at->format('H:i').' - '.$this->ends_at->format('H:i');

@@ -70,51 +70,5 @@
     </template>
 </div>
 
-@once
-    @push('scripts')
-        <script>
-            document.addEventListener('alpine:init', () => {
-                Alpine.store('confirm', {
-                    open: false,
-                    title: '',
-                    body: '',
-                    notes: [],
-                    tone: 'info',
-                    confirmLabel: 'ยืนยัน',
-                    cancelLabel: 'ยกเลิก',
-                    action: null,
-
-                    ask(options = {}) {
-                        this.title = options.title ?? 'ยืนยันการทำรายการ';
-                        this.body = options.body ?? '';
-                        this.notes = options.notes ?? [];
-                        this.tone = options.tone ?? 'info';
-                        this.confirmLabel = options.confirmLabel ?? 'ยืนยัน';
-                        this.cancelLabel = options.cancelLabel ?? 'ยกเลิก';
-                        this.action = options.action ?? null;
-                        this.open = true;
-
-                        // กันหน้าเลื่อนอยู่ข้างหลังกล่อง
-                        document.body.style.overflow = 'hidden';
-                    },
-
-                    accept() {
-                        const run = this.action;
-                        this.close();
-                        if (typeof run === 'function') run();
-                    },
-
-                    dismiss() {
-                        this.close();
-                    },
-
-                    close() {
-                        this.open = false;
-                        this.action = null;
-                        document.body.style.overflow = '';
-                    },
-                });
-            });
-        </script>
-    @endpush
-@endonce
+{{-- ตัว store อยู่ใน resources/js/app.js ลงทะเบียนตอน Alpine เริ่ม ซึ่งเกิดครั้งเดียวต่อการโหลดหน้า
+     ถ้าฝังไว้ที่นี่ หน้าที่เข้ามาด้วย wire:navigate จากหน้าที่ไม่มีกล่องนี้ (เช่นหน้า login) จะไม่มี store --}}
