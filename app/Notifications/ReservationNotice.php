@@ -20,7 +20,10 @@ class ReservationNotice extends Notification
 
     public function via(object $notifiable): array
     {
-        return config('gym.notifications.mail', true) ? ['database', 'mail'] : ['database'];
+        // บัญชีตัวอย่างใช้โดเมนที่ไม่มีอยู่จริง ส่งเมลไปก็เด้งกลับ เก็บไว้ในเว็บอย่างเดียว
+        $mail = config('gym.notifications.mail', true) && ! \App\Services\DemoData::isDemoEmail($notifiable->email ?? null);
+
+        return $mail ? ['database', 'mail'] : ['database'];
     }
 
     public function toArray(object $notifiable): array
