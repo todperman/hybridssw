@@ -210,6 +210,30 @@ class PaymentService
         return $refund->refresh();
     }
 
+    /**
+     * ปิดรายการชำระที่ต้องตรวจสอบ (ชำระช้าจนเวลาถูกจองไปแล้ว ยอดไม่ตรง หรือชำระซ้ำ)
+     * คืนเงินเต็มจำนวน หรือบันทึกว่าตรวจแล้วไม่ต้องคืน พร้อมเหตุผล
+     */
+    public function resolveReview(Payment $payment, User $admin, string $reason, bool $refund): ?Refund
+    {
+        if (! $payment->needs_review) {
+            throw new ReservationException('รายการนี้ตรวจสอบไปแล้ว', 'already_reviewed');
+        }
+
+        $reservation = $payment->reservation;
+
+        $result = $refund ? $this->refundInFull($reservation, $payment, $admin, $reason) : null;
+
+        $payment->update(['needs_review' => false]);
+
+        AuditLog::record('payment.reviewed', $reservation, null, [
+            'payment_id' => $payment->id,
+            'refunded' => $refund,
+        ], $reason, $admin);
+
+        return $result;
+    }
+
     /** บันทึกผลการคืนเงิน ใช้ทั้งผลจาก Omise และแอดมินที่โอนคืนเองแล้วกดบันทึก */
     public function settleRefund(Refund $refund, RefundStatus $status, ?User $actor, ?string $message = null, ?string $providerRefundId = null, ?array $payload = null): Refund
     {

@@ -38,14 +38,19 @@ class BranchesTable
                     ->placeholder('ไม่มี')
                     ->searchable(),
 
-                // รวมสองค่าที่ใช้คู่กันเสมอไว้ช่องเดียว ตารางจะได้ไม่ยาวเป็นหางว่าว
-                TextColumn::make('default_capacity')
-                    ->label('รอบมาตรฐาน')
-                    ->formatStateUsing(fn ($record) => $record->default_capacity.' ที่ · '.$record->slot_duration_minutes.' นาที')
+                TextColumn::make('hourly_rate')
+                    ->label('ราคาต่อชั่วโมง')
+                    ->money('THB')
+                    ->color(fn ($state) => (float) $state > 0 ? null : 'danger')
+                    ->description(fn ($record) => (float) $record->hourly_rate > 0 ? null : 'ยังไม่ตั้ง จองไม่ได้')
                     ->sortable(),
 
-                TextColumn::make('session_horizon_days')
-                    ->label('สร้างรอบล่วงหน้า')
+                TextColumn::make('max_trainees')
+                    ->label('ต่อการจอง')
+                    ->formatStateUsing(fn ($record) => 'ไม่เกิน '.$record->max_trainees.' คน · '.$record->max_booking_hours.' ชม.'),
+
+                TextColumn::make('booking_window_days')
+                    ->label('จองล่วงหน้า')
                     ->formatStateUsing(fn ($state) => $state.' วัน')
                     ->sortable()
                     ->toggleable(),
@@ -55,25 +60,6 @@ class BranchesTable
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state ? 'เปิดให้บริการ' : 'ปิด')
                     ->color(fn ($state) => $state ? 'success' : 'danger'),
-
-                // ค่าตั้งของกติกาการจอง นาน ๆ ดูที ซ่อนไว้ก่อนแต่ยังเปิดดูได้
-                TextColumn::make('cancellation_cutoff_hours')
-                    ->label('ยกเลิกฟรีก่อน')
-                    ->formatStateUsing(fn ($state) => $state.' ชม.')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('waitlist_confirm_minutes')
-                    ->label('ยืนยันคิวสำรองใน')
-                    ->formatStateUsing(fn ($state) => $state.' นาที')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('no_show_strike_limit')
-                    ->label('ไม่มาได้กี่ครั้ง')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('no_show_suspension_days')
-                    ->label('ระงับกี่วัน')
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('timezone')
                     ->label('เขตเวลา')

@@ -146,6 +146,28 @@ class Member extends Model
     }
 
     /** แอดมินอนุมัติการสมัคร จองได้ทันทีหลังจากนี้ */
+    /**
+     * ให้หรือถอนสิทธิ์เข้าใช้โดยไม่มี Trainer ทำได้เฉพาะแอดมิน และต้องมีเหตุผลเสมอ
+     * เก็บประวัติว่าใครเปลี่ยน เมื่อไร เพราะอะไร ตามข้อกำหนดข้อ 2
+     */
+    public function setNoTrainerPrivilege(bool $granted, User $admin, string $reason): void
+    {
+        if ((bool) $this->can_book_without_trainer === $granted) {
+            return;
+        }
+
+        $before = ['can_book_without_trainer' => (bool) $this->can_book_without_trainer];
+
+        $this->update(['can_book_without_trainer' => $granted]);
+
+        AuditLog::record('member.no_trainer_privilege', $this, $before, ['can_book_without_trainer' => $granted], $reason, $admin);
+    }
+
+    public function auditLogs(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(AuditLog::class, 'subject')->latest('id');
+    }
+
     public function approve(?User $by = null): void
     {
         $this->update([

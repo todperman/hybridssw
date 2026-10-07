@@ -12,6 +12,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Collection;
 use App\Enums\MemberStatus;
@@ -65,12 +66,14 @@ class MembersTable
                     ->badge()
                     ->sortable(),
 
-                TextColumn::make('no_show_count')
-                    ->label('ไม่มาตามนัด')
-                    ->badge()
-                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
-                    ->formatStateUsing(fn ($state) => $state.' ครั้ง')
-                    ->sortable(),
+                IconColumn::make('can_book_without_trainer')
+                    ->label('ไม่มี Trainer ได้')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-shield-check')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->tooltip(fn (Member $record) => $record->can_book_without_trainer ? 'เข้าใช้ยิมโดยไม่มี Trainer ได้' : null),
 
                 TextColumn::make('date_of_birth')
                     ->label('อายุ')
@@ -107,15 +110,9 @@ class MembersTable
                     ->relationship('primaryTrainer.user', 'name')
                     ->searchable(),
 
-                // คัดคนที่ควรตามก่อน ไม่ต้องเรียงแล้วไล่ดูเอง
-                Filter::make('has_no_shows')
-                    ->label('เคยไม่มาตามนัด')
-                    ->query(fn ($query) => $query->where('no_show_count', '>', 0)),
-
-                Filter::make('suspended')
-                    ->label('กำลังถูกระงับ')
-                    ->query(fn ($query) => $query->whereNotNull('suspended_until')
-                        ->where('suspended_until', '>', now())),
+                Filter::make('no_trainer')
+                    ->label('มีสิทธิ์เข้าใช้โดยไม่มี Trainer')
+                    ->query(fn ($query) => $query->where('can_book_without_trainer', true)),
 
                 TrashedFilter::make()
                     ->label('ที่ถูกลบ'),
@@ -153,6 +150,25 @@ class MembersTable
                     ->action(function (Member $record, array $data) {
                         $record->reject(auth()->user(), $data['note']);
                         Notification::make()->title('ไม่อนุมัติแล้ว')->success()->send();
+                    }),
+
+                Action::make('noTrainerPrivilege')
+                    ->label(fn (Member $record) => $record->can_book_without_trainer ? 'ถอนสิทธิ์ไม่มี Trainer' : 'ให้สิทธิ์ไม่มี Trainer')
+                    ->icon('heroicon-o-shield-check')
+                    ->color(fn (Member $record) => $record->can_book_without_trainer ? 'danger' : 'gray')
+                    ->visible(fn (Member $record) => ! $record->awaitsApproval())
+                    ->modalHeading(fn (Member $record) => ($record->can_book_without_trainer ? 'ถอนสิทธิ์' : 'ให้สิทธิ์').'เข้าใช้ยิมโดยไม่มี Trainer')
+                    ->modalDescription(fn (Member $record) => $record->user->name.' · ระบบเก็บประวัติว่าใครเปลี่ยน เมื่อไร และเหตุผล'
+                        .(config('gym.reservation.no_trainer_rule', 'all') === 'all' ? ' · การจองแบบไม่มี Trainer ต้องให้ผู้เข้าร่วมทุกคนมีสิทธิ์นี้' : ''))
+                    ->schema([
+                        Textarea::make('reason')->label('เหตุผล')->required()->rows(2),
+                    ])
+                    ->action(function (Member $record, array $data) {
+                        $record->setNoTrainerPrivilege(! $record->can_book_without_trainer, auth()->user(), $data['reason']);
+                        Notification::make()
+                            ->title($record->can_book_without_trainer ? 'ให้สิทธิ์แล้ว' : 'ถอนสิทธิ์แล้ว')
+                            ->success()
+                            ->send();
                     }),
 
                 EditAction::make(),

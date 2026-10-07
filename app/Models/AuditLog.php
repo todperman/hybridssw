@@ -60,6 +60,7 @@ class AuditLog extends Model
             'reservation.trainer_changed' => 'เปลี่ยน Trainer',
             'reservation.cancelled' => 'ยกเลิกการจอง',
             'reservation.payment_recorded' => 'บันทึกรับชำระ',
+            'payment.reviewed' => 'ตรวจสอบรายการชำระ',
             'refund.created' => 'สร้างรายการคืนเงิน',
             'refund.updated' => 'อัปเดตผลคืนเงิน',
             'request.approved' => 'อนุมัติคำขอ',
@@ -67,5 +68,34 @@ class AuditLog extends Model
             'member.no_trainer_privilege' => 'เปลี่ยนสิทธิ์เข้าใช้โดยไม่มี Trainer',
             default => $this->action,
         };
+    }
+
+    /** สรุปก่อนและหลังเป็นประโยคสั้น ๆ สำหรับหน้าประวัติ */
+    public function changeSummary(): ?string
+    {
+        $before = $this->before ?? [];
+        $after = $this->after ?? [];
+        $lines = [];
+
+        if (($before['when'] ?? null) !== ($after['when'] ?? null) && isset($before['when'], $after['when'])) {
+            $lines[] = 'เวลา: '.$before['when'].' → '.$after['when'];
+        }
+
+        if (array_key_exists('trainer', $before) && ($before['trainer'] ?? null) !== ($after['trainer'] ?? null)) {
+            $lines[] = 'Trainer: '.($before['trainer'] ?? 'ไม่มี').' → '.($after['trainer'] ?? 'ไม่มี');
+        }
+
+        if (isset($before['status'], $after['status']) && $before['status'] !== $after['status']) {
+            $lines[] = 'สถานะ: '.$before['status'].' → '.$after['status'];
+        }
+
+        if ($lines === [] && $after !== []) {
+            $lines[] = collect($after)
+                ->reject(fn ($v) => is_array($v) || $v === null)
+                ->map(fn ($v, $k) => $k.': '.(is_bool($v) ? ($v ? 'ใช่' : 'ไม่') : $v))
+                ->join(' · ');
+        }
+
+        return $lines === [] ? null : implode("\n", array_filter($lines));
     }
 }
