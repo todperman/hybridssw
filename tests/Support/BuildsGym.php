@@ -8,12 +8,10 @@ use App\Enums\TrainerType;
 use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Member;
-use App\Models\MemberPackage;
 use App\Models\ScheduleTemplate;
 use App\Models\TeamMember;
 use App\Models\Trainer;
 use App\Models\User;
-use App\Models\WorkoutSession;
 
 /** ตัวช่วยประกอบข้อมูลตั้งต้นให้เทสต์อ่านง่าย */
 trait BuildsGym
@@ -23,8 +21,6 @@ trait BuildsGym
         return Branch::create(array_merge([
             'code' => 'B'.fake()->unique()->numerify('####'),
             'name' => 'สาขาทดสอบ',
-            'default_capacity' => 5,
-            'slot_duration_minutes' => 60,
         ], $attributes));
     }
 
@@ -48,7 +44,7 @@ trait BuildsGym
         ], $attributes));
     }
 
-    protected function makeMember(Branch $branch, ?Trainer $trainer = null, array $attributes = [], int $credits = 10): Member
+    protected function makeMember(Branch $branch, ?Trainer $trainer = null, array $attributes = []): Member
     {
         $user = User::create([
             'branch_id' => $branch->id,
@@ -67,17 +63,6 @@ trait BuildsGym
             'parq_signed_at' => now(),
         ], $attributes));
 
-        if ($credits > 0) {
-            MemberPackage::create([
-                'member_id' => $member->id,
-                'package_name' => 'แพ็กทดสอบ',
-                'credits_total' => $credits,
-                'credits_used' => 0,
-                'starts_at' => now()->toDateString(),
-                'expires_at' => now()->addDays(90)->toDateString(),
-            ]);
-        }
-
         if ($trainer) {
             TeamMember::create([
                 'trainer_id' => $trainer->id,
@@ -90,19 +75,6 @@ trait BuildsGym
         return $member;
     }
 
-    protected function makeSession(Branch $branch, array $attributes = []): WorkoutSession
-    {
-        $starts = $attributes['starts_at'] ?? now()->addDay()->setTime(18, 0);
-
-        return WorkoutSession::create(array_merge([
-            'branch_id' => $branch->id,
-            'date' => $starts->toDateString(),
-            'starts_at' => $starts,
-            'ends_at' => $starts->copy()->addHour(),
-            'capacity' => $branch->default_capacity,
-        ], $attributes));
-    }
-
     protected function makeTemplate(Branch $branch, array $attributes = []): ScheduleTemplate
     {
         return ScheduleTemplate::create(array_merge([
@@ -111,8 +83,6 @@ trait BuildsGym
             'day_of_week' => 1,
             'start_time' => '18:00',
             'end_time' => '21:00',
-            'slot_duration_minutes' => 60,
-            'capacity' => 5,
         ], $attributes));
     }
 }

@@ -9,13 +9,10 @@ use App\Enums\UserRole;
 use App\Models\Branch;
 use App\Models\Member;
 use App\Models\MemberGroup;
-use App\Models\MemberPackage;
-use App\Models\Package;
 use App\Models\ScheduleTemplate;
 use App\Models\TeamMember;
 use App\Models\Trainer;
 use App\Models\User;
-use App\Services\SessionGenerator;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -27,16 +24,15 @@ class DatabaseSeeder extends Seeder
             'name' => 'Srisawan Hybrid Workout — สาขาสำนักงานใหญ่',
             'phone' => '056-000000',
             'address' => 'นครสวรรค์',
-            'default_capacity' => 5,
-            'slot_duration_minutes' => 60,
+            'hourly_rate' => 800,
+            'payment_instructions' => "โอนเข้าบัญชีตัวอย่าง 000-0-00000-0\nส่งสลิปให้เจ้าหน้าที่พร้อมเลขการจอง",
         ]);
 
         $annex = Branch::create([
             'code' => 'SSW-ANNEX',
             'name' => 'Srisawan Hybrid Workout — สาขาย่อย',
             'phone' => '056-000001',
-            'default_capacity' => 5,
-            'slot_duration_minutes' => 60,
+            'hourly_rate' => 600,
         ]);
 
         User::create([
@@ -67,7 +63,6 @@ class DatabaseSeeder extends Seeder
                 'day_of_week' => $day,
                 'start_time' => '06:00',
                 'end_time' => '10:00',
-                'capacity' => 5,
             ]);
 
             ScheduleTemplate::create([
@@ -76,7 +71,6 @@ class DatabaseSeeder extends Seeder
                 'day_of_week' => $day,
                 'start_time' => '17:00',
                 'end_time' => '21:00',
-                'capacity' => 5,
             ]);
         }
 
@@ -87,7 +81,6 @@ class DatabaseSeeder extends Seeder
                 'day_of_week' => $day,
                 'start_time' => '08:00',
                 'end_time' => '18:00',
-                'capacity' => 5,
             ]);
         }
 
@@ -98,15 +91,8 @@ class DatabaseSeeder extends Seeder
                 'day_of_week' => $day,
                 'start_time' => '17:00',
                 'end_time' => '20:00',
-                'capacity' => 5,
             ]);
         }
-
-        $packages = collect([
-            ['name' => 'ทดลอง 4 ครั้ง', 'credits' => 4, 'price' => 800, 'validity_days' => 30],
-            ['name' => 'แพ็ก 10 ครั้ง', 'credits' => 10, 'price' => 1800, 'validity_days' => 90],
-            ['name' => 'แพ็ก 30 ครั้ง', 'credits' => 30, 'price' => 4500, 'validity_days' => 180],
-        ])->map(fn ($p) => Package::create($p + ['branch_id' => $main->id]));
 
         // เทรนเนอร์ภายใน อนุมัติอัตโนมัติ
         $internal = $this->makeTrainer($main, 'ครูเอ', 'ภายใน', 'trainer.a@example.com', TrainerType::Internal, TrainerStatus::Approved);
@@ -122,20 +108,20 @@ class DatabaseSeeder extends Seeder
         // เทรนเนอร์ภายนอกที่ยังรออนุมัติ ใช้ทดสอบว่าจองไม่ได้
         $this->makeTrainer($main, 'ครูซี', 'รออนุมัติ', 'trainer.c@example.com', TrainerType::External, TrainerStatus::Pending);
 
+        // เวลาว่างของ Trainer ตรงกับเวลาเปิดของสาขา ลูกเทรนจะได้เห็นคนให้เลือกทันที
+        foreach ([$internal, $external] as $trainer) {
+            foreach ($main->scheduleTemplates as $template) {
+                $trainer->availabilities()->create([
+                    'day_of_week' => $template->day_of_week,
+                    'start_time' => $template->start_time,
+                    'end_time' => $template->end_time,
+                ]);
+            }
+        }
+
         foreach ([$internal, $external] as $index => $trainer) {
             for ($i = 1; $i <= 6; $i++) {
-                $member = $this->makeMember($main, $trainer, $index, $i);
-
-                MemberPackage::create([
-                    'member_id' => $member->id,
-                    'package_id' => $packages[1]->id,
-                    'package_name' => $packages[1]->name,
-                    'credits_total' => $packages[1]->credits,
-                    'credits_used' => 0,
-                    'price_paid' => $packages[1]->price,
-                    'starts_at' => now()->toDateString(),
-                    'expires_at' => now()->addDays($packages[1]->validity_days)->toDateString(),
-                ]);
+                $this->makeMember($main, $trainer, $index, $i);
             }
         }
 
@@ -150,13 +136,6 @@ class DatabaseSeeder extends Seeder
 
             $trainer->teamMembers()->take(3)->get()
                 ->each(fn ($member) => $group->members()->attach($member->id, ['joined_at' => now()]));
-        }
-
-        $generator = app(SessionGenerator::class);
-
-        foreach ([$main, $annex] as $branch) {
-            $result = $generator->generateForBranch($branch, now(), now()->addDays(30));
-            $this->command?->info("สร้างรอบให้ {$branch->code}: {$result['created']} รอบ");
         }
     }
 

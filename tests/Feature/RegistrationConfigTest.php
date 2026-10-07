@@ -53,12 +53,10 @@ class RegistrationConfigTest extends TestCase
     public function trainer_defaults_are_read_from_config(): void
     {
         config([
-            'gym.trainer_defaults.external.seats_per_session' => 5,
             'gym.trainer_defaults.external.max_team_size' => 25,
             'gym.trainer_defaults.internal.max_team_size' => null,
         ]);
 
-        $this->assertSame(5, TrainerType::External->defaultMaxSeatsPerSession());
         $this->assertSame(25, TrainerType::External->defaultMaxTeamSize());
         $this->assertNull(TrainerType::Internal->defaultMaxTeamSize(), 'null คือไม่จำกัด');
     }

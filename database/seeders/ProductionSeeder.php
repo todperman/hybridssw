@@ -45,14 +45,9 @@ class ProductionSeeder extends Seeder
                 [
                     'name' => env('BRANCH_NAME', config('app.name')),
                     'timezone' => config('app.timezone', 'Asia/Bangkok'),
-                    'default_capacity' => 5,
                     'max_group_size' => 5,
-                    'slot_duration_minutes' => 60,
-                    'cancellation_cutoff_hours' => 6,
-                    'waitlist_confirm_minutes' => 30,
-                    'no_show_strike_limit' => 3,
-                    'no_show_suspension_days' => 7,
-                    'session_horizon_days' => 30,
+                    // ราคาตั้งเองในหลังบ้าน ยังไม่ตั้ง = ยังเปิดจองไม่ได้ gym:doctor จะเตือน
+                    'hourly_rate' => 0,
                     'is_active' => true,
                 ],
             );

@@ -2,15 +2,11 @@
 
 use App\Http\Middleware\EnsureMemberIsApproved;
 use App\Http\Middleware\EnsureUserIsTrainer;
-use App\Livewire\Member\MyBookings;
-use App\Livewire\Member\Schedule as MemberSchedule;
 use App\Livewire\MemberRegistration;
 use App\Livewire\Reservations\BookingWizard;
 use App\Livewire\Reservations\ReservationDetail;
 use App\Livewire\Reservations\ReservationList;
 use App\Livewire\TeamJoin;
-use App\Livewire\Trainer\BookingBoard;
-use App\Livewire\Trainer\Insights;
 use App\Livewire\Trainer\TeamRoster;
 use App\Livewire\TrainerRegistration;
 use Illuminate\Support\Facades\Route;
@@ -22,7 +18,7 @@ Route::get('/', fn () => auth()->check()
     : redirect()->route('login')
 )->name('home');
 
-// คนทั่วไปสมัครสมาชิกเอง แล้วจองรอบให้ตัวเอง (ปิดได้ด้วย GYM_REGISTRATION_PUBLIC=false)
+// คนทั่วไปสมัครสมาชิกเอง แล้วจองยิมเอง (ปิดได้ด้วย GYM_REGISTRATION_PUBLIC=false)
 Route::get('register', MemberRegistration::class)
     ->middleware('guest')
     ->name('register');
@@ -57,20 +53,16 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
     // หน้ารอผลอนุมัติ ต้องอยู่นอกการกันของ middleware ไม่งั้นจะ redirect วนหาตัวเอง
     Route::get('pending', \App\Livewire\Trainer\PendingApproval::class)->name('pending');
 
-    Route::get('schedule', BookingBoard::class)->name('schedule');
     Route::get('jobs', ReservationList::class)->name('jobs');
     Route::get('book', BookingWizard::class)->name('book');
     Route::get('availability', \App\Livewire\Trainer\AvailabilityPlanner::class)->name('availability');
     Route::get('team', TeamRoster::class)->name('team');
-    Route::get('insights', Insights::class)->name('insights');
 });
 
 Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->name('member.')->group(function () {
     // หน้าสถานะการสมัคร middleware ปล่อยผ่านหน้านี้หน้าเดียวตอนยังไม่อนุมัติ
     Route::get('pending', \App\Livewire\Member\PendingApproval::class)->name('pending');
 
-    Route::get('schedule', MemberSchedule::class)->name('schedule');
-    Route::get('bookings', MyBookings::class)->name('bookings');
     Route::get('book', BookingWizard::class)->name('book');
     Route::get('reservations', ReservationList::class)->name('reservations');
 });

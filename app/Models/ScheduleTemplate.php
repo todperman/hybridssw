@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * กฎเวลาเปิดประจำสัปดาห์ของสาขา
- * ไม่ได้เก็บรอบจริง แต่เป็นสูตรที่ SessionGenerator ใช้สร้างรอบล่วงหน้า
+ * กฎเวลาเปิดให้จองประจำสัปดาห์ของสาขา
+ * OpeningHours แบ่งช่วงที่เปิดเป็นช่องละ 1 ชั่วโมงให้ระบบจองใช้
  */
 class ScheduleTemplate extends Model
 {
@@ -20,8 +20,6 @@ class ScheduleTemplate extends Model
         'day_of_week',
         'start_time',
         'end_time',
-        'slot_duration_minutes',
-        'capacity',
         'effective_from',
         'effective_until',
         'is_active',
@@ -31,8 +29,6 @@ class ScheduleTemplate extends Model
     {
         return [
             'day_of_week' => 'integer',
-            'slot_duration_minutes' => 'integer',
-            'capacity' => 'integer',
             'effective_from' => 'date',
             'effective_until' => 'date',
             'is_active' => 'boolean',

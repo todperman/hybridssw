@@ -35,8 +35,6 @@ class Trainer extends Model
         'certification_expires_at',
         'contract_starts_at',
         'contract_ends_at',
-        'max_seats_per_session',
-        'advance_booking_days',
         'max_team_size',
         'invite_token',
         'approved_at',
@@ -105,11 +103,6 @@ class Trainer extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    public function bookings(): HasMany
-    {
-        return $this->hasMany(Booking::class);
-    }
-
     /** ลูกทีมที่ยังอยู่ในทีม */
     public function teamMembers(): BelongsToMany
     {
@@ -130,19 +123,6 @@ class Trainer extends Model
         return $this->hasMany(MemberGroup::class);
     }
 
-    // โควตา: ใช้ค่าเฉพาะรายถ้าตั้งไว้ ไม่งั้นถอยไปใช้ค่าตามประเภทเทรนเนอร์
-
-    public function maxSeatsPerSession(): int
-    {
-        return $this->max_seats_per_session ?? $this->type->defaultMaxSeatsPerSession();
-    }
-
-    public function advanceBookingDays(): int
-    {
-        return $this->advance_booking_days ?? $this->type->defaultAdvanceBookingDays();
-    }
-
-    /** null แปลว่าไม่จำกัดจำนวนลูกทีม */
     /**
      * เพดานจำนวนลูกทีม คืน null = ไม่จำกัด
      *

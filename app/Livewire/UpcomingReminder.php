@@ -2,13 +2,13 @@
 
 namespace App\Livewire;
 
-use App\Models\Booking;
-use App\Models\WorkoutSession;
+use App\Enums\ReservationStatus;
+use App\Models\Reservation;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
- * แจ้งเตือนก่อนถึงรอบที่จองไว้
+ * แจ้งเตือนก่อนถึงเวลาที่จองยิมไว้
  *
  * วางไว้ในเลย์เอาต์หลัก จึงติดตามผู้ใช้ไปทุกหน้า
  * ฝั่งเซิร์ฟเวอร์ถามข้อมูลทุก 60 วินาที ส่วนตัวนับถอยหลังเดินฝั่งเบราว์เซอร์
@@ -16,77 +16,50 @@ use Livewire\Component;
  */
 class UpcomingReminder extends Component
 {
-    /** รอบที่ผู้ใช้กดปิดไปแล้ว เก็บไว้ไม่ให้เด้งซ้ำภายในหน้าเดียวกัน */
+    /** การจองที่ผู้ใช้กดปิดไปแล้ว เก็บไว้ไม่ให้เด้งซ้ำภายในหน้าเดียวกัน */
     public array $dismissed = [];
 
-    public function dismiss(int $bookingId): void
+    public function dismiss(int $reservationId): void
     {
-        $this->dismissed[] = $bookingId;
+        $this->dismissed[] = $reservationId;
 
-        unset($this->booking);
+        unset($this->reservation);
     }
 
     /**
-     * หารอบถัดไปที่ควรเตือน
-     *
-     * เตือนทั้งฝั่งลูกทีม (รอบของตัวเอง) และฝั่งเทรนเนอร์ (รอบที่จองให้ลูกทีม)
-     * ถ้าเป็นทั้งสองอย่าง ให้เอารอบที่ใกล้ที่สุดก่อน
+     * การจองที่ยืนยันแล้วและใกล้ถึงเวลาที่สุด
+     * เตือนทั้งผู้เข้าร่วม ผู้ชำระ และ Trainer ประจำงาน
      */
     #[Computed]
-    public function booking(): ?Booking
+    public function reservation(): ?Reservation
     {
         $user = auth()->user();
 
-        if (! $user) {
+        if (! $user || (! $user->member && ! $user->trainer)) {
             return null;
         }
 
         $lead = (int) config('gym.reminder.lead_minutes', 90);
         $grace = (int) config('gym.reminder.grace_minutes', 15);
 
-        $from = now()->subMinutes($grace);
-        $until = now()->addMinutes($lead);
-
-        return Booking::query()
-            ->active()
+        return Reservation::query()
+            ->where('status', ReservationStatus::Confirmed->value)
+            ->whereBetween('starts_at', [now()->subMinutes($grace), now()->addMinutes($lead)])
             ->when($this->dismissed !== [], fn ($q) => $q->whereNotIn('id', $this->dismissed))
             ->where(function ($q) use ($user) {
                 if ($user->member) {
-                    $q->orWhere('member_id', $user->member->id);
+                    $q->orWhere('payer_member_id', $user->member->id)
+                        ->orWhereHas('participants', fn ($p) => $p->whereKey($user->member->id));
                 }
 
                 if ($user->trainer) {
                     $q->orWhere('trainer_id', $user->trainer->id);
                 }
             })
-            ->whereHas('workoutSession', fn ($q) => $q
-                ->whereBetween('starts_at', [$from, $until]))
-            ->with(['workoutSession.branch', 'member.user'])
-            // เรียงด้วย subquery แทนการ join เพราะทั้งสองตารางมีคอลัมน์ status
-            // การ join ทำให้เงื่อนไข where ของ scopeActive กำกวมทันที
-            ->orderBy(
-                WorkoutSession::select('starts_at')
-                    ->whereColumn('workout_sessions.id', 'bookings.workout_session_id')
-            )
+            ->with(['branch', 'trainer.user'])
+            ->withCount('participants')
+            ->orderBy('starts_at')
             ->first();
-    }
-
-    /** จำนวนลูกทีมของเราในรอบเดียวกัน ใช้บอกเทรนเนอร์ว่าต้องดูแลกี่คน */
-    #[Computed]
-    public function teamCount(): int
-    {
-        $booking = $this->booking;
-        $trainer = auth()->user()?->trainer;
-
-        if (! $booking || ! $trainer) {
-            return 0;
-        }
-
-        return Booking::query()
-            ->active()
-            ->where('trainer_id', $trainer->id)
-            ->where('workout_session_id', $booking->workout_session_id)
-            ->count();
     }
 
     public function render()

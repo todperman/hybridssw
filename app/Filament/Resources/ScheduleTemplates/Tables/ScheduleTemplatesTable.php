@@ -34,17 +34,6 @@ class ScheduleTemplatesTable
                     ->formatStateUsing(fn ($record) => substr((string) $record->start_time, 0, 5).' - '.substr((string) $record->end_time, 0, 5))
                     ->sortable(),
 
-                TextColumn::make('slot_duration_minutes')
-                    ->label('ความยาวรอบ')
-                    ->formatStateUsing(fn ($state) => $state ? $state.' นาที' : 'ตามค่าสาขา')
-                    ->toggleable(),
-
-                TextColumn::make('capacity')
-                    ->label('ที่นั่ง/รอบ')
-                    ->badge()
-                    ->color('gray')
-                    ->sortable(),
-
                 TextColumn::make('branch.name')
                     ->label('สาขา')
                     ->sortable(),

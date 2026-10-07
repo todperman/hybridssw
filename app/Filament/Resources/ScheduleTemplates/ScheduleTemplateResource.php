@@ -23,7 +23,7 @@ class ScheduleTemplateResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'ตารางและรอบ';
+    protected static string|\UnitEnum|null $navigationGroup = 'เวลาเปิด';
 
     protected static ?int $navigationSort = 1;
 

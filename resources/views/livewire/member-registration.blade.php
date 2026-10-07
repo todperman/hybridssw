@@ -2,7 +2,7 @@
     <div class="fade-up">
         <h2 class="font-display text-3xl font-extrabold heading-th text-ink">สมัครสมาชิก</h2>
         <p class="mt-2 text-[15px] text-muted">
-            กรอกข้อมูลครั้งเดียว แล้วเลือกจองรอบที่สะดวกได้เลย
+            กรอกข้อมูลครั้งเดียว แล้วจองยิมในเวลาที่สะดวกได้เลย
         </p>
     </div>
 

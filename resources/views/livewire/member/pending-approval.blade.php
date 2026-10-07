@@ -50,7 +50,7 @@
 
             <ul class="divide-y divide-line/70 text-sm">
                 @foreach ([
-                    [false, 'จองรอบ'],
+                    [false, 'จองยิม'],
                     [true, 'แก้ไขข้อมูลโปรไฟล์ของคุณ'],
                 ] as [$allowed, $text])
                     <li class="flex items-center gap-3 px-5 py-3">

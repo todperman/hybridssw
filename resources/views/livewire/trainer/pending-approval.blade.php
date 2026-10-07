@@ -53,7 +53,7 @@
 
             <ul class="divide-y divide-line/70 text-sm">
                 @foreach ([
-                    [false, 'จองรอบให้ลูกทีม'],
+                    [false, 'จองยิมให้ลูกเทรน'],
                     [false, 'ชวนลูกทีมเข้าทีม'],
                     [true, 'แก้ไขข้อมูลโปรไฟล์ของคุณ'],
                 ] as [$allowed, $text])

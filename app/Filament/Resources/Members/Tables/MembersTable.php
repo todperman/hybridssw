@@ -129,7 +129,7 @@ class MembersTable
                     ->modalSubmitActionLabel('อนุมัติ')
                     ->action(function (Member $record) {
                         $record->approve(auth()->user());
-                        Notification::make()->title('อนุมัติแล้ว')->body($record->user->name.' จองรอบได้แล้ว')->success()->send();
+                        Notification::make()->title('อนุมัติแล้ว')->body($record->user->name.' จองยิมได้แล้ว')->success()->send();
                     }),
 
                 Action::make('reject')

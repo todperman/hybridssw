@@ -103,7 +103,7 @@ class TeamJoin extends Component
 
         auth()->login($user);
 
-        $this->redirect(route('member.bookings'), navigate: true);
+        $this->redirect(route('member.reservations'), navigate: true);
     }
 
     public function render()
@@ -112,14 +112,13 @@ class TeamJoin extends Component
             'eyebrow' => 'คำเชิญเข้าทีม',
             'heading' => 'เข้าร่วมทีม',
             'headingAccent' => $this->trainer->user->name,
-            'lead' => $this->trainer->bio ?: 'กรอกข้อมูลครั้งเดียว แล้วเทรนเนอร์จะจองรอบให้คุณได้ทันที',
+            'lead' => $this->trainer->bio ?: 'กรอกข้อมูลครั้งเดียว แล้ว Trainer จะจองยิมให้คุณได้ทันที',
             'points' => [
-                'เทรนเนอร์จองชั่วโมงให้คุณ ไม่ต้องจองเอง',
-                'ดูคิวที่กำลังจะถึงและยกเลิกได้จากหน้าคิวของฉัน',
-                'รอบเต็มก็ต่อคิวสำรองได้ ระบบเลื่อนคิวให้อัตโนมัติ',
+                'Trainer จองยิมให้คุณ หรือจองเองพร้อมชวนเพื่อนก็ได้',
+                'ดูการจองที่กำลังจะถึงได้จากหน้าการจองของฉัน',
+                'ได้รับแจ้งเตือนก่อนถึงเวลาทุกครั้ง',
             ],
             'stats' => [
-                'ที่นั่งต่อรอบ' => '5',
                 'ลูกทีมในทีมนี้' => $this->trainer->teamMembers()->count(),
             ],
             'altHref' => route('login'),

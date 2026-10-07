@@ -17,37 +17,23 @@ class Branch extends Model
         'phone',
         'address',
         'timezone',
-        'default_capacity',
         'max_group_size',
         'hourly_rate',
         'max_trainees',
         'booking_window_days',
         'max_booking_hours',
         'payment_instructions',
-        'slot_duration_minutes',
-        'cancellation_cutoff_hours',
-        'waitlist_confirm_minutes',
-        'no_show_strike_limit',
-        'no_show_suspension_days',
-        'session_horizon_days',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'default_capacity' => 'integer',
             'max_group_size' => 'integer',
             'hourly_rate' => 'decimal:2',
             'max_trainees' => 'integer',
             'booking_window_days' => 'integer',
             'max_booking_hours' => 'integer',
-            'slot_duration_minutes' => 'integer',
-            'cancellation_cutoff_hours' => 'integer',
-            'waitlist_confirm_minutes' => 'integer',
-            'no_show_strike_limit' => 'integer',
-            'no_show_suspension_days' => 'integer',
-            'session_horizon_days' => 'integer',
             'is_active' => 'boolean',
         ];
     }
@@ -75,11 +61,6 @@ class Branch extends Model
     public function scheduleExceptions(): HasMany
     {
         return $this->hasMany(ScheduleException::class);
-    }
-
-    public function workoutSessions(): HasMany
-    {
-        return $this->hasMany(WorkoutSession::class);
     }
 
     public function memberGroups(): HasMany

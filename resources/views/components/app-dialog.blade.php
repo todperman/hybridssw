@@ -39,7 +39,7 @@
                             <h3 class="font-display text-[19px] font-bold leading-snug text-ink" x-text="$store.confirm.title"></h3>
                             <p class="mt-1.5 text-[14px] leading-relaxed text-muted" x-text="$store.confirm.body" x-show="$store.confirm.body"></p>
 
-                            {{-- รายการผลกระทบ เช่น จะถูกหักเครดิตหรือไม่ --}}
+                            {{-- รายการผลกระทบ เช่น ยอดที่ต้องชำระ --}}
                             <template x-if="$store.confirm.notes.length">
                                 <ul class="mt-3 space-y-1.5 rounded-xl border border-line bg-white/70 p-3">
                                     <template x-for="note in $store.confirm.notes" :key="note">

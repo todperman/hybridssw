@@ -38,11 +38,6 @@ class MemberForm
                 Select::make('status')
                     ->options(MemberStatus::class)
                     ->required(),
-                TextInput::make('no_show_count')
-                    ->numeric()
-                    ->default(0)
-                    ->required(),
-                DateTimePicker::make('no_show_reset_at'),
                 DateTimePicker::make('suspended_until'),
                 Textarea::make('suspension_reason')
                     ->columnSpanFull(),

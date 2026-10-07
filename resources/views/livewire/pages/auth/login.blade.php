@@ -25,15 +25,15 @@ new class extends Component
             'eyebrow' => 'ยินดีต้อนรับกลับ',
             'heading' => 'พร้อมเทรน',
             'headingAccent' => 'อีกครั้งแล้วใช่ไหม',
-            'lead' => 'เข้าสู่ระบบเพื่อจองรอบ ดูคิวของคุณ หรือจัดการทีมสำหรับเทรนเนอร์',
+            'lead' => 'เข้าสู่ระบบเพื่อจองยิม ดูการจองของคุณ หรือจัดการงานสำหรับ Trainer',
             'points' => [
-                'เห็นที่นั่งว่างของทุกรอบแบบเรียลไทม์',
-                'แต่ละรอบรับจำนวนจำกัด จองแล้วได้ที่นั่งแน่นอน',
-                'เทรนเนอร์จองให้ลูกทีมหลายคนพร้อมกันได้ในคลิกเดียว',
+                'จองทั้งยิมเป็นรายชั่วโมง ได้ใช้เฉพาะกลุ่มของคุณ',
+                'เห็นเฉพาะเวลาที่ยิมและ Trainer ว่างจริง',
+                'Trainer จองให้ลูกเทรนทั้งกลุ่มได้ในครั้งเดียว',
             ],
-            'altHref' => \App\Support\BookingRules::publicRegistrationOpen() ? route('register') : route('trainer.register'),
+            'altHref' => \App\Support\RegistrationRules::publicRegistrationOpen() ? route('register') : route('trainer.register'),
             'altLabel' => 'ยังไม่มีบัญชี',
-            'altCta' => \App\Support\BookingRules::publicRegistrationOpen() ? 'สมัครสมาชิก' : 'สมัครเทรนเนอร์',
+            'altCta' => \App\Support\RegistrationRules::publicRegistrationOpen() ? 'สมัครสมาชิก' : 'สมัครเทรนเนอร์',
         ];
     }
 
@@ -127,7 +127,7 @@ new class extends Component
         <p class="text-sm text-muted">ยังไม่มีบัญชี</p>
 
         <div class="mt-3 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
-            @if (\App\Support\BookingRules::publicRegistrationOpen())
+            @if (\App\Support\RegistrationRules::publicRegistrationOpen())
                 <a href="{{ route('register') }}" wire:navigate class="btn-ghost justify-center px-6 py-3">
                     @svg('lucide-user-plus', 'h-4 w-4', ['stroke-width' => '1.9'])
                     สมัครสมาชิก

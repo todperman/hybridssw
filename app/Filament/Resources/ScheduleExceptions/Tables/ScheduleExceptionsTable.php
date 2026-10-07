@@ -39,11 +39,6 @@ class ScheduleExceptionsTable
                         ? substr((string) $record->start_time, 0, 5).' - '.substr((string) $record->end_time, 0, 5)
                         : '—'),
 
-                TextColumn::make('capacity')
-                    ->label('ที่นั่ง/รอบ')
-                    ->placeholder('ตามปกติ')
-                    ->toggleable(),
-
                 TextColumn::make('branch.name')
                     ->label('สาขา')
                     ->sortable(),

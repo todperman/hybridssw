@@ -1,18 +1,17 @@
-{{-- แจ้งเตือนก่อนถึงรอบ
+{{-- แจ้งเตือนก่อนถึงเวลาที่จองไว้
      ถามเซิร์ฟเวอร์ทุก 60 วินาที ส่วนตัวนับถอยหลังเดินฝั่งเบราว์เซอร์
      จะได้ไม่ต้องยิงคำขอทุกวินาทีแค่เพื่ออัปเดตตัวเลข --}}
 <div wire:poll.60s>
-    @php($booking = $this->booking)
+    @php($reservation = $this->reservation)
 
-    @if ($booking)
-        @php($session = $booking->workoutSession)
-        @php($isTrainer = auth()->user()?->trainer && $booking->trainer_id === auth()->user()->trainer->id)
+    @if ($reservation)
+        @php($isTrainer = auth()->user()?->trainer && $reservation->trainer_id === auth()->user()->trainer->id)
 
         <div class="reminder"
-             wire:key="reminder-{{ $booking->id }}"
+             wire:key="reminder-{{ $reservation->id }}"
              x-data="{
                 show: false,
-                startsAt: new Date(@js($session->starts_at->toIso8601String())).getTime(),
+                startsAt: new Date(@js($reservation->starts_at->toIso8601String())).getTime(),
                 left: '',
                 started: false,
 
@@ -33,7 +32,7 @@
 
                 seen() {
                     try {
-                        return localStorage.getItem('ssw-reminder-{{ $booking->id }}') === '1';
+                        return localStorage.getItem('ssw-reminder-r{{ $reservation->id }}') === '1';
                     } catch (e) {
                         // โหมดส่วนตัวหรือปิดการเก็บข้อมูลไว้ ถือว่ายังไม่เคยเห็น
                         return false;
@@ -55,12 +54,12 @@
                     this.show = false;
 
                     try {
-                        localStorage.setItem('ssw-reminder-{{ $booking->id }}', '1');
+                        localStorage.setItem('ssw-reminder-r{{ $reservation->id }}', '1');
                     } catch (e) {
                         // เก็บไม่ได้ก็ยังปิดได้ แค่รอบหน้าที่โหลดใหม่อาจเด้งอีก
                     }
 
-                    setTimeout(() => $wire.dismiss({{ $booking->id }}), 320);
+                    setTimeout(() => $wire.dismiss({{ $reservation->id }}), 320);
                 },
              }"
              x-show="show"
@@ -82,19 +81,17 @@
 
                 <div class="min-w-0 flex-1">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-deep">
-                        <span x-show="! started">ใกล้ถึงรอบของคุณ</span>
-                        <span x-show="started" x-cloak>รอบเริ่มแล้ว</span>
+                        <span x-show="! started">{{ $isTrainer ? 'ใกล้ถึงงานของคุณ' : 'ใกล้ถึงเวลาจองยิม' }}</span>
+                        <span x-show="started" x-cloak>เริ่มแล้ว</span>
                     </p>
 
                     <p class="mt-0.5 font-display text-[18px] font-extrabold leading-tight text-ink">
-                        {{ $session->timeLabel() }}
+                        {{ $reservation->timeLabel() }}
                     </p>
 
                     <p class="mt-0.5 text-[12px] text-muted">
-                        {{ $session->starts_at->locale('th')->isoFormat('dddd D MMM') }}
-                        @if ($session->branch)
-                            · {{ $session->branch->name }}
-                        @endif
+                        {{ $reservation->starts_at->locale('th')->isoFormat('dddd D MMM') }}
+                        · {{ $reservation->branch->name }}
                     </p>
 
                     {{-- ตัวนับถอยหลังเป็นข้อมูลที่คนอยากรู้ที่สุด จึงเน้นด้วยป้ายสีแยกออกมา --}}
@@ -105,12 +102,15 @@
                         <span x-show="started" x-cloak>เริ่มไปแล้ว <span x-text="left"></span></span>
                     </p>
 
-                    @if ($isTrainer && $this->teamCount > 0)
-                        <p class="mt-1.5 text-[12px] text-muted">ลูกทีมของคุณในรอบนี้ {{ $this->teamCount }} คน</p>
-                    @endif
+                    <p class="mt-1.5 text-[12px] text-muted">
+                        ผู้เข้าร่วม {{ $reservation->participants_count }} คน
+                        @unless ($isTrainer)
+                            · {{ $reservation->trainer?->user?->displayName() ?? 'ไม่มี Trainer' }}
+                        @endunless
+                    </p>
 
                     <div class="mt-3 flex items-center gap-2">
-                        <a href="{{ $isTrainer ? route('trainer.schedule') : route('member.bookings') }}"
+                        <a href="{{ route('reservations.show', $reservation->reference) }}"
                            wire:navigate @click="close()" class="btn-grad px-4 text-[13px]">
                             ดูรายละเอียด
                         </a>

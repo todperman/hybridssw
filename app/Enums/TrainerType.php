@@ -29,18 +29,6 @@ enum TrainerType: string implements HasLabel
         return config("gym.trainer_defaults.{$this->value}", []);
     }
 
-    /** จำนวนที่นั่งสูงสุดที่จองได้ต่อรอบ เมื่อไม่ได้ตั้งค่าเฉพาะราย */
-    public function defaultMaxSeatsPerSession(): int
-    {
-        return (int) ($this->defaults()['seats_per_session'] ?? 5);
-    }
-
-    /** จองล่วงหน้าได้กี่วัน เมื่อไม่ได้ตั้งค่าเฉพาะราย */
-    public function defaultAdvanceBookingDays(): int
-    {
-        return (int) ($this->defaults()['advance_booking_days'] ?? 7);
-    }
-
     /** ขนาดทีมสูงสุด null แปลว่าไม่จำกัด */
     public function defaultMaxTeamSize(): ?int
     {

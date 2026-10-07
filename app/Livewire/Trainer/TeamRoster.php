@@ -51,7 +51,7 @@ class TeamRoster extends Component
     {
         return $this->trainer()
             ->teamMembers()
-            ->with(['user', 'packages', 'groups'])
+            ->with(['user', 'groups'])
             ->when($this->search !== '', fn ($q) => $q->whereHas(
                 'user',
                 fn ($u) => $u->where('name', 'like', "%{$this->search}%")
@@ -395,8 +395,8 @@ class TeamRoster extends Component
      * ตั้งใจไม่ตั้งรหัสผ่านให้ ลูกทีมต้องกด "ลืมรหัสผ่าน" ตั้งเองครั้งแรก
      * เทรนเนอร์จะได้ไม่ต้องรู้รหัสผ่านของลูกทีม
      *
-     * และไม่เซ็น PAR-Q แทนกันเด็ดขาด สมาชิกที่เพิ่มทางนี้จึงยังจองไม่ได้
-     * จนกว่าจะเซ็นเอง ซึ่ง BookingService ตรวจอยู่แล้ว
+     * และไม่เซ็น PAR-Q แทนกันเด็ดขาด ช่องเซ็นของสมาชิกที่เพิ่มทางนี้จึงว่างไว้
+     * (ระบบจองไม่ได้ใช้ PAR-Q เป็นเงื่อนไขการจอง)
      */
     public function addMember(): void
     {

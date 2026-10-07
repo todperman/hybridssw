@@ -226,7 +226,7 @@ class TrainerRegistration extends Component
         // เทรนเนอร์ภายในที่ยืนยันตัวตนแล้วอนุมัติอัตโนมัติ เข้าหน้าจองได้เลย
         // ที่เหลือไปหน้ารอผลอนุมัติ จะได้รู้ว่าต้องรออะไรและตอนนี้ทำอะไรได้บ้าง
         $this->redirect(
-            route($autoApprove ? 'trainer.schedule' : 'trainer.pending'),
+            route($autoApprove ? 'trainer.jobs' : 'trainer.pending'),
             navigate: true,
         );
     }
@@ -239,7 +239,7 @@ class TrainerRegistration extends Component
             'eyebrow' => 'สมัครเทรนเนอร์',
             'heading' => 'สร้างทีมของคุณ',
             'headingAccent' => 'แล้วเริ่มเทรน',
-            'lead' => 'สมัครครั้งเดียว จากนั้นชวนลูกทีมเข้าทีมด้วยลิงก์หรือ QR แล้วจองรอบให้พวกเขาได้เอง',
+            'lead' => 'สมัครครั้งเดียว จากนั้นชวนลูกทีมเข้าทีมด้วยลิงก์หรือ QR แล้วจองยิมให้พวกเขาได้เอง',
             // ข้อความฝั่งซ้ายต้องสอดคล้องกับประเภทที่เปิดให้สมัครจริง
             // ถ้าปิดเทรนเนอร์ภายในไว้แล้วยังโฆษณารหัสพนักงาน คนอ่านจะหาไม่เจอ
             'points' => array_values(array_filter([

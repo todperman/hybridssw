@@ -8,7 +8,7 @@
     <x-page-hero :eyebrow="$trainer->branch->name" title="ทีมของฉัน" pattern="kettlebell" pattern-alt="sandbag"
                  :subtitle="$unlimited ? 'ลูกทีม '.$count.' คน · ไม่จำกัดจำนวน' : 'ลูกทีม '.$count.' จาก '.$max.' คน'">
         <x-slot:action>
-            <a href="{{ route('trainer.schedule') }}" wire:navigate
+            <a href="{{ route('trainer.book') }}" wire:navigate
                class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
                 @svg('lucide-calendar-days', 'h-4 w-4', ['stroke-width' => '1.9'])
                 ไปหน้าจอง
@@ -357,14 +357,6 @@
                                     <span class="chip {{ $member->isActive() ? 'bg-brand-light/40 text-brand-dark' : 'bg-red-100 text-red-800' }}">
                                         {{ $member->isSuspended() ? 'ระงับถึง '.$member->suspended_until?->format('d/m') : $member->status->label() }}
                                     </span>
-
-                                    @if (\App\Support\BookingRules::creditsRequired())
-                                        <span class="chip bg-accent-light text-accent-ink">เครดิต {{ $member->availableCredits() }}</span>
-                                    @endif
-
-                                    @if ($member->no_show_count > 0)
-                                        <span class="chip bg-red-50 text-red-700">ไม่มา {{ $member->no_show_count }}</span>
-                                    @endif
 
                                     @foreach ($member->groups as $g)
                                         @php($gc = $g->palette())

@@ -3,87 +3,92 @@
 namespace Tests\Feature;
 
 use App\Livewire\UpcomingReminder;
-use App\Models\Booking;
+use App\Models\Reservation;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\Support\BuildsGym;
+use Tests\Support\BuildsReservations;
 use Tests\TestCase;
 
 class UpcomingReminderTest extends TestCase
 {
-    use BuildsGym, RefreshDatabase;
+    use BuildsReservations, RefreshDatabase;
 
-    protected function bookInMinutes(int $minutes): Booking
+    protected function setUp(): void
     {
-        $branch = $this->makeBranch();
-        $trainer = $this->makeTrainer($branch);
-        $member = $this->makeMember($branch, $trainer);
-        $session = $this->makeSession($branch, ['starts_at' => now()->addMinutes($minutes)]);
+        parent::setUp();
 
-        return app(\App\Services\BookingService::class)->book($session, $member, $trainer);
+        config(['gym.reminder.lead_minutes' => 90]);
+        Notification::fake();
+    }
+
+    /** จองตอน 09:00 ให้เริ่ม 18:00 แล้วข้ามเวลาไปจนเหลือ $minutes นาทีก่อนเริ่ม */
+    protected function confirmedReservationIn(int $minutes, bool $confirm = true): Reservation
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-07 09:00'));
+
+        $gym = $this->makeGym();
+        $friend = $this->makeMember($gym);
+        $r = $this->bookAsTrainee($gym, $this->makeMember($gym), [$friend], $this->makeAvailableTrainer($gym), CarbonImmutable::parse('2026-10-07 18:00'));
+
+        if ($confirm) {
+            $this->confirmManually($r);
+        }
+
+        $this->travelTo($r->starts_at->subMinutes($minutes));
+
+        return $r->refresh();
     }
 
     #[Test]
-    public function a_member_is_reminded_when_their_session_is_close(): void
+    public function every_participant_and_the_trainer_are_reminded_when_it_is_close(): void
     {
-        config(['gym.reminder.lead_minutes' => 90]);
+        $r = $this->confirmedReservationIn(45);
 
-        $booking = $this->bookInMinutes(45);
+        foreach ($r->participants as $member) {
+            Livewire::actingAs($member->user)->test(UpcomingReminder::class)->assertSee($r->timeLabel());
+        }
 
-        Livewire::actingAs($booking->member->user)
-            ->test(UpcomingReminder::class)
-            ->assertSee($booking->workoutSession->timeLabel());
+        Livewire::actingAs($r->trainer->user)->test(UpcomingReminder::class)
+            ->assertSee($r->timeLabel())
+            ->assertSee(route('reservations.show', $r->reference));
     }
 
     #[Test]
-    public function nothing_shows_when_the_session_is_still_far_away(): void
+    public function nothing_shows_when_it_is_still_far_away(): void
     {
-        config(['gym.reminder.lead_minutes' => 90]);
+        $r = $this->confirmedReservationIn(60 * 5);
 
-        $booking = $this->bookInMinutes(60 * 8);
-
-        Livewire::actingAs($booking->member->user)
-            ->test(UpcomingReminder::class)
-            ->assertDontSee($booking->workoutSession->timeLabel());
+        Livewire::actingAs($r->payer->user)->test(UpcomingReminder::class)->assertDontSee($r->timeLabel());
     }
 
     #[Test]
-    public function the_trainer_who_made_the_booking_is_reminded_too(): void
+    public function unpaid_bookings_are_not_reminded(): void
     {
-        config(['gym.reminder.lead_minutes' => 90]);
+        $this->travelTo(CarbonImmutable::parse('2026-10-07 17:20'));
+        $gym = $this->makeGym();
+        $r = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $this->makeAvailableTrainer($gym), CarbonImmutable::parse('2026-10-07 18:00'));
 
-        $booking = $this->bookInMinutes(30);
-
-        Livewire::actingAs($booking->trainer->user)
-            ->test(UpcomingReminder::class)
-            ->assertSee($booking->workoutSession->timeLabel());
+        Livewire::actingAs($r->payer->user)->test(UpcomingReminder::class)->assertDontSee($r->timeLabel());
     }
 
     #[Test]
-    public function dismissing_hides_the_reminder_for_that_booking(): void
+    public function a_dismissed_reminder_stays_closed(): void
     {
-        config(['gym.reminder.lead_minutes' => 90]);
+        $r = $this->confirmedReservationIn(30);
 
-        $booking = $this->bookInMinutes(20);
-
-        Livewire::actingAs($booking->member->user)
-            ->test(UpcomingReminder::class)
-            ->assertSee($booking->workoutSession->timeLabel())
-            ->call('dismiss', $booking->id)
-            ->assertDontSee($booking->workoutSession->timeLabel());
+        Livewire::actingAs($r->payer->user)->test(UpcomingReminder::class)
+            ->call('dismiss', $r->id)
+            ->assertDontSee($r->timeLabel());
     }
 
     #[Test]
-    public function a_cancelled_booking_is_never_reminded(): void
+    public function strangers_see_nothing(): void
     {
-        config(['gym.reminder.lead_minutes' => 90]);
+        $r = $this->confirmedReservationIn(30);
 
-        $booking = $this->bookInMinutes(30);
-        app(\App\Services\BookingService::class)->cancel($booking, $booking->member->user);
-
-        Livewire::actingAs($booking->member->user)
-            ->test(UpcomingReminder::class)
-            ->assertDontSee($booking->workoutSession->timeLabel());
+        Livewire::actingAs($this->makeMember($r->branch)->user)->test(UpcomingReminder::class)->assertDontSee($r->timeLabel());
     }
 }

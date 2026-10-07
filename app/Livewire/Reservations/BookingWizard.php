@@ -146,6 +146,19 @@ class BookingWizard extends Component
             ->values();
     }
 
+    /** กลุ่มลูกทีมที่ Trainer สร้างไว้ แตะครั้งเดียวเพิ่มทั้งกลุ่ม */
+    #[Computed]
+    public function groups(): Collection
+    {
+        if ($this->isTrainee()) {
+            return collect();
+        }
+
+        return auth()->user()->trainer->memberGroups()->active()->with('members')->orderBy('name')->get()
+            ->filter(fn ($g) => $g->members->isNotEmpty())
+            ->values();
+    }
+
     #[Computed]
     public function amount(): string
     {
@@ -213,6 +226,33 @@ class BookingWizard extends Component
 
         if ($member && count($this->memberIds) < (int) $this->branch->max_trainees) {
             $this->pushMember($member);
+        }
+    }
+
+    /**
+     * เพิ่มทุกคนในกลุ่มที่ยังไม่อยู่ในการจอง ข้ามคนที่ยังเพิ่มไม่ได้
+     * ถ้าเกินจำนวนต่อการจอง เพิ่มเท่าที่ใส่ได้แล้วบอกว่าเหลือกี่คน
+     */
+    public function addGroup(int $groupId): void
+    {
+        $this->lookupError = null;
+        $group = $this->groups->firstWhere('id', $groupId);
+
+        if (! $group) {
+            return;
+        }
+
+        $max = (int) $this->branch->max_trainees;
+        $candidates = $group->members
+            ->reject(fn (Member $m) => in_array($m->id, $this->memberIds, true))
+            ->filter(fn (Member $m) => $m->branch_id === $this->branch->id && $m->canJoinReservations())
+            ->values();
+
+        $room = $max - count($this->memberIds);
+        $candidates->take(max(0, $room))->each(fn (Member $m) => $this->pushMember($m));
+
+        if ($candidates->count() > $room) {
+            $this->lookupError = 'เพิ่มได้ '.max(0, $room).' คน กลุ่มนี้มีคนเกินจำนวนต่อการจอง ('.$max.' คน)';
         }
     }
 
@@ -292,7 +332,7 @@ class BookingWizard extends Component
 
     protected function afterGroupChanged(): void
     {
-        unset($this->participants, $this->mayGoWithoutTrainer, $this->teamShortcuts);
+        unset($this->participants, $this->mayGoWithoutTrainer, $this->teamShortcuts, $this->groups);
 
         // กลุ่มเปลี่ยนแล้วไม่มีสิทธิ์ไปแบบไม่มี Trainer แล้ว ต้องกลับมาเลือก Trainer
         if ($this->noTrainer && ! $this->mayGoWithoutTrainer) {

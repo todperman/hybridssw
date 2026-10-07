@@ -18,7 +18,7 @@ class ScheduleTemplateForm
     {
         return $schema
             ->components([
-                Section::make('เวลาเปิดของวันนี้')
+                Section::make('เวลาเปิดให้จองของวันนี้')
                     ->description('หนึ่งแถวคือหนึ่งวันในสัปดาห์ ถ้าเปิดทุกวันต้องสร้าง 7 แถว')
                     ->columns(2)
                     ->schema([
@@ -44,12 +44,13 @@ class ScheduleTemplateForm
 
                         Toggle::make('is_active')
                             ->label('เปิดใช้งาน')
-                            ->helperText('ปิดไว้ = ข้ามวันนี้ตอนสร้างรอบ')
+                            ->helperText('ปิดไว้ = วันนี้ไม่เปิดให้จองตามกฎนี้')
                             ->default(true)
                             ->inline(false),
 
                         TimePicker::make('start_time')
                             ->label('เปิด')
+                            ->helperText('จองเป็นช่วงละ 1 ชั่วโมงนับจากเวลาเปิด ช่วงท้ายที่ไม่ครบชั่วโมงจองไม่ได้')
                             ->seconds(false)
                             ->required(),
 
@@ -58,27 +59,6 @@ class ScheduleTemplateForm
                             ->seconds(false)
                             ->required()
                             ->after('start_time'),
-                    ]),
-
-                Section::make('ขนาดรอบ')
-                    ->columns(2)
-                    ->schema([
-                        TextInput::make('slot_duration_minutes')
-                            ->label('ความยาวรอบ (นาที)')
-                            ->helperText('ช่วงที่เหลือไม่ครบหนึ่งรอบจะถูกตัดทิ้ง')
-                            ->numeric()
-                            ->minValue(15)
-                            ->maxValue(240)
-                            ->default(60)
-                            ->required(),
-
-                        TextInput::make('capacity')
-                            ->label('ที่นั่งต่อรอบ')
-                            ->numeric()
-                            ->minValue(1)
-                            ->maxValue(50)
-                            ->default(fn () => Branch::query()->value('default_capacity') ?? 5)
-                            ->required(),
                     ]),
 
                 Section::make('ช่วงที่ใช้กฎนี้')

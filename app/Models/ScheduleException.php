@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * ข้อยกเว้นรายวันที่ทับกฎใน ScheduleTemplate
- * เช่น ปิดวันหยุดนักขัตฤกษ์ ลดเวลาเปิด หรือเปิดรอบพิเศษนอกตาราง
+ * เช่น ปิดวันหยุดนักขัตฤกษ์ ลดเวลาเปิด หรือเปิดเพิ่มนอกตาราง
  */
 class ScheduleException extends Model
 {
@@ -24,7 +24,6 @@ class ScheduleException extends Model
         'type',
         'start_time',
         'end_time',
-        'capacity',
         'reason',
         'created_by',
     ];
@@ -33,7 +32,6 @@ class ScheduleException extends Model
     {
         return [
             'date' => 'date',
-            'capacity' => 'integer',
         ];
     }
 
@@ -42,7 +40,7 @@ class ScheduleException extends Model
         return [
             self::TYPE_CLOSED => 'ปิดทั้งวัน',
             self::TYPE_CUSTOM_HOURS => 'เปลี่ยนเวลาเปิด-ปิด',
-            self::TYPE_SPECIAL_OPEN => 'เปิดรอบพิเศษ',
+            self::TYPE_SPECIAL_OPEN => 'เปิดเพิ่มช่วงพิเศษ',
         ];
     }
 

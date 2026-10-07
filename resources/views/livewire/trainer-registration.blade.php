@@ -175,9 +175,7 @@
                             </span>
 
                             <dl class="mt-4 space-y-1.5 border-t border-line pt-3 text-[13px]">
-                                <div class="flex justify-between"><dt class="text-muted">ที่นั่งต่อรอบ</dt><dd class="font-medium text-ink">{{ $case->defaultMaxSeatsPerSession() }}</dd></div>
-                                <div class="flex justify-between"><dt class="text-muted">จองล่วงหน้า</dt><dd class="font-medium text-ink">{{ $case->defaultAdvanceBookingDays() }} วัน</dd></div>
-
+                                <div class="flex justify-between"><dt class="text-muted">ลูกทีมสูงสุด</dt><dd class="font-medium text-ink">{{ $case->defaultMaxTeamSize() ?? 'ไม่จำกัด' }}</dd></div>
                             </dl>
                         </label>
                     @endforeach

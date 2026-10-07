@@ -2,12 +2,16 @@
 
 namespace App\Filament\Widgets;
 
-use App\Enums\BookingStatus;
-use App\Enums\SessionStatus;
+use App\Enums\RefundStatus;
+use App\Enums\RequestStatus;
+use App\Enums\ReservationStatus;
 use App\Enums\TrainerStatus;
-use App\Models\Booking;
+use App\Models\Branch;
+use App\Models\Payment;
+use App\Models\Reservation;
+use App\Models\ReservationRequest;
 use App\Models\Trainer;
-use App\Models\WorkoutSession;
+use App\Services\Reservations\OpeningHours;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,51 +25,56 @@ class TodayOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $today = now()->toDateString();
+        $today = now();
 
-        $sessions = $this->scoped(WorkoutSession::query())
-            ->whereDate('date', $today)
-            ->where('status', '!=', SessionStatus::Cancelled->value)
-            ->get();
+        $confirmed = $this->scoped(Reservation::query())
+            ->where('status', ReservationStatus::Confirmed->value)
+            ->whereDate('starts_at', $today->toDateString())
+            ->get(['id', 'hours', 'amount']);
 
-        $capacity = $sessions->sum('capacity');
-        $booked = $sessions->sum('booked_count');
+        // ชั่วโมงที่ยิมเปิดวันนี้รวมทุกสาขาที่เห็น ใช้หาว่ายิมถูกจองไปกี่เปอร์เซ็นต์
+        $openHours = $this->scoped(Branch::query())->where('is_active', true)->get()
+            ->sum(fn (Branch $b) => count(app(OpeningHours::class)->slotsOn($b, $today)));
+        $bookedHours = (int) $confirmed->sum('hours');
+        $usage = $openHours > 0 ? round($bookedHours / $openHours * 100) : 0;
 
-        // อัตราการใช้ที่นั่ง คือ ตัวเลขที่บอกว่าควรเพิ่มรอบหรือควรลดรอบ
-        $utilisation = $capacity > 0 ? round($booked / $capacity * 100) : 0;
-
-        $checkedIn = Booking::whereIn('workout_session_id', $sessions->pluck('id'))
-            ->whereIn('status', [BookingStatus::CheckedIn->value, BookingStatus::Completed->value])
+        $awaitingPayment = $this->scoped(Reservation::query())
+            ->where('status', ReservationStatus::PendingPayment->value)
+            ->where('hold_expires_at', '>', now())
             ->count();
 
-        $waitlisted = $sessions->sum('waitlist_count');
+        $requests = ReservationRequest::where('status', RequestStatus::Pending->value)
+            ->whereHas('reservation', fn ($q) => $this->scoped($q))
+            ->count();
+        $review = Payment::where('needs_review', true)
+            ->whereHas('reservation', fn ($q) => $this->scoped($q))
+            ->count();
+        $refunds = $this->scoped(Reservation::query())
+            ->whereIn('refund_status', [RefundStatus::Pending->value, RefundStatus::Failed->value])
+            ->count();
+        $todo = $requests + $review + $refunds;
 
         $pendingTrainers = $this->scoped(Trainer::query())
             ->where('status', TrainerStatus::Pending->value)
             ->count();
 
-        $expiringCerts = $this->scoped(Trainer::query())
-            ->where('status', TrainerStatus::Approved->value)
-            ->whereNotNull('certification_expires_at')
-            ->whereDate('certification_expires_at', '<=', now()->addDays(30))
-            ->count();
-
         return [
-            Stat::make('รอบวันนี้', $sessions->count())
-                ->description("{$booked} / {$capacity} ที่นั่งถูกจอง")
+            Stat::make('การจองวันนี้', $confirmed->count())
+                ->description("{$bookedHours} จาก {$openHours} ชั่วโมงที่เปิด ({$usage}%)")
                 ->color('primary'),
 
-            Stat::make('อัตราการใช้ที่นั่ง', "{$utilisation}%")
-                ->description($utilisation >= 80 ? 'เกือบเต็ม ควรพิจารณาเปิดรอบเพิ่ม' : 'ยังมีที่ว่าง')
-                ->color($utilisation >= 80 ? 'warning' : 'success'),
+            Stat::make('รอชำระเงิน', $awaitingPayment)
+                ->description($awaitingPayment > 0 ? 'ถ้าโอนมาแล้ว กดบันทึกรับชำระที่หน้าการจอง' : 'ไม่มีรายการค้าง')
+                ->color($awaitingPayment > 0 ? 'warning' : 'gray'),
 
-            Stat::make('เช็คอินแล้ว', $checkedIn)
-                ->description($waitlisted > 0 ? "มีคิวสำรองรออยู่ {$waitlisted} คน" : 'ไม่มีคิวสำรอง')
-                ->color('success'),
+            Stat::make('รอแอดมินจัดการ', $todo)
+                ->description($todo > 0
+                    ? collect(['คำขอ '.$requests => $requests, 'ตรวจการชำระ '.$review => $review, 'คืนเงิน '.$refunds => $refunds])->filter()->keys()->join(' · ')
+                    : 'ไม่มีงานค้าง')
+                ->color($todo > 0 ? 'danger' : 'success'),
 
-            Stat::make('เทรนเนอร์รออนุมัติ', $pendingTrainers)
-                ->description($expiringCerts > 0 ? "ใบรับรองใกล้หมดอายุ {$expiringCerts} คน" : 'เอกสารครบทุกคน')
-                ->color($pendingTrainers > 0 || $expiringCerts > 0 ? 'warning' : 'gray'),
+            Stat::make('Trainer รออนุมัติ', $pendingTrainers)
+                ->color($pendingTrainers > 0 ? 'warning' : 'gray'),
         ];
     }
 
@@ -78,6 +87,8 @@ class TodayOverview extends StatsOverviewWidget
             return $query;
         }
 
-        return $query->where('branch_id', $user->branch_id ?? 0);
+        $column = $query->getModel() instanceof Branch ? 'id' : 'branch_id';
+
+        return $query->where($query->getModel()->getTable().'.'.$column, $user->branch_id ?? 0);
     }
 }

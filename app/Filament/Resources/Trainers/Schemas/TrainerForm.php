@@ -10,6 +10,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -85,7 +86,7 @@ class TrainerForm
                         DatePicker::make('contract_ends_at')->label('สัญญาสิ้นสุด'),
                     ]),
 
-                Section::make('โควตาและสถานะ')
+                Section::make('สถานะและทีม')
                     ->columns(3)
                     ->schema([
                         Select::make('status')
@@ -93,19 +94,11 @@ class TrainerForm
                             ->options(TrainerStatus::class)
                             ->required(),
 
-                        TextInput::make('max_seats_per_session')
-                            ->label('ที่นั่งสูงสุดต่อรอบ')
-                            ->numeric()
-                            ->minValue(1)
-                            ->maxValue(20)
-                            ->placeholder(fn (Get $get) => static::defaultHint($get('type'), 'seats')),
-
-                        TextInput::make('advance_booking_days')
-                            ->label('จองล่วงหน้าได้ (วัน)')
-                            ->numeric()
-                            ->minValue(1)
-                            ->maxValue(365)
-                            ->placeholder(fn (Get $get) => static::defaultHint($get('type'), 'days')),
+                        Toggle::make('accepts_bookings')
+                            ->label('เปิดรับงานจอง')
+                            ->helperText('ปิดไว้ = ลูกเทรนเลือกคนนี้ไม่ได้ งานที่มีอยู่ยังอยู่')
+                            ->default(true)
+                            ->inline(false),
 
                         // เก็บลงคอลัมน์เดียวแต่มีสามความหมาย จึงแยกเป็นตัวเลือกโหมด
                         // แล้วค่อยแปลงเป็นค่าจริงตอนบันทึก ดูที่ EditTrainer / CreateTrainer
@@ -182,8 +175,6 @@ class TrainerForm
             : (TrainerType::tryFrom((string) $type) ?? TrainerType::External);
 
         $value = match ($key) {
-            'seats' => $type->defaultMaxSeatsPerSession(),
-            'days' => $type->defaultAdvanceBookingDays(),
             'team' => $type->defaultMaxTeamSize(),
         };
 

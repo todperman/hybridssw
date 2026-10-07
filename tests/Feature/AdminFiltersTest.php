@@ -3,18 +3,19 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
-use App\Filament\Resources\Bookings\Pages\ListBookings;
 use App\Filament\Resources\MemberGroups\Pages\ListMemberGroups;
+use App\Filament\Resources\Members\Pages\ListMembers;
+use App\Filament\Resources\Reservations\Pages\ListReservations;
 use App\Filament\Resources\Trainers\Pages\ListTrainers;
-use App\Filament\Resources\WorkoutSessions\Pages\ListWorkoutSessions;
 use App\Models\User;
-use App\Services\BookingService;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\Support\BuildsGym;
+use Tests\Support\BuildsReservations;
 use Tests\TestCase;
 
 /**
@@ -24,13 +25,14 @@ use Tests\TestCase;
  */
 class AdminFiltersTest extends TestCase
 {
-    use BuildsGym, RefreshDatabase;
+    use BuildsReservations, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->travelTo(now()->setTime(8, 0));
+        $this->travelTo(CarbonImmutable::parse('2026-10-07 08:00'));
+        Notification::fake();
 
         $branch = $this->makeBranch();
 
@@ -43,12 +45,10 @@ class AdminFiltersTest extends TestCase
     public static function filters(): array
     {
         return [
-            'การจอง: เฉพาะรอบวันนี้' => [ListBookings::class, 'today'],
-            'การจอง: รอยืนยันสิทธิ์' => [ListBookings::class, 'awaiting_confirmation'],
+            'การจอง: วันที่ใช้งาน' => [ListReservations::class, 'date'],
             'กลุ่มลูกทีม: ตั้งจำนวนเอง' => [ListMemberGroups::class, 'has_override'],
             'เทรนเนอร์: ใบรับรองใกล้หมด' => [ListTrainers::class, 'certification_expiring'],
-            'รอบ: ที่ยังไม่ถึง' => [ListWorkoutSessions::class, 'upcoming'],
-            'รอบ: มีคิวสำรอง' => [ListWorkoutSessions::class, 'has_waitlist'],
+            'สมาชิก: มีสิทธิ์ไม่มี Trainer' => [ListMembers::class, 'no_trainer'],
         ];
     }
 
@@ -83,38 +83,30 @@ class AdminFiltersTest extends TestCase
     }
 
     #[Test]
-    public function the_waitlist_filter_actually_filters(): void
+    public function the_no_trainer_filter_actually_filters(): void
     {
-        $branch = $this->makeBranch(['default_capacity' => 1]);
-        $trainer = $this->makeTrainer($branch);
-        $busy = $this->makeSession($branch, ['starts_at' => now()->setTime(18, 0)]);
-        $quiet = $this->makeSession($branch, ['starts_at' => now()->setTime(19, 0)]);
+        $branch = $this->makeBranch();
+        $privileged = $this->makeMember($branch, attributes: ['can_book_without_trainer' => true]);
+        $plain = $this->makeMember($branch);
 
-        $bookings = app(BookingService::class);
-        $bookings->book($busy, $this->makeMember($branch, $trainer), $trainer);
-        $bookings->book($busy, $this->makeMember($branch, $trainer), $trainer);
-
-        Livewire::test(ListWorkoutSessions::class)
-            ->filterTable('has_waitlist')
-            ->assertCanSeeTableRecords([$busy])
-            ->assertCanNotSeeTableRecords([$quiet]);
+        Livewire::test(ListMembers::class)
+            ->set('activeTab', 'all')
+            ->filterTable('no_trainer')
+            ->assertCanSeeTableRecords([$privileged])
+            ->assertCanNotSeeTableRecords([$plain]);
     }
 
     #[Test]
-    public function the_today_filter_actually_filters(): void
+    public function the_date_filter_actually_filters(): void
     {
-        $branch = $this->makeBranch();
-        $trainer = $this->makeTrainer($branch);
-        $today = $this->makeSession($branch, ['starts_at' => now()->setTime(18, 0)]);
-        $later = $this->makeSession($branch, ['starts_at' => now()->addDays(3)->setTime(18, 0)]);
+        $gym = $this->makeGym();
+        $trainer = $this->makeAvailableTrainer($gym);
+        $tomorrow = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $trainer, CarbonImmutable::parse('2026-10-08 18:00'));
+        $later = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $trainer, CarbonImmutable::parse('2026-10-10 18:00'));
 
-        $a = app(BookingService::class)->book($today, $this->makeMember($branch, $trainer), $trainer);
-        $b = app(BookingService::class)->book($later, $this->makeMember($branch, $trainer), $trainer);
-
-        Livewire::test(ListBookings::class)
-            ->set('activeTab', 'all')
-            ->filterTable('today')
-            ->assertCanSeeTableRecords([$a])
-            ->assertCanNotSeeTableRecords([$b]);
+        Livewire::test(ListReservations::class)
+            ->filterTable('date', ['on' => '2026-10-08'])
+            ->assertCanSeeTableRecords([$tomorrow])
+            ->assertCanNotSeeTableRecords([$later]);
     }
 }

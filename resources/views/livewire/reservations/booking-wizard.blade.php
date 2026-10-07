@@ -129,6 +129,10 @@
                     <p class="text-sm text-muted">ยังไม่มีผู้เข้าร่วม เพิ่มลูกเทรนอย่างน้อย 1 คน</p>
                 @endif
 
+                @if ($lookupError)
+                    <p class="text-sm text-red-600" role="alert">{{ $lookupError }}</p>
+                @endif
+
                 @if (count($memberIds) < $maxTrainees)
                     <form wire:submit="addMember" class="space-y-1.5">
                         <label for="lookup" class="text-sm font-medium text-ink">เพิ่ม{{ $trainee ? 'เพื่อน' : 'ลูกเทรน' }}ด้วยรหัสสมาชิกหรือเบอร์โทร</label>
@@ -139,10 +143,24 @@
                             <button type="submit" class="btn-primary shrink-0 px-4 text-sm" wire:loading.attr="disabled" wire:target="addMember">เพิ่ม</button>
                         </div>
                         <p class="text-xs text-muted">ต้องพิมพ์ให้ตรงทั้งหมด ระบบไม่แสดงรายชื่อสมาชิกคนอื่น</p>
-                        @if ($lookupError)
-                            <p class="text-sm text-red-600" role="alert">{{ $lookupError }}</p>
-                        @endif
                     </form>
+
+                    @if ($this->groups->isNotEmpty())
+                        <div>
+                            <p class="mb-2 text-sm font-medium text-ink">เพิ่มทั้งกลุ่ม</p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach ($this->groups as $g)
+                                    @php($gc = $g->palette())
+                                    <button type="button" wire:click="addGroup({{ $g->id }})" wire:key="grp-{{ $g->id }}"
+                                            class="btn-grad-soft min-h-[40px] text-sm"
+                                            style="--g-soft: {{ $gc['soft'] }}; --g-base: {{ $gc['base'] }}; --g-ink: {{ $gc['ink'] }}">
+                                        @svg('lucide-users', 'h-4 w-4')
+                                        {{ $g->name }} <span class="opacity-70">· {{ $g->members->count() }} คน</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     @if ($this->teamShortcuts->isNotEmpty())
                         <div>

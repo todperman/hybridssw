@@ -90,7 +90,7 @@ class TrainersTable
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalHeading('อนุมัติเทรนเนอร์')
-                    ->modalDescription('อนุมัติแล้วเทรนเนอร์จะเริ่มจองรอบให้ลูกทีมได้ทันที')
+                    ->modalDescription('อนุมัติแล้วเทรนเนอร์จะเริ่มรับงานและจองยิมให้ลูกเทรนได้ทันที')
                     ->visible(fn (Trainer $r) => $r->status !== TrainerStatus::Approved)
                     ->action(function (Trainer $record) {
                         // กันอนุมัติเทรนเนอร์ภายนอกที่เอกสารหมดอายุ เพราะจะจองไม่ได้อยู่ดี
@@ -112,7 +112,7 @@ class TrainersTable
 
                         Notification::make()
                             ->title('อนุมัติแล้ว')
-                            ->body("{$record->user->name} เริ่มจองรอบได้แล้ว")
+                            ->body("{$record->user->name} เริ่มรับงานได้แล้ว")
                             ->success()
                             ->send();
                     }),
@@ -144,7 +144,7 @@ class TrainersTable
                     ->icon('heroicon-o-pause-circle')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('ระงับแล้วจะจองรอบใหม่ไม่ได้ แต่การจองเดิมยังอยู่')
+                    ->modalDescription('ระงับแล้วจะรับงานใหม่และจองไม่ได้ แต่การจองเดิมยังอยู่')
                     ->visible(fn (Trainer $r) => $r->status === TrainerStatus::Approved)
                     ->action(fn (Trainer $record) => $record->update(['status' => TrainerStatus::Suspended])),
 

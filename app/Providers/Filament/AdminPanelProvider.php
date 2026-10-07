@@ -47,6 +47,8 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => BrandPalette::Gold,
                 'danger' => BrandPalette::Clay,
             ])
+            // งานประจำวันอยู่บนสุด งานตั้งค่าที่นาน ๆ แตะทีอยู่ล่าง
+            ->navigationGroups(['การจอง', 'คนในระบบ', 'เวลาเปิด', 'ตั้งค่าระบบ'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -56,7 +58,6 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 TodayOverview::class,
                 \App\Filament\Widgets\PendingTrainers::class,
-                \App\Filament\Widgets\TodaySessions::class,
             ])
             ->middleware([
                 EncryptCookies::class,

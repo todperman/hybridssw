@@ -2,22 +2,21 @@
 
 namespace Tests\Feature;
 
-use App\Enums\BookingStatus;
 use App\Enums\MemberStatus;
 use App\Enums\UserRole;
-use App\Exceptions\BookingException;
+use App\Exceptions\ReservationException;
 use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Resources\Members\Pages\ListMembers;
-use App\Livewire\Member\Schedule;
 use App\Livewire\MemberRegistration;
 use App\Livewire\TeamJoin;
 use App\Models\Branch;
 use App\Models\User;
-use App\Services\BookingService;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\Support\BuildsGym;
+use Tests\Support\BuildsReservations;
 use Tests\TestCase;
 
 /**
@@ -26,13 +25,27 @@ use Tests\TestCase;
  */
 class MemberApprovalTest extends TestCase
 {
-    use BuildsGym, RefreshDatabase;
+    use BuildsReservations, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->travelTo(now()->setTime(8, 0));
+        $this->travelTo(CarbonImmutable::parse('2026-10-07 08:00'));
+        Notification::fake();
+    }
+
+    /** สาขาที่ตั้งราคาและเวลาเปิดแล้ว พร้อม Trainer ว่าง สำหรับลองจองด้วยบัญชีที่เพิ่งสมัคร */
+    protected function bookFor(User $user): \App\Models\Reservation
+    {
+        $branch = $user->member->branch;
+        $branch->update(['hourly_rate' => 800]);
+
+        foreach (range(0, 6) as $day) {
+            $this->makeTemplate($branch, ['day_of_week' => $day, 'start_time' => '06:00', 'end_time' => '22:00']);
+        }
+
+        return $this->bookAsTrainee($branch, $user->member->fresh(), [], $this->makeAvailableTrainer($branch));
     }
 
     protected function register(): User
@@ -59,34 +72,6 @@ class MemberApprovalTest extends TestCase
         ])->refresh();
     }
 
-    // --- การจองไม่ต้องอนุมัติแล้ว ---
-
-    #[Test]
-    public function by_default_a_self_booking_gets_its_seat_immediately(): void
-    {
-        $branch = $this->makeBranch();
-
-        $booking = app(BookingService::class)->bookSelf($this->makeSession($branch), $this->makeMember($branch));
-
-        $this->assertSame(BookingStatus::Booked, $booking->status);
-        $this->assertNotNull($booking->approved_at);
-    }
-
-    #[Test]
-    public function the_schedule_page_says_the_seat_is_confirmed(): void
-    {
-        $branch = $this->makeBranch();
-        $session = $this->makeSession($branch, ['starts_at' => now()->setTime(18, 0)]);
-        $member = $this->makeMember($branch);
-
-        Livewire::actingAs($member->user)
-            ->test(Schedule::class)
-            ->assertSee('กดจองแล้วได้ที่นั่งทันที')
-            ->call('book', $session->id)
-            ->assertDispatched('toast', tone: 'success', title: 'จองสำเร็จ')
-            ->assertSee('จองแล้ว');
-    }
-
     // --- การสมัครต้องอนุมัติ ---
 
     #[Test]
@@ -106,7 +91,7 @@ class MemberApprovalTest extends TestCase
         $this->actingAs($user);
 
         $this->get(route('member.book'))->assertRedirect(route('member.pending'));
-        $this->get(route('member.bookings'))->assertRedirect(route('member.pending'));
+        $this->get(route('member.reservations'))->assertRedirect(route('member.pending'));
         $this->get(route('member.pending'))->assertOk()->assertSee('รอแอดมินอนุมัติ')->assertSee('สถานะการสมัคร');
     }
 
@@ -114,11 +99,10 @@ class MemberApprovalTest extends TestCase
     public function an_unapproved_member_is_refused_by_the_booking_service_too(): void
     {
         $user = $this->register();
-        $session = $this->makeSession(Branch::firstOrFail(), ['starts_at' => now()->setTime(18, 0)]);
 
-        $this->expectExceptionObject(BookingException::memberNotApproved());
+        $this->expectException(ReservationException::class);
 
-        app(BookingService::class)->bookSelf($session, $user->member);
+        $this->bookFor($user);
     }
 
     #[Test]
@@ -153,10 +137,7 @@ class MemberApprovalTest extends TestCase
         $this->get(route('member.pending'))->assertRedirect(route('member.book'));
         $this->get(route('member.book'))->assertOk();
 
-        $session = $this->makeSession(Branch::firstOrFail(), ['starts_at' => now()->setTime(18, 0)]);
-        $booking = app(BookingService::class)->bookSelf($session, $user->member->fresh());
-
-        $this->assertSame(BookingStatus::Booked, $booking->status);
+        $this->assertSame(\App\Enums\ReservationStatus::PendingPayment, $this->bookFor($user)->status);
     }
 
     #[Test]

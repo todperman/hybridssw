@@ -76,7 +76,7 @@ class PendingTrainers extends TableWidget
                     ->color('success')
                     ->requiresConfirmation()
                     ->modalHeading('อนุมัติเทรนเนอร์')
-                    ->modalDescription('อนุมัติแล้วเทรนเนอร์จะเริ่มจองรอบให้ลูกทีมได้ทันที')
+                    ->modalDescription('อนุมัติแล้วเทรนเนอร์จะเริ่มรับงานและจองยิมให้ลูกเทรนได้ทันที')
                     ->action(function (Trainer $record) {
                         // เงื่อนไขเดียวกับในหน้าเทรนเนอร์ ใบรับรองหมดอายุแล้วอนุมัติไปก็จองไม่ได้
                         if ($record->hasCertificationExpired()) {
@@ -97,7 +97,7 @@ class PendingTrainers extends TableWidget
 
                         Notification::make()
                             ->title('อนุมัติแล้ว')
-                            ->body($record->user->name.' เริ่มจองรอบได้ทันที')
+                            ->body($record->user->name.' เริ่มรับงานได้ทันที')
                             ->success()
                             ->send();
                     }),

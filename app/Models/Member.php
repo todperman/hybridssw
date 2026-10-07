@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\BookingStatus;
 use App\Enums\MemberStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,8 +37,6 @@ class Member extends Model
         'parq_signed_at',
         'parq_signature',
         'status',
-        'no_show_count',
-        'no_show_reset_at',
         'suspended_until',
         'suspension_reason',
     ];
@@ -53,8 +50,6 @@ class Member extends Model
             'date_of_birth' => 'date',
             'parq_answers' => 'array',
             'parq_signed_at' => 'datetime',
-            'no_show_count' => 'integer',
-            'no_show_reset_at' => 'datetime',
             'suspended_until' => 'datetime',
         ];
     }
@@ -89,11 +84,6 @@ class Member extends Model
             ->wherePivot('status', 'active');
     }
 
-    public function bookings(): HasMany
-    {
-        return $this->hasMany(Booking::class);
-    }
-
     /** กลุ่มที่ลูกทีมคนนี้สังกัดอยู่ อยู่ได้มากกว่าหนึ่งกลุ่ม */
     public function groups(): BelongsToMany
     {
@@ -102,18 +92,13 @@ class Member extends Model
             ->withTimestamps();
     }
 
-    public function packages(): HasMany
-    {
-        return $this->hasMany(MemberPackage::class);
-    }
-
     /** เซ็นแบบคัดกรองสุขภาพแล้วหรือยัง */
     public function hasSignedParq(): bool
     {
         return $this->parq_signed_at !== null;
     }
 
-    /** ถูกระงับสิทธิ์จองอยู่หรือไม่ (หมดเวลาระงับแล้วถือว่าปกติ) */
+    /** แอดมินระงับไว้หรือไม่ (หมดเวลาระงับแล้วถือว่าปกติ) */
     public function isSuspended(): bool
     {
         if ($this->status === MemberStatus::Suspended) {
@@ -145,7 +130,6 @@ class Member extends Model
         return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
-    /** แอดมินอนุมัติการสมัคร จองได้ทันทีหลังจากนี้ */
     /**
      * ให้หรือถอนสิทธิ์เข้าใช้โดยไม่มี Trainer ทำได้เฉพาะแอดมิน และต้องมีเหตุผลเสมอ
      * เก็บประวัติว่าใครเปลี่ยน เมื่อไร เพราะอะไร ตามข้อกำหนดข้อ 2
@@ -168,6 +152,7 @@ class Member extends Model
         return $this->morphMany(AuditLog::class, 'subject')->latest('id');
     }
 
+    /** แอดมินอนุมัติการสมัคร จองได้ทันทีหลังจากนี้ */
     public function approve(?User $by = null): void
     {
         $this->update([
@@ -192,23 +177,6 @@ class Member extends Model
     public function isActive(): bool
     {
         return $this->status === MemberStatus::Active && ! $this->isSuspended();
-    }
-
-    /** เครดิตคงเหลือจากทุกแพ็กเกจที่ยังไม่หมดอายุ */
-    public function availableCredits(): int
-    {
-        return $this->packages()
-            ->active()
-            ->get()
-            ->sum(fn (MemberPackage $p) => $p->creditsRemaining());
-    }
-
-    /** การจองที่ยังใช้ที่นั่งอยู่ในอนาคต */
-    public function upcomingBookings(): HasMany
-    {
-        return $this->bookings()
-            ->whereIn('status', [BookingStatus::Booked->value, BookingStatus::Waitlisted->value])
-            ->whereHas('workoutSession', fn ($q) => $q->where('starts_at', '>=', now()));
     }
 
     public function scopeActive($query)

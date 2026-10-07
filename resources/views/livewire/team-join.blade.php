@@ -2,7 +2,7 @@
     <div class="fade-up">
         <h2 class="font-display text-3xl font-extrabold heading-th text-ink">สมัครเข้าทีม</h2>
         <p class="mt-2 text-[15px] text-muted">
-            กรอกข้อมูลครั้งเดียว จากนั้น {{ $trainer->user->name }} จะจองรอบให้คุณได้เลย
+            กรอกข้อมูลครั้งเดียว จากนั้น {{ $trainer->user->name }} จะจองยิมให้คุณได้เลย
         </p>
     </div>
 

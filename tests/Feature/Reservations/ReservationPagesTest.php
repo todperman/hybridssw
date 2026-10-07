@@ -384,4 +384,20 @@ class ReservationPagesTest extends TestCase
             ->call('addMember')
             ->assertSet('memberIds', [$me->id, $friend->id]);
     }
+
+    #[Test]
+    public function a_trainer_adds_a_whole_group_up_to_the_limit(): void
+    {
+        $gym = $this->makeGym(['max_trainees' => 3]);
+        $trainer = $this->makeAvailableTrainer($gym);
+        $members = collect(range(1, 4))->map(fn () => $this->makeMember($gym, $trainer));
+        $group = \App\Models\MemberGroup::create(['trainer_id' => $trainer->id, 'branch_id' => $gym->id, 'name' => 'กลุ่มเช้า']);
+        $group->members()->attach($members->pluck('id'), ['joined_at' => now()]);
+
+        Livewire::actingAs($trainer->user)->test(BookingWizard::class)
+            ->assertSee('กลุ่มเช้า')
+            ->call('addGroup', $group->id)
+            ->assertSet('memberIds', $members->take(3)->pluck('id')->all())
+            ->assertSet('lookupError', fn ($e) => str_contains((string) $e, 'เพิ่มได้ 3 คน'));
+    }
 }

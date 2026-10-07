@@ -8,7 +8,7 @@ use App\Models\Branch;
 use App\Models\Member;
 use App\Models\User;
 use App\Rules\ThaiPhone;
-use App\Support\BookingRules;
+use App\Support\RegistrationRules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
@@ -17,8 +17,8 @@ use Livewire\Component;
 /**
  * คนทั่วไปสมัครสมาชิกเอง ไม่ต้องผ่านลิงก์ชวนของเทรนเนอร์
  *
- * สมาชิกแบบนี้ไม่สังกัดทีมใด จองรอบให้ตัวเองได้ที่หน้าจองรอบ
- * แล้วรอแอดมินอนุมัติตามค่า gym.booking.approval
+ * สมาชิกแบบนี้ไม่สังกัดทีมใด จองยิมให้ตัวเองและเพื่อนได้ที่หน้าจองยิม
+ * ถ้าเปิด gym.registration.member_approval ต้องรอแอดมินอนุมัติบัญชีก่อน
  */
 class MemberRegistration extends Component
 {
@@ -38,7 +38,7 @@ class MemberRegistration extends Component
 
     public function mount(): void
     {
-        abort_unless(BookingRules::publicRegistrationOpen(), 404);
+        abort_unless(RegistrationRules::publicRegistrationOpen(), 404);
 
         // มีสาขาเดียวก็ผูกให้เลย ไม่ต้องให้เลือก
         $this->branch_id = Branch::active()->value('id');
@@ -57,7 +57,7 @@ class MemberRegistration extends Component
 
     public function register(): void
     {
-        abort_unless(BookingRules::publicRegistrationOpen(), 404);
+        abort_unless(RegistrationRules::publicRegistrationOpen(), 404);
 
         $data = $this->validate([
             'branch_id' => ['required', Rule::exists('branches', 'id')->where('is_active', true)],
@@ -91,8 +91,8 @@ class MemberRegistration extends Component
                 'user_id' => $user->id,
                 'branch_id' => $data['branch_id'],
                 'primary_trainer_id' => null,
-                'status' => BookingRules::memberRegistrationNeedsApproval() ? MemberStatus::Pending : MemberStatus::Active,
-                'approved_at' => BookingRules::memberRegistrationNeedsApproval() ? null : now(),
+                'status' => RegistrationRules::memberRegistrationNeedsApproval() ? MemberStatus::Pending : MemberStatus::Active,
+                'approved_at' => RegistrationRules::memberRegistrationNeedsApproval() ? null : now(),
                 'emergency_contact_name' => $data['emergency_contact_name'],
                 'emergency_contact_phone' => ThaiPhone::digits($data['emergency_contact_phone']),
             ]);
@@ -102,26 +102,23 @@ class MemberRegistration extends Component
 
         auth()->login($user);
 
-        $this->redirect(route(BookingRules::memberRegistrationNeedsApproval() ? 'member.pending' : 'member.schedule'), navigate: true);
+        $this->redirect(route(RegistrationRules::memberRegistrationNeedsApproval() ? 'member.pending' : 'member.book'), navigate: true);
     }
 
     public function render()
     {
-        $approval = BookingRules::needsApproval(selfBooked: true);
-        $reviewed = BookingRules::memberRegistrationNeedsApproval();
+        $reviewed = RegistrationRules::memberRegistrationNeedsApproval();
 
         return view('livewire.member-registration')->layout('layouts.auth', [
             'eyebrow' => 'สมัครสมาชิก',
             'heading' => 'เริ่มเทรน',
             'headingAccent' => 'กับเราวันนี้',
-            'lead' => 'สมัครครั้งเดียว แล้วเลือกจองรอบที่สะดวกได้เอง',
+            'lead' => 'สมัครครั้งเดียว แล้วจองยิมทั้งยิมเป็นรายชั่วโมงได้เอง',
             'points' => array_values(array_filter([
                 $reviewed ? 'สมัครแล้วรอแอดมินอนุมัติบัญชีก่อน ครั้งเดียวจบ' : null,
-                'เลือกวันและเวลาได้เองจากตารางรอบ',
-                'แต่ละรอบรับจำนวนจำกัด เห็นที่ว่างก่อนจองทุกครั้ง',
-                $approval
-                    ? 'ส่งคำขอจองแล้วรอแอดมินยืนยัน ที่นั่งถูกกันไว้ให้ระหว่างรอ'
-                    : 'จองแล้วได้ที่นั่งทันที',
+                'เลือกวัน เวลา และ Trainer ที่ว่างได้เอง',
+                'ชวนเพื่อนมาเข้ากลุ่มเดียวกันได้ในการจองเดียว',
+                'ชำระเงินแล้วการจองยืนยันทันที',
             ])),
             'altHref' => route('login'),
             'altLabel' => 'มีบัญชีอยู่แล้ว',
