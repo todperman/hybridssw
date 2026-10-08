@@ -32,6 +32,9 @@ class BookingWizard extends Component
     public string $mode = 'trainee';
 
     public string $date = '';
+
+    /** ใช้ตัวเดียวทั้งคำขอ เวลาเปิดที่คำนวณแล้วจะได้ไม่ถูกถามซ้ำในแต่ละส่วนของหน้า */
+    protected ?Availability $availabilityService = null;
     public int $hours = 1;
     public ?string $start = null;
 
@@ -89,12 +92,11 @@ class BookingWizard extends Component
     #[Computed]
     public function startTimes(): array
     {
-        $times = app(Availability::class)->gymStartTimes($this->branch, CarbonImmutable::parse($this->date), $this->hours);
+        $times = $this->availability()->gymStartTimes($this->branch, CarbonImmutable::parse($this->date), $this->hours);
 
         // Trainer จองให้ลูกเทรน ต้องแสดงเฉพาะเวลาที่ตัวเองว่างด้วย
         if (! $this->isTrainee()) {
-            $me = auth()->user()->trainer;
-            $times = array_values(array_filter($times, fn ($t) => app(Availability::class)->trainerCovers($me, $t, $this->hours)));
+            $times = $this->availability()->trainerStartTimes(auth()->user()->trainer, $times, $this->hours);
         }
 
         return $times;
@@ -123,7 +125,7 @@ class BookingWizard extends Component
             return collect();
         }
 
-        return app(Availability::class)->availableTrainers($this->branch, $this->startAt, $this->hours);
+        return $this->availability()->availableTrainers($this->branch, $this->startAt, $this->hours);
     }
 
     #[Computed]
@@ -371,6 +373,11 @@ class BookingWizard extends Component
         abort_if($mode === 'trainer' ? $user->trainer === null : $user->member === null, 403);
 
         return $mode;
+    }
+
+    protected function availability(): Availability
+    {
+        return $this->availabilityService ??= app(Availability::class);
     }
 
     public function render()

@@ -116,4 +116,15 @@ class GymDoctorTest extends TestCase
             $backup === null ? @unlink($log) : file_put_contents($log, $backup);
         }
     }
+
+    #[Test]
+    public function the_speed_section_reports_debug_mode_and_database_latency(): void
+    {
+        config(['app.debug' => true]);
+        $this->makeAvailableTrainer($this->makeGym());
+
+        $this->artisan('gym:doctor')
+            ->expectsOutputToContain('APP_DEBUG เปิดอยู่')
+            ->expectsOutputToContain('ต่อฐานข้อมูล');
+    }
 }

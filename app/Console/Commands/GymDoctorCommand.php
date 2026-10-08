@@ -55,6 +55,9 @@ class GymDoctorCommand extends Command
         $this->checkOpenHours();
         $this->checkTrainers();
 
+        $this->section('ความเร็ว');
+        $this->checkSpeed();
+
         $this->section('งานที่ค้างและข้อผิดพลาดล่าสุด');
         $this->checkPending();
         $this->checkScheduler();
@@ -235,6 +238,58 @@ class GymDoctorCommand extends Command
         $stuck === 0
             ? $this->ok('ไม่มีรายการรอชำระที่หมดเวลาค้างอยู่')
             : $this->caution("มีรายการรอชำระที่หมดเวลาแล้วแต่ยังไม่ถูกปิด {$stuck} รายการ ตัวตั้งเวลาอาจไม่ได้ทำงาน", 'ตั้ง Scheduled Task ให้รัน php artisan schedule:run ทุก 1 นาที (deploy.ps1 -InstallScheduler)');
+    }
+
+    /**
+     * สิ่งที่ทำให้ทุกหน้าช้าลงเท่ากันหมด ไม่ใช่เพราะโค้ดหน้าไหน
+     * คำสั่งนี้รันผ่าน CLI ค่า OPcache ที่เห็นอาจต่างจากตัวที่เว็บใช้ ต้องดูใน Plesk ประกอบ
+     */
+    protected function checkSpeed(): void
+    {
+        config('app.debug')
+            ? $this->caution('APP_DEBUG เปิดอยู่ ช้าลงและอาจเผยข้อมูลภายในเมื่อเกิดข้อผิดพลาด', 'ตั้ง APP_DEBUG=false ใน .env แล้ว php artisan optimize')
+            : $this->ok('APP_DEBUG ปิดอยู่');
+
+        app()->configurationIsCached() && app()->routesAreCached()
+            ? $this->ok('config และ route ถูก cache แล้ว')
+            : $this->caution('ยังไม่ได้ cache config/route ทุกหน้าต้องอ่านไฟล์ตั้งค่าใหม่ทุกครั้ง', 'php artisan optimize (deploy.ps1 ทำให้อยู่แล้ว)');
+
+        $opcache = filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOL);
+        $files = (int) ini_get('opcache.max_accelerated_files');
+
+        if ($opcache && $files < 20000) {
+            $this->caution("OPcache เปิดแต่จำไฟล์ได้แค่ {$files} ไฟล์ Laravel กับ Filament ใช้มากกว่านั้น ไฟล์ที่ล้นต้องแปลใหม่ทุกครั้ง", 'Plesk → PHP Settings: opcache.max_accelerated_files=20000');
+        }
+
+        $opcache
+            ? $this->ok('OPcache เปิดใน php.ini ('.ini_get('opcache.memory_consumption').' MB, ไฟล์ '.$files.') ค่าที่เว็บใช้จริงดูใน Plesk → PHP Settings')
+            : $this->caution('OPcache ไม่ได้เปิด PHP ต้องแปลโค้ดใหม่ทุกคำขอ เป็นสาเหตุหลักที่ทุกหน้าช้า', 'Plesk → เว็บไซต์ → PHP Settings: opcache.enable=on, memory_consumption=256, max_accelerated_files=20000');
+
+        if (PHP_OS_FAMILY === 'Windows' && config('database.connections.'.config('database.default').'.host') === 'localhost') {
+            $this->caution('DB_HOST เป็น localhost บน Windows จะลอง IPv6 (::1) ก่อน เสียเวลาทุกครั้งที่ต่อฐานข้อมูล', 'เปลี่ยนเป็น DB_HOST=127.0.0.1 ใน .env แล้ว php artisan optimize');
+        }
+
+        // ต่อฐานข้อมูลใหม่ด้วยการเชื่อมต่อแยก แล้วจับเวลาทั้งการต่อและการถามสั้น ๆ ซ้ำ 20 ครั้ง
+        // ไม่แตะการเชื่อมต่อหลัก ทรานแซกชันที่เปิดค้างอยู่ (เช่นในเทสต์) จะได้ไม่หลุด
+        config(['database.connections.doctor_probe' => config('database.connections.'.config('database.default'))]);
+
+        $t = microtime(true);
+        $probe = DB::connection('doctor_probe');
+        $probe->select('select 1');
+        $connect = (microtime(true) - $t) * 1000;
+
+        $t = microtime(true);
+        foreach (range(1, 20) as $_) {
+            $probe->select('select 1');
+        }
+        $query = (microtime(true) - $t) * 1000 / 20;
+        DB::purge('doctor_probe');
+
+        $summary = sprintf('ต่อฐานข้อมูล %.0f ms · คิวรีละ %.1f ms', $connect, $query);
+
+        $connect > 100 || $query > 5
+            ? $this->caution($summary.' ช้ากว่าปกติ (ควรต่ำกว่า 100 ms และ 5 ms)', 'ถ้าฐานข้อมูลอยู่เครื่องเดียวกันให้ใช้ DB_HOST=127.0.0.1')
+            : $this->ok($summary);
     }
 
     protected function checkLog(): void

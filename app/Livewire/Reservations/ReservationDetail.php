@@ -102,7 +102,7 @@ class ReservationDetail extends Component
         $times = $availability->gymStartTimes($r->branch, CarbonImmutable::parse($this->newDate), $r->hours, $r->id);
 
         if ($r->trainer) {
-            $times = array_filter($times, fn ($t) => $availability->trainerCovers($r->trainer, $t, $r->hours, $r->id));
+            $times = $availability->trainerStartTimes($r->trainer, $times, $r->hours, $r->id);
         }
 
         return array_values(array_filter($times, fn ($t) => ! $t->equalTo($r->starts_at)));

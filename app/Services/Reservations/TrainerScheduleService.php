@@ -75,6 +75,9 @@ class TrainerScheduleService
         return DB::transaction(function () use ($trainer, $change) {
             $result = $change();
 
+            // ตรวจกับเวลาว่างหลังแก้แล้ว ไม่ใช่ข้อมูลที่โหลดค้างไว้ก่อนแก้
+            $trainer->unsetRelation('availabilities')->unsetRelation('timeOffs');
+
             $upcoming = Reservation::query()
                 ->where('trainer_id', $trainer->id)
                 ->whereIn('status', ReservationStatus::holding())

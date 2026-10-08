@@ -21,6 +21,9 @@ class OpeningHours
     /** @var array<string, array<int, CarbonImmutable>> */
     protected array $cache = [];
 
+    /** @var array<int, \Illuminate\Support\Collection> ตารางเวลาเปิดของแต่ละสาขา ใช้ซ้ำทุกวันที่ถามในคำขอเดียวกัน */
+    protected array $templates = [];
+
     /**
      * จุดเริ่มของทุกช่วง 1 ชั่วโมงที่ยิมเปิดในวันนั้น เรียงตามเวลา
      *
@@ -63,7 +66,9 @@ class OpeningHours
         if ($custom && $custom->start_time && $custom->end_time) {
             $ranges[] = [$custom->start_time, $custom->end_time];
         } else {
-            foreach ($branch->scheduleTemplates()->active()->get() as $template) {
+            $this->templates[$branch->id] ??= $branch->scheduleTemplates()->active()->get();
+
+            foreach ($this->templates[$branch->id] as $template) {
                 if ($template->appliesOn($date)) {
                     $ranges[] = [$template->start_time, $template->end_time];
                 }

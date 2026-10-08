@@ -197,8 +197,11 @@ class ReservationActions
         $availability = app(Availability::class);
         $times = $availability->gymStartTimes($record->branch, CarbonImmutable::parse($date), $record->hours, $record->id);
 
+        if ($record->trainer) {
+            $times = $availability->trainerStartTimes($record->trainer, $times, $record->hours, $record->id);
+        }
+
         return collect($times)
-            ->filter(fn ($t) => ! $record->trainer || $availability->trainerCovers($record->trainer, $t, $record->hours, $record->id))
             ->filter(fn ($t) => $record->participants->every(fn ($m) => $availability->memberFree($m, $t, $record->hours, $record->id)))
             ->mapWithKeys(fn ($t) => [$t->format('H:i') => $t->format('H:i').' – '.$t->addHours($record->hours)->format('H:i')])
             ->all();

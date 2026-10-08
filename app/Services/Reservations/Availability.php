@@ -32,9 +32,26 @@ class Availability
      */
     public function lockedSlots(string $resource, int $id, CarbonInterface $from, CarbonInterface $to, ?int $ignoreReservationId = null): array
     {
-        return SlotLock::query()
+        return $this->lockedSlotsFor($resource, [$id], $from, $to, $ignoreReservationId)[$id] ?? [];
+    }
+
+    /**
+     * เหมือน lockedSlots แต่ถามหลายรายการในคิวรีเดียว ใช้ตอนต้องเช็ค Trainer หลายคนพร้อมกัน
+     *
+     * @param  array<int, int>  $ids
+     * @return array<int, array<string, true>>
+     */
+    public function lockedSlotsFor(string $resource, array $ids, CarbonInterface $from, CarbonInterface $to, ?int $ignoreReservationId = null): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $locked = [];
+
+        SlotLock::query()
             ->where('resource', $resource)
-            ->where('resource_id', $id)
+            ->whereIn('resource_id', $ids)
             ->where('slot_start', '>=', $from)
             ->where('slot_start', '<', $to)
             ->when($ignoreReservationId, fn ($q) => $q->where('reservation_id', '!=', $ignoreReservationId))
@@ -43,9 +60,12 @@ class Availability
                 ->orWhere(fn ($q) => $q
                     ->where('status', ReservationStatus::PendingPayment->value)
                     ->where('hold_expires_at', '>', now()))))
-            ->pluck('slot_start')
-            ->mapWithKeys(fn ($s) => [CarbonImmutable::parse($s)->format('Y-m-d H:i') => true])
-            ->all();
+            ->get(['resource_id', 'slot_start'])
+            ->each(function (SlotLock $lock) use (&$locked) {
+                $locked[$lock->resource_id][CarbonImmutable::parse($lock->slot_start)->format('Y-m-d H:i')] = true;
+            });
+
+        return $locked;
     }
 
     /**
@@ -139,10 +159,12 @@ class Availability
         $start = CarbonImmutable::parse($start);
         $end = $start->addHours($hours);
 
-        $windows = $trainer->availabilities()->get();
-        $offs = $trainer->timeOffs()
-            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->get();
+        // ใช้ข้อมูลที่โหลดมาแล้วถ้ามี ตอนเช็คหลายช่วงเวลาหรือหลายคนจะได้ไม่ถามฐานข้อมูลซ้ำ
+        $windows = $trainer->relationLoaded('availabilities') ? $trainer->availabilities : $trainer->availabilities()->get();
+        $offs = ($trainer->relationLoaded('timeOffs')
+                ? $trainer->timeOffs
+                : $trainer->timeOffs()->whereBetween('date', [$start->toDateString(), $end->toDateString()])->get())
+            ->filter(fn (TrainerTimeOff $off) => $off->date->betweenIncluded($start->startOfDay(), $end->endOfDay()));
 
         foreach (range(0, $hours - 1) as $i) {
             $slot = $start->addHours($i);
@@ -158,14 +180,54 @@ class Availability
     /** Trainer ทุกคนในสาขาที่ว่างครบทุกชั่วโมงของช่วงนี้ */
     public function availableTrainers(Branch $branch, CarbonInterface $start, int $hours, ?int $ignoreReservationId = null): Collection
     {
-        return Trainer::query()
+        $start = CarbonImmutable::parse($start);
+
+        // โหลดเวลาว่าง วันลา และงานของทุกคนทีเดียว แทนการถามทีละคน
+        $trainers = Trainer::query()
             ->where('branch_id', $branch->id)
             ->where('status', TrainerStatus::Approved->value)
             ->where('accepts_bookings', true)
-            ->with('user')
+            ->with(['user', 'availabilities', 'timeOffs' => fn ($q) => $q
+                ->whereBetween('date', [$start->toDateString(), $start->addHours($hours)->toDateString()])])
             ->get()
-            ->filter(fn (Trainer $t) => $this->trainerCovers($t, $start, $hours, $ignoreReservationId))
-            ->values();
+            ->filter(fn (Trainer $t) => $t->canTakeReservations() && $this->coveredBySchedule($t, $start, $hours));
+
+        $locked = $this->lockedSlotsFor(SlotLock::TRAINER, $trainers->modelKeys(), $start, $start->addHours($hours), $ignoreReservationId);
+
+        return $trainers->reject(fn (Trainer $t) => isset($locked[$t->id]))->values();
+    }
+
+    /**
+     * กรองเวลาเริ่มให้เหลือเฉพาะที่ Trainer คนนี้ว่างครบ ถามงานของ Trainer ครั้งเดียวทั้งวัน
+     *
+     * @param  array<int, CarbonImmutable>  $starts
+     * @return array<int, CarbonImmutable>
+     */
+    public function trainerStartTimes(Trainer $trainer, array $starts, int $hours, ?int $ignoreReservationId = null): array
+    {
+        if ($starts === [] || ! $trainer->canTakeReservations()) {
+            return [];
+        }
+
+        $trainer->loadMissing(['availabilities', 'timeOffs']);
+
+        $from = collect($starts)->min();
+        $to = collect($starts)->max()->addHours($hours);
+        $locked = $this->lockedSlots(SlotLock::TRAINER, $trainer->id, $from, $to, $ignoreReservationId);
+
+        return array_values(array_filter($starts, function (CarbonImmutable $start) use ($trainer, $hours, $locked) {
+            if (! $this->coveredBySchedule($trainer, $start, $hours)) {
+                return false;
+            }
+
+            foreach (range(0, $hours - 1) as $i) {
+                if (isset($locked[$start->addHours($i)->format('Y-m-d H:i')])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }));
     }
 
     public function memberFree(Member $member, CarbonInterface $start, int $hours, ?int $ignoreReservationId = null): bool
