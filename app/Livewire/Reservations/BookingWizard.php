@@ -193,6 +193,11 @@ class BookingWizard extends Component
 
     public function chooseTrainer(?int $id): void
     {
+        // ไม่มีสิทธิ์ก็เลือกเข้าใช้เองไม่ได้ ต่อให้ส่งค่ามาเองจากหน้าเว็บ
+        if ($id === null && ! $this->mayGoWithoutTrainer) {
+            return;
+        }
+
         $this->trainerId = $id;
         $this->noTrainer = $id === null;
     }
@@ -345,9 +350,10 @@ class BookingWizard extends Component
         $this->start = null;
         $this->error = null;
 
+        // เปลี่ยนวันหรือชั่วโมงแล้ว Trainer ที่เลือกไว้อาจไม่ว่าง ต้องเลือกใหม่
+        // แต่การเลือกเข้าใช้เองไม่ขึ้นกับเวลา จึงคงไว้
         if ($this->isTrainee()) {
             $this->trainerId = null;
-            $this->noTrainer = false;
         }
 
         unset($this->startTimes, $this->trainers, $this->startAt, $this->amount);

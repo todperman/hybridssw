@@ -129,11 +129,11 @@ class ReservationPagesTest extends TestCase
 
         Livewire::actingAs($plain->user)->test(BookingWizard::class)
             ->call('selectDay', '2026-10-08')->call('pickStart', '18:00')
-            ->assertDontSee('เข้าใช้โดยไม่มี Trainer');
+            ->assertDontSee('เข้าใช้เอง ไม่มี Trainer');
 
         Livewire::actingAs($privileged->user)->test(BookingWizard::class)
             ->call('selectDay', '2026-10-08')->call('pickStart', '18:00')
-            ->assertSee('เข้าใช้โดยไม่มี Trainer')
+            ->assertSee('เข้าใช้เอง ไม่มี Trainer')
             ->call('chooseTrainer', null)
             ->call('submit')
             ->assertRedirect();
@@ -399,5 +399,38 @@ class ReservationPagesTest extends TestCase
             ->call('addGroup', $group->id)
             ->assertSet('memberIds', $members->take(3)->pluck('id')->all())
             ->assertSet('lookupError', fn ($e) => str_contains((string) $e, 'เพิ่มได้ 3 คน'));
+    }
+
+    #[Test]
+    public function a_privileged_trainee_can_skip_the_trainer_before_picking_a_time_and_keeps_that_choice(): void
+    {
+        $gym = $this->makeGym();
+        $this->makeAvailableTrainer($gym);
+        $me = $this->makeMember($gym, attributes: ['can_book_without_trainer' => true]);
+
+        Livewire::actingAs($me->user)->test(BookingWizard::class)
+            ->assertSee('เข้าใช้เอง ไม่มี Trainer')
+            ->call('chooseTrainer', null)
+            ->call('selectDay', '2026-10-08')
+            ->call('setHours', 2)
+            ->assertSet('noTrainer', true)
+            ->call('pickStart', '18:00')
+            ->assertSet('noTrainer', true)
+            ->call('submit')
+            ->assertRedirect();
+
+        $this->assertNull(Reservation::sole()->trainer_id);
+    }
+
+    #[Test]
+    public function a_trainee_without_the_privilege_cannot_choose_no_trainer(): void
+    {
+        $gym = $this->makeGym();
+        $me = $this->makeMember($gym);
+
+        Livewire::actingAs($me->user)->test(BookingWizard::class)
+            ->assertDontSee('เข้าใช้เอง ไม่มี Trainer')
+            ->call('chooseTrainer', null)
+            ->assertSet('noTrainer', false);
     }
 }

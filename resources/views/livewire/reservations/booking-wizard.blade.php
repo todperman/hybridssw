@@ -181,17 +181,39 @@
             </div>
         </section>
 
-        {{-- 4. Trainer (เฉพาะ Trainee) --}}
+        {{-- 4. Trainer (เฉพาะ Trainee)
+             คนที่มีสิทธิ์เข้าใช้เองเลือก "ไปกับ Trainer" หรือ "เข้าใช้เอง" ได้ตั้งแต่แรก ไม่ต้องรอเลือกเวลา
+             เพราะตัวเลือกนี้ไม่ขึ้นกับเวลา ส่วนรายชื่อ Trainer ขึ้นกับเวลาจึงแสดงหลังเลือกเวลาเริ่ม --}}
         @if ($trainee)
+            @php($canSkip = $this->mayGoWithoutTrainer)
             <section class="card overflow-hidden">
                 <div class="card-head">
                     <h2 class="font-display text-[17px] font-bold text-grad">4. Trainer</h2>
-                    <p class="mt-0.5 text-xs text-muted">แสดงเฉพาะ Trainer ที่ว่างครบทุกชั่วโมงของช่วงที่เลือก</p>
+                    <p class="mt-0.5 text-xs text-muted">
+                        {{ $canSkip ? 'คุณเข้าใช้ยิมเองได้โดยไม่ต้องมี Trainer หรือเลือก Trainer ที่ว่างก็ได้' : 'แสดงเฉพาะ Trainer ที่ว่างครบทุกชั่วโมงของช่วงที่เลือก' }}
+                    </p>
                 </div>
 
-                <div class="p-4 sm:p-5">
-                    @if (! $start)
-                        <p class="text-sm text-muted">เลือกเวลาเริ่มก่อน</p>
+                <div class="space-y-3 p-4 sm:p-5">
+                    @if ($canSkip)
+                        <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="รูปแบบการเข้าใช้">
+                            <button type="button" wire:click="chooseTrainer(null)" role="radio" aria-checked="{{ $noTrainer ? 'true' : 'false' }}"
+                                    class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition
+                                           {{ $noTrainer ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
+                                @svg('lucide-user-round', 'h-4 w-4') เข้าใช้เอง ไม่มี Trainer
+                            </button>
+                            <button type="button" wire:click="$set('noTrainer', false)" role="radio" aria-checked="{{ $noTrainer ? 'false' : 'true' }}"
+                                    class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition
+                                           {{ ! $noTrainer ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
+                                @svg('lucide-users', 'h-4 w-4') ไปกับ Trainer
+                            </button>
+                        </div>
+                    @endif
+
+                    @if ($noTrainer)
+                        <p class="text-sm text-muted">ไม่ต้องเลือก Trainer เลือกวันเวลาแล้วไปขั้นถัดไปได้เลย</p>
+                    @elseif (! $start)
+                        <p class="text-sm text-muted">เลือกเวลาเริ่มก่อน แล้วจะเห็น Trainer ที่ว่างช่วงนั้น</p>
                     @else
                         <div class="space-y-2">
                             @forelse ($this->trainers as $t)
@@ -211,21 +233,8 @@
                                     @endif
                                 </button>
                             @empty
-                                <p class="text-sm text-muted">ไม่มี Trainer ว่างครบช่วงนี้ ลองเลือกเวลาอื่น</p>
+                                <p class="text-sm text-muted">ไม่มี Trainer ว่างครบช่วงนี้ ลองเลือกเวลาอื่น{{ $canSkip ? ' หรือเลือกเข้าใช้เอง' : '' }}</p>
                             @endforelse
-
-                            @if ($this->mayGoWithoutTrainer)
-                                <button type="button" wire:click="chooseTrainer(null)"
-                                        aria-pressed="{{ $noTrainer ? 'true' : 'false' }}"
-                                        class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition
-                                               {{ $noTrainer ? 'border-brand-dark bg-brand-light/30' : 'border-dashed border-line bg-white/40 hover:bg-mist' }}">
-                                    <span class="grid h-9 w-9 place-items-center rounded-full bg-mist text-muted">@svg('lucide-user-x', 'h-4 w-4')</span>
-                                    <span class="flex-1 text-sm font-medium text-ink">เข้าใช้โดยไม่มี Trainer</span>
-                                    @if ($noTrainer)
-                                        @svg('lucide-circle-check', 'h-5 w-5 text-brand-deep')
-                                    @endif
-                                </button>
-                            @endif
                         </div>
                     @endif
                 </div>
