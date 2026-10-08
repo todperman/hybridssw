@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
  *
  *   php artisan gym:demo --rate=800      ใส่ข้อมูลตัวอย่าง (ตั้งราคาให้ถ้าสาขายังไม่มีราคา)
  *   php artisan gym:demo --remove        ลบข้อมูลตัวอย่างทั้งหมด
+ *   php artisan gym:demo --reset-password ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่าง (เมื่อลืมรหัสเดิม)
  *
  * ไม่แตะเวลาเปิดของสาขา ต้องตั้งในหลังบ้านก่อน และตั้งราคาให้เฉพาะเมื่อยังเป็น 0 และสั่งมาเอง
  */
@@ -20,6 +21,7 @@ class GymDemoCommand extends Command
 {
     protected $signature = 'gym:demo
         {--remove : ลบข้อมูลตัวอย่างทั้งหมด}
+        {--reset-password : ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่างทุกบัญชี}
         {--branch= : รหัสสาขา (ค่าเริ่มต้นคือสาขาแรกที่เปิดใช้)}
         {--rate= : ราคาต่อชั่วโมง ใช้เฉพาะเมื่อสาขายังไม่ได้ตั้งราคา}
         {--no-bookings : สร้างแค่บัญชี ไม่สร้างการจองตัวอย่าง}
@@ -31,6 +33,10 @@ class GymDemoCommand extends Command
     {
         if ($this->option('remove')) {
             return $this->remove($demo);
+        }
+
+        if ($this->option('reset-password')) {
+            return $this->resetPassword($demo);
         }
 
         if ($demo->exists()) {
@@ -77,15 +83,9 @@ class GymDemoCommand extends Command
             return self::SUCCESS;
         }
 
-        // รหัสผ่านไม่ฝังในโค้ด ตั้งเองผ่าน DEMO_PASSWORD หรือให้ระบบสุ่มแล้วแสดงครั้งเดียว
-        $password = (string) env('DEMO_PASSWORD', '');
-        $generated = $password === '';
+        [$password, $generated] = $this->password();
 
-        if ($generated) {
-            $password = Str::password(14, symbols: false);
-        } elseif (strlen($password) < 12) {
-            $this->error('DEMO_PASSWORD ต้องยาวอย่างน้อย 12 ตัวอักษร');
-
+        if ($password === null) {
             return self::FAILURE;
         }
 
@@ -108,14 +108,61 @@ class GymDemoCommand extends Command
         ]);
         $this->line('ลูกเทรนตัวอย่างค้นด้วยเบอร์ 0990001001 ถึง 0990001006 ได้');
 
-        if ($generated) {
-            $this->newLine();
-            $this->warn('รหัสผ่านของทุกบัญชีตัวอย่าง (แสดงครั้งเดียว เก็บไว้เอง): '.$password);
-        } else {
-            $this->line('รหัสผ่านทุกบัญชีคือค่า DEMO_PASSWORD ใน .env ลบออกจาก .env ได้แล้ว');
-        }
+        $this->showPassword($password, $generated);
 
         return self::SUCCESS;
+    }
+
+    protected function resetPassword(DemoData $demo): int
+    {
+        if (! $demo->exists()) {
+            $this->error('ยังไม่มีข้อมูลตัวอย่าง สร้างก่อนด้วย php artisan gym:demo');
+
+            return self::FAILURE;
+        }
+
+        [$password, $generated] = $this->password();
+
+        if ($password === null) {
+            return self::FAILURE;
+        }
+
+        $count = $demo->resetPassword($password);
+        $this->info("ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่าง {$count} บัญชีแล้ว");
+        $this->showPassword($password, $generated);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * รหัสผ่านไม่ฝังในโค้ด ตั้งเองผ่าน DEMO_PASSWORD หรือให้ระบบสุ่มแล้วแสดงครั้งเดียว
+     *
+     * @return array{0: ?string, 1: bool}
+     */
+    protected function password(): array
+    {
+        $password = (string) env('DEMO_PASSWORD', '');
+
+        if ($password === '') {
+            return [Str::password(14, symbols: false), true];
+        }
+
+        if (strlen($password) < 12) {
+            $this->error('DEMO_PASSWORD ต้องยาวอย่างน้อย 12 ตัวอักษร');
+
+            return [null, false];
+        }
+
+        return [$password, false];
+    }
+
+    protected function showPassword(string $password, bool $generated): void
+    {
+        $this->newLine();
+
+        $generated
+            ? $this->warn('รหัสผ่านของทุกบัญชีตัวอย่าง (แสดงครั้งเดียว เก็บไว้เอง): '.$password)
+            : $this->line('รหัสผ่านทุกบัญชีคือค่า DEMO_PASSWORD ใน .env ลบออกจาก .env ได้แล้ว');
     }
 
     protected function remove(DemoData $demo): int

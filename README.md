@@ -292,6 +292,7 @@ php artisan gym:doctor
 ```bash
 php artisan gym:demo --rate=800   # ใส่ (--rate ใช้เฉพาะเมื่อสาขายังไม่ตั้งราคา)
 php artisan gym:demo --remove     # ลบทิ้งทั้งหมดก่อนเปิดให้บริการจริง
+php artisan gym:demo --reset-password  # ลืมรหัสผ่าน ตั้งใหม่ให้ทุกบัญชีตัวอย่าง
 ```
 
 สร้าง Trainer 2 คน ลูกเทรน 6 คน กลุ่มลูกทีม และการจองครบทุกสถานะ (ยืนยัน หมดอายุ ยกเลิกพร้อมคืนเงิน

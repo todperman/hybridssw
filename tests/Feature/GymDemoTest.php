@@ -118,4 +118,21 @@ class GymDemoTest extends TestCase
         $this->makeGym(['code' => 'NOPRICE', 'hourly_rate' => 0]);
         $this->artisan('gym:demo', ['--branch' => 'NOPRICE', '--force' => true])->expectsOutputToContain('ใส่ --rate')->assertFailed();
     }
+
+    #[Test]
+    public function a_forgotten_password_can_be_reset_for_every_demo_account_except_the_admin(): void
+    {
+        Notification::fake();
+        $this->makeGym();
+        $this->artisan('gym:demo', ['--force' => true, '--no-bookings' => true])->assertSuccessful();
+
+        putenv('DEMO_PASSWORD=another-password-456');
+        $this->artisan('gym:demo', ['--reset-password' => true])
+            ->expectsOutputToContain('ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่าง 8 บัญชีแล้ว')
+            ->assertSuccessful();
+
+        $this->assertTrue(auth()->validate(['email' => 'trainer1@'.DemoData::DOMAIN, 'password' => 'another-password-456']));
+        $this->assertTrue(auth()->validate(['email' => 'member1@'.DemoData::DOMAIN, 'password' => 'another-password-456']));
+        $this->assertFalse(auth()->validate(['email' => 'admin@'.DemoData::DOMAIN, 'password' => 'another-password-456']));
+    }
 }

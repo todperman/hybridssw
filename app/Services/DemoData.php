@@ -322,6 +322,21 @@ class DemoData
     }
 
     /**
+     * ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่างทุกบัญชี ใช้เมื่อลืมรหัสที่แสดงตอนสร้าง
+     * ข้ามแอดมินตัวอย่าง ซึ่งตั้งใจให้ไม่มีใครรู้รหัสและเข้าหลังบ้านไม่ได้
+     */
+    public function resetPassword(string $password): int
+    {
+        $users = User::where('email', 'like', '%@'.self::DOMAIN)
+            ->where('email', '!=', 'admin@'.self::DOMAIN)
+            ->get();
+
+        $users->each(fn (User $user) => $user->forceFill(['password' => $password])->save());
+
+        return $users->count();
+    }
+
+    /**
      * ลบข้อมูลตัวอย่างทั้งหมด
      * ถ้ามีคนจริงจองโดยเลือก Trainer ตัวอย่างไว้และยังไม่ถึงเวลา จะไม่ลบ เพราะงานนั้นจะหาย Trainer ไปเฉย ๆ
      *
