@@ -26,11 +26,6 @@ new class extends Component
             'heading' => 'พร้อมเทรน',
             'headingAccent' => 'อีกครั้งแล้วใช่ไหม',
             'lead' => 'เข้าสู่ระบบเพื่อจองยิม ดูการจองของคุณ หรือจัดการงานสำหรับ Trainer',
-            'points' => [
-                'จองทั้งยิมเป็นรายชั่วโมง ได้ใช้เฉพาะกลุ่มของคุณ',
-                'เห็นเฉพาะเวลาที่ยิมและ Trainer ว่างจริง',
-                'Trainer จองให้ลูกเทรนทั้งกลุ่มได้ในครั้งเดียว',
-            ],
             'altHref' => \App\Support\RegistrationRules::publicRegistrationOpen() ? route('register') : route('trainer.register'),
             'altLabel' => 'ยังไม่มีบัญชี',
             'altCta' => \App\Support\RegistrationRules::publicRegistrationOpen() ? 'สมัครสมาชิก' : 'สมัครเทรนเนอร์',

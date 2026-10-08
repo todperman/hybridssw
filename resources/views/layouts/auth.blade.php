@@ -74,9 +74,11 @@
                             <span class="text-brand-light">{{ $headingAccent }}</span>
                         </h1>
 
-                        <p class="fade-up d-3 mt-5 text-[17px] leading-relaxed text-brand-light/75">
-                            {{ $lead }}
-                        </p>
+                        @if (filled($lead))
+                            <p class="fade-up d-3 mt-5 text-[17px] leading-relaxed text-brand-light/75">
+                                {{ $lead }}
+                            </p>
+                        @endif
 
                         @if ($points)
                             <ul class="mt-10 space-y-4">
@@ -171,7 +173,9 @@
                                 <span class="text-brand-light">{{ $headingAccent }}</span>
                             </h1>
 
-                            <p class="mt-2.5 text-[14px] leading-relaxed text-white/80">{{ $lead }}</p>
+                            @if (filled($lead))
+                                <p class="mt-2.5 text-[14px] leading-relaxed text-white/80">{{ $lead }}</p>
+                            @endif
                         </div>
                     </div>
 
