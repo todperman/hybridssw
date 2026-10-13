@@ -64,18 +64,101 @@
                     </p>
 
                     @if ($this->isPayer)
-                        @if ($this->onlinePayment)
-                            @if ($checkout && ! empty($checkout['qr']))
-                                <div class="flex flex-col items-center gap-2 rounded-xl border border-line bg-white p-4">
-                                    <img src="{{ $checkout['qr'] }}" alt="QR พร้อมเพย์สำหรับชำระ {{ $r->reference }}" class="h-56 w-56">
-                                    <p class="text-sm text-muted">สแกนด้วยแอปธนาคาร หน้านี้จะอัปเดตเองเมื่อชำระสำเร็จ</p>
+                        @if ($this->omise)
+                            @php($qr = $this->activeQr)
+                            @php($methods = $this->omiseMethods)
+
+                            @if ($this->omise->isTestMode())
+                                <p class="rounded-lg bg-accent-light px-3 py-2 text-xs font-medium text-accent-ink">โหมดทดสอบ ไม่มีการตัดเงินจริง</p>
+                            @endif
+
+                            @if (count($methods) > 1)
+                                <div class="grid grid-cols-2 gap-2" role="tablist" aria-label="ช่องทางชำระเงิน">
+                                    @foreach ($methods as $m)
+                                        <button type="button" role="tab" aria-selected="{{ $method === $m ? 'true' : 'false' }}"
+                                                wire:click="setMethod('{{ $m }}')" wire:key="pm-{{ $m }}"
+                                                class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition
+                                                       {{ $method === $m ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
+                                            @if ($m === 'promptpay')
+                                                @svg('lucide-qr-code', 'h-4 w-4') พร้อมเพย์
+                                            @else
+                                                @svg('lucide-credit-card', 'h-4 w-4') บัตรเครดิต/เดบิต
+                                            @endif
+                                        </button>
+                                    @endforeach
                                 </div>
-                            @else
-                                <button type="button" wire:click="startPayment" wire:loading.attr="disabled"
-                                        class="btn-grad w-full py-3 text-[15px] font-semibold">
-                                    <span wire:loading.remove wire:target="startPayment">ชำระด้วย QR พร้อมเพย์</span>
-                                    <span wire:loading wire:target="startPayment">กำลังสร้าง QR…</span>
-                                </button>
+                            @endif
+
+                            @if (! $error && $this->lastFailure)
+                                <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">ครั้งก่อนไม่สำเร็จ: {{ $this->lastFailure->failure_message ?: 'กรุณาลองใหม่' }}</p>
+                            @endif
+
+                            @if ($method === 'promptpay')
+                                @if ($qr)
+                                    <div class="flex flex-col items-center gap-3 rounded-xl border border-line bg-white p-4 text-center">
+                                        <img src="{{ $qr->payload['qr'] }}" alt="QR พร้อมเพย์ ยอด {{ number_format((float) $r->amount, 2) }} บาท สำหรับ {{ $r->reference }}"
+                                             class="h-60 w-60 max-w-full" width="240" height="240">
+                                        <p class="font-display text-xl font-bold text-ink">฿{{ number_format((float) $r->amount, 2) }}</p>
+                                        <a href="{{ $qr->payload['qr'] }}" target="_blank" rel="noopener" download="promptpay-{{ $r->reference }}"
+                                           class="btn-ghost inline-flex items-center gap-2 text-sm">
+                                            @svg('lucide-download', 'h-4 w-4') บันทึกรูป QR
+                                        </a>
+                                        <ol class="w-full space-y-1 text-left text-[13px] text-muted">
+                                            <li>1. เปิดแอปธนาคาร เลือกสแกนจ่าย</li>
+                                            <li>2. สแกน QR นี้ หรือบันทึกรูปแล้วเลือกจากอัลบั้ม</li>
+                                            <li>3. ชำระแล้วรอสักครู่ หน้านี้จะยืนยันการจองเอง</li>
+                                        </ol>
+                                    </div>
+                                @else
+                                    <button type="button" wire:click="startPayment" wire:loading.attr="disabled"
+                                            class="btn-grad w-full py-3 text-[15px] font-semibold">
+                                        <span wire:loading.remove wire:target="startPayment">สร้าง QR พร้อมเพย์</span>
+                                        <span wire:loading wire:target="startPayment">กำลังสร้าง QR…</span>
+                                    </button>
+                                @endif
+                            @endif
+
+                            @if ($method === 'card')
+                                <div x-data="{
+                                        busy: false,
+                                        open() {
+                                            this.busy = true;
+                                            const go = () => {
+                                                OmiseCard.configure({ publicKey: @js($this->omise->publicKey()) });
+                                                OmiseCard.open({
+                                                    amount: {{ $this->omise->satang($r->amount) }},
+                                                    currency: 'THB',
+                                                    defaultPaymentMethod: 'credit_card',
+                                                    otherPaymentMethods: [],
+                                                    frameLabel: 'Hybrid SSW',
+                                                    frameDescription: @js('การจอง '.$r->reference),
+                                                    submitLabel: 'ชำระเงิน',
+                                                    locale: 'th',
+                                                    onCreateTokenSuccess: (token) => $wire.payByCard(token).finally(() => this.busy = false),
+                                                    onFormClosed: () => this.busy = false,
+                                                });
+                                            };
+                                            if (window.OmiseCard) return go();
+                                            const script = document.createElement('script');
+                                            script.src = 'https://cdn.omise.co/omise.js';
+                                            script.onload = go;
+                                            script.onerror = () => { this.busy = false; alert('โหลดหน้าชำระด้วยบัตรไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่'); };
+                                            document.head.appendChild(script);
+                                        },
+                                     }" class="space-y-3">
+                                    @if ($qr)
+                                        <p class="rounded-lg bg-accent-light px-3 py-2 text-sm text-accent-ink">ถ้าสแกน QR จ่ายไปแล้ว ไม่ต้องจ่ายด้วยบัตรซ้ำ รอสักครู่ให้ระบบยืนยัน</p>
+                                    @endif
+                                    <button type="button" @click="open()" :disabled="busy" wire:loading.attr="disabled" wire:target="payByCard"
+                                            class="btn-grad w-full py-3 text-[15px] font-semibold disabled:opacity-60">
+                                        <span x-show="! busy">ชำระด้วยบัตร ฿{{ number_format((float) $r->amount, 2) }}</span>
+                                        <span x-show="busy" x-cloak>กำลังดำเนินการ…</span>
+                                    </button>
+                                    <p class="flex items-start gap-2 text-xs leading-relaxed text-muted">
+                                        @svg('lucide-shield-check', 'mt-0.5 h-4 w-4 shrink-0 text-brand-deep')
+                                        ข้อมูลบัตรส่งตรงถึง Omise ผู้ให้บริการชำระเงินที่ได้มาตรฐาน PCI DSS ไม่ผ่านและไม่ถูกเก็บในระบบของยิม รองรับ Visa, Mastercard และ JCB
+                                    </p>
+                                </div>
                             @endif
                         @else
                             <div class="rounded-xl border border-line bg-mist/60 p-4 text-sm leading-relaxed text-ink">
@@ -131,6 +214,12 @@
                     <dt class="text-muted">ยอดเงิน</dt>
                     <dd class="text-right font-medium text-ink">฿{{ number_format((float) $r->amount, 2) }}</dd>
                 </div>
+                @if ($paid = $r->payments->firstWhere('status', \App\Enums\PaymentStatus::Succeeded))
+                    <div class="flex justify-between gap-4 px-5 py-3">
+                        <dt class="text-muted">ชำระด้วย</dt>
+                        <dd class="text-right text-ink">{{ $paid->methodLabel() }} · {{ $paid->paid_at?->locale('th')->isoFormat('D MMM HH:mm') }}</dd>
+                    </div>
+                @endif
                 <div class="flex justify-between gap-4 px-5 py-3">
                     <dt class="text-muted">จองโดย</dt>
                     <dd class="text-right text-ink">{{ $r->createdBy?->displayName() }} · {{ $r->created_at->locale('th')->isoFormat('D MMM HH:mm') }}</dd>

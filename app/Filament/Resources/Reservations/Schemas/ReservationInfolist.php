@@ -60,7 +60,8 @@ class ReservationInfolist
                                     TextEntry::make('status')->label('สถานะ')->badge()
                                         ->helperText(fn ($record) => $record->needs_review ? 'ต้องตรวจสอบ' : null),
                                     TextEntry::make('provider')->label('ช่องทาง')
-                                        ->formatStateUsing(fn (string $state) => $state === 'omise' ? 'Omise' : 'แอดมินบันทึก'),
+                                        ->formatStateUsing(fn ($record) => $record->methodLabel())
+                                        ->helperText(fn ($record) => $record->provider_charge_id),
                                     TextEntry::make('paid_at')->label('เวลา')->dateTime('d/m/Y H:i')->placeholder('—'),
                                     TextEntry::make('note')->label('หมายเหตุ')->placeholder('—')->columnSpanFull(),
                                 ]),

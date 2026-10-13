@@ -7,12 +7,15 @@ use App\Enums\ReservationStatus;
 use App\Exceptions\ReservationException;
 use App\Models\Payment;
 use App\Models\Reservation;
+use App\Services\Payments\Omise\OmiseException;
+use App\Services\Payments\OmiseGateway;
 use App\Services\Payments\PaymentGateways;
 use App\Services\Payments\PaymentService;
 use App\Services\Reservations\Availability;
 use App\Services\Reservations\ReservationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -35,6 +38,9 @@ class ReservationDetail extends Component
     public ?string $flash = null;
     public ?string $error = null;
 
+    /** ช่องทาง Omise ที่ผู้ชำระเลือกอยู่ */
+    public string $method = '';
+
     // เลื่อนวันเวลา
     public bool $rescheduling = false;
     public string $newDate = '';
@@ -56,6 +62,11 @@ class ReservationDetail extends Component
 
         $this->reference = $reference;
         $this->newDate = $reservation->starts_at->toDateString();
+        $this->method = $this->omiseMethods[0] ?? '';
+
+        // ผลที่ส่งมาจากหน้ากลับจากธนาคาร (3-D Secure)
+        $this->flash = session('payment_success') ?? session('payment_info');
+        $this->error = session('payment_error');
     }
 
     #[Computed]
@@ -90,6 +101,45 @@ class ReservationDetail extends Component
     public function onlinePayment(): bool
     {
         return app(PaymentGateways::class)->current()->isOnline();
+    }
+
+    /** ช่องทางของ Omise ที่เปิดให้เลือก ว่างถ้าไม่ได้ใช้ Omise */
+    #[Computed]
+    public function omiseMethods(): array
+    {
+        $gateway = app(PaymentGateways::class)->current();
+
+        return $gateway instanceof OmiseGateway ? $gateway->methods() : [];
+    }
+
+    #[Computed]
+    public function omise(): ?OmiseGateway
+    {
+        $gateway = app(PaymentGateways::class)->current();
+
+        return $gateway instanceof OmiseGateway ? $gateway : null;
+    }
+
+    /** QR พร้อมเพย์ที่ยังไม่หมดอายุ แสดงต่อได้แม้รีเฟรชหน้า */
+    #[Computed]
+    public function activeQr(): ?Payment
+    {
+        return $this->reservation->payments
+            ->where('provider', Payment::PROVIDER_OMISE)
+            ->where('method', Payment::METHOD_PROMPTPAY)
+            ->where('status', PaymentStatus::Pending)
+            ->filter(fn (Payment $p) => filled($p->payload['qr'] ?? null) && now()->lt($p->payload['expires_at'] ?? now()))
+            ->sortByDesc('id')
+            ->first();
+    }
+
+    /** รายการที่ไม่สำเร็จล่าสุด บอกผู้ชำระว่าทำไมต้องลองใหม่ */
+    #[Computed]
+    public function lastFailure(): ?Payment
+    {
+        $latest = $this->reservation->payments->where('provider', Payment::PROVIDER_OMISE)->sortByDesc('id')->first();
+
+        return $latest?->status === PaymentStatus::Failed ? $latest : null;
     }
 
     /** เวลาเริ่มที่เลื่อนไปได้ในวันที่เลือก ใช้ Trainer คนเดิมและความยาวเท่าเดิม */
@@ -133,39 +183,134 @@ class ReservationDetail extends Component
         }
 
         // ถาม Omise ไม่บ่อยกว่า 10 วินาทีต่อหน้า ไม่ให้ยิง API ถี่เกินจำเป็น
-        $pending = $r->payments->first(fn (Payment $p) => $p->provider === Payment::PROVIDER_OMISE && $p->status === PaymentStatus::Pending);
+        $pending = $r->payments->filter(fn (Payment $p) => $p->provider === Payment::PROVIDER_OMISE
+            && $p->status === PaymentStatus::Pending
+            && filled($p->provider_charge_id));
 
-        if ($pending && time() - $this->lastSyncAt >= 10) {
+        if ($pending->isNotEmpty() && time() - $this->lastSyncAt >= 10) {
             $this->lastSyncAt = time();
-
-            try {
-                $payments->syncOmiseCharge($pending->provider_charge_id);
-            } catch (\Throwable $e) {
-                Log::warning('ตรวจสถานะ Omise ไม่สำเร็จ', ['reference' => $r->reference, 'error' => $e->getMessage()]);
-            }
-
-            unset($this->reservation);
+            $this->syncPending($payments, $pending);
         }
     }
 
+        public function setMethod(string $method): void
+    {
+        if (in_array($method, $this->omiseMethods, true)) {
+            $this->method = $method;
+            $this->error = null;
+        }
+    }
+
+    /** สร้างหรือเรียก QR พร้อมเพย์เดิม */
     public function startPayment(PaymentGateways $gateways): void
     {
         $this->error = null;
         $r = $this->reservation;
 
-        if (! $this->isPayer || $r->status !== ReservationStatus::PendingPayment || $r->hold_expires_at->isPast()) {
+        if (! $this->canPayNow() || ! $this->allowAttempt('qr', 10)) {
             return;
         }
 
         try {
             $this->checkout = $gateways->current()->startCheckout($r);
+        } catch (OmiseException $e) {
+            $this->error = $e->getMessage();
         } catch (\Throwable $e) {
             Log::error('เริ่มชำระเงินไม่สำเร็จ', ['reference' => $r->reference, 'error' => $e->getMessage()]);
             $this->error = 'เปิดหน้าชำระเงินไม่สำเร็จ ลองอีกครั้งในอีกสักครู่';
         }
+
+        unset($this->reservation, $this->activeQr);
     }
 
-    public function openReschedule(): void
+    /**
+     * ตัดบัตรด้วย token ที่ Omise.js สร้างในเบราว์เซอร์ (ข้อมูลบัตรไม่ผ่านเซิร์ฟเวอร์นี้)
+     * บัตรที่ต้องยืนยันตัวตนจะถูกพาไปหน้าธนาคาร แล้วกลับมาที่ reservations.payment-return
+     */
+    public function payByCard(string $token, PaymentGateways $gateways, PaymentService $payments): void
+    {
+        $this->error = null;
+        $r = $this->reservation;
+        $gateway = $gateways->current();
+
+        if (! $gateway instanceof OmiseGateway || ! $this->canPayNow() || ! $this->allowAttempt('card', 5)) {
+            return;
+        }
+
+        // เคยสร้าง QR ไว้ ตรวจก่อนว่าสแกนจ่ายไปแล้วหรือยัง จะได้ไม่ตัดบัตรซ้ำ
+        $this->syncPending($payments, $r->payments->filter(fn (Payment $p) => $p->method === Payment::METHOD_PROMPTPAY && $p->status === PaymentStatus::Pending));
+
+        if ($this->reservation->status !== ReservationStatus::PendingPayment) {
+            return;
+        }
+
+        try {
+            $result = $gateway->chargeCard($this->reservation, $token, request()->ip());
+        } catch (OmiseException $e) {
+            $this->error = $e->getMessage();
+            unset($this->reservation);
+
+            return;
+        } catch (\Throwable $e) {
+            Log::error('ตัดบัตรไม่สำเร็จ', ['reference' => $r->reference, 'error' => $e->getMessage()]);
+            $this->error = 'ระบบชำระเงินขัดข้อง ยังไม่มีการตัดเงิน ลองใหม่อีกครั้ง';
+
+            return;
+        }
+
+        if ($result['status'] === 'redirect') {
+            $this->redirect($result['authorize_uri']);
+
+            return;
+        }
+
+        if ($result['status'] === 'failed') {
+            $payments->recordFailure(Payment::PROVIDER_OMISE, $result['charge']['id'], $result['message']);
+            $this->error = 'ชำระไม่สำเร็จ: '.$result['message'];
+        } else {
+            $this->syncPending($payments, collect([(object) ['provider_charge_id' => $result['charge']['id']]]));
+        }
+
+        unset($this->reservation);
+    }
+
+    protected function canPayNow(): bool
+    {
+        $r = $this->reservation;
+
+        return $this->isPayer && $r->status === ReservationStatus::PendingPayment && $r->hold_expires_at->isFuture();
+    }
+
+    /** กันกดซ้ำรัว ๆ และกันการลองบัตรไปเรื่อย ๆ */
+    protected function allowAttempt(string $action, int $perMinute): bool
+    {
+        $key = 'pay:'.$action.':'.auth()->id();
+
+        if (RateLimiter::tooManyAttempts($key, $perMinute)) {
+            $this->error = 'ลองบ่อยเกินไป กรุณารอ '.RateLimiter::availableIn($key).' วินาที';
+
+            return false;
+        }
+
+        RateLimiter::hit($key, 60);
+
+        return true;
+    }
+
+    protected function syncPending(PaymentService $payments, iterable $pending): void
+    {
+        foreach ($pending as $payment) {
+            try {
+                $payments->syncOmiseCharge($payment->provider_charge_id);
+            } catch (\Throwable $e) {
+                Log::warning('ตรวจสถานะ Omise ไม่สำเร็จ', ['reference' => $this->reference, 'error' => $e->getMessage()]);
+            }
+        }
+
+        unset($this->reservation, $this->activeQr, $this->lastFailure);
+    }
+
+        public function openReschedule(): void
     {
         $this->rescheduling = true;
         $this->newStart = null;

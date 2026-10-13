@@ -249,7 +249,7 @@ class ChangeReservationTest extends TestCase
         $gym = $this->makeGym();
         $admin = $this->makeAdmin($gym);
         $r = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $this->makeAvailableTrainer($gym));
-        $this->payments()->recordSuccess($r, Payment::PROVIDER_OMISE, $r->amount, 'chrg_9');
+        $this->payments()->recordSuccess($r, Payment::PROVIDER_OMISE, $r->amount, 'chrg_9', null, null, ['method' => Payment::METHOD_CARD]);
 
         Http::fake(['api.omise.co/charges/chrg_9/refunds' => Http::response(['object' => 'refund', 'id' => 'rfnd_1'])]);
 
@@ -267,14 +267,32 @@ class ChangeReservationTest extends TestCase
         $gym = $this->makeGym();
         $admin = $this->makeAdmin($gym);
         $r = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $this->makeAvailableTrainer($gym));
-        $this->payments()->recordSuccess($r, Payment::PROVIDER_OMISE, $r->amount, 'chrg_10');
+        $this->payments()->recordSuccess($r, Payment::PROVIDER_OMISE, $r->amount, 'chrg_10', null, null, ['method' => Payment::METHOD_CARD]);
 
-        Http::fake(['api.omise.co/charges/chrg_10/refunds' => Http::response(['message' => 'refund not supported'], 400)]);
+        Http::fake(['api.omise.co/charges/chrg_10/refunds' => Http::response(['object' => 'error', 'code' => 'failed_refund', 'message' => 'refund not supported'], 400)]);
 
         $r = $this->reservations()->cancelByAdmin($r->fresh(), $admin, 'ยิมปิดฉุกเฉิน');
 
         $this->assertSame(RefundStatus::Failed, $r->refund_status);
-        $this->assertSame('refund not supported', $r->refunds()->first()->failure_message);
+        $this->assertStringContainsString('refund not supported', $r->refunds()->first()->failure_message);
+    }
+
+    #[Test]
+    public function a_promptpay_payment_is_left_for_the_admin_to_transfer_back(): void
+    {
+        config(['services.omise.secret_key' => 'skey_test_x']);
+        Http::fake();
+
+        $gym = $this->makeGym();
+        $admin = $this->makeAdmin($gym);
+        $r = $this->bookAsTrainee($gym, $this->makeMember($gym), [], $this->makeAvailableTrainer($gym));
+        $this->payments()->recordSuccess($r, Payment::PROVIDER_OMISE, $r->amount, 'chrg_11', null, null, ['method' => Payment::METHOD_PROMPTPAY]);
+
+        $r = $this->reservations()->cancelByAdmin($r->fresh(), $admin, 'ยิมปิดฉุกเฉิน');
+
+        // Omise คืนเงินพร้อมเพย์ไม่ได้ ห้ามยิงไปให้ได้ error เปล่า ๆ ต้องรอแอดมินโอนคืนแล้วบันทึกผล
+        Http::assertNothingSent();
+        $this->assertSame(RefundStatus::Pending, $r->refund_status);
     }
 
     // --- ข้อ 3 Trainer ลบเวลาที่มีงานไม่ได้ ---

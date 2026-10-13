@@ -64,6 +64,7 @@ class ReservationActions
                 static::attempt(function () use ($record, $data) {
                     $payment = app(PaymentService::class)->recordSuccess(
                         $record, Payment::PROVIDER_MANUAL, (string) $data['amount'], null, auth()->user(), $data['note'] ?? null,
+                        ['method' => Payment::METHOD_TRANSFER],
                     );
 
                     $payment->needs_review
@@ -141,9 +142,11 @@ class ReservationActions
             ->visible(fn (Reservation $record) => $record->status->holdsSlots())
             ->requiresConfirmation()
             ->modalHeading('ยกเลิกการจองนี้')
-            ->modalDescription(fn (Reservation $record) => $record->successfulPayment()
-                ? 'ปล่อยเวลาคืนทันที และคืนเงินเต็มจำนวน ฿'.number_format((float) $record->amount, 2).' ให้ผู้ชำระเงินเดิม ('.$record->payer?->user?->name.')'
-                : 'ยังไม่มีการชำระเงิน ปล่อยเวลาคืนทันทีโดยไม่มีการคืนเงิน')
+            ->modalDescription(fn (Reservation $record) => match (true) {
+                ! $record->successfulPayment() => 'ยังไม่มีการชำระเงิน ปล่อยเวลาคืนทันทีโดยไม่มีการคืนเงิน',
+                $record->successfulPayment()->refundableOnline() => 'ปล่อยเวลาคืนทันที และคืนเงิน ฿'.number_format((float) $record->amount, 2).' เข้าบัตรเดิมผ่าน Omise ให้ '.$record->payer?->user?->name.' อัตโนมัติ',
+                default => 'ปล่อยเวลาคืนทันที ชำระมาด้วย'.$record->successfulPayment()->methodLabel().' ระบบคืนเงินให้เองไม่ได้ ต้องโอนคืน ฿'.number_format((float) $record->amount, 2).' ให้ '.$record->payer?->user?->name.' แล้วกด "บันทึกผลคืนเงิน"',
+            })
             ->modalSubmitActionLabel('ยืนยันยกเลิก')
             ->schema([
                 Textarea::make('reason')->label('เหตุผล (ผู้เกี่ยวข้องทุกคนจะเห็น)')->required()->rows(2),

@@ -93,8 +93,9 @@ class PaymentResource extends Resource
 
                 TextColumn::make('provider')
                     ->label('ช่องทาง')
-                    ->formatStateUsing(fn (Payment $record) => $record->providerLabel())
-                    ->description(fn (Payment $record) => $record->recordedBy?->name),
+                    ->formatStateUsing(fn (Payment $record) => $record->methodLabel())
+                    ->description(fn (Payment $record) => $record->recordedBy?->name ?? $record->provider_charge_id)
+                    ->searchable(['provider_charge_id']),
 
                 TextColumn::make('status')
                     ->label('สถานะ')
@@ -114,7 +115,9 @@ class PaymentResource extends Resource
                     ->visible(fn (Payment $record) => $record->needs_review && $record->status === PaymentStatus::Succeeded)
                     ->requiresConfirmation()
                     ->modalHeading('คืนเงินรายการนี้เต็มจำนวน')
-                    ->modalDescription(fn (Payment $record) => 'คืน ฿'.number_format((float) $record->amount, 2).' ให้ '.$record->payer?->user?->name.' ผ่านช่องทางเดิม')
+                    ->modalDescription(fn (Payment $record) => $record->refundableOnline()
+                        ? 'คืน ฿'.number_format((float) $record->amount, 2).' เข้าบัตรเดิมของ '.$record->payer?->user?->name.' ผ่าน Omise อัตโนมัติ'
+                        : 'ชำระด้วย'.$record->methodLabel().' ระบบคืนให้เองไม่ได้ ต้องโอนคืน ฿'.number_format((float) $record->amount, 2).' ให้ '.$record->payer?->user?->name.' แล้วบันทึกผลที่หน้าการจอง')
                     ->schema([Textarea::make('reason')->label('เหตุผล')->required()->rows(2)
                         ->default('ชำระหลังหมดเวลาและช่วงเวลาถูกจองไปแล้ว')])
                     ->action(fn (Payment $record, array $data) => static::resolve($record, $data['reason'], true)),

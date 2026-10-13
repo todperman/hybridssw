@@ -110,8 +110,70 @@ class GymDoctorCommand extends Command
             RegistrationRules::memberRegistrationNeedsApproval() ? 'ต้องอนุมัติ' : 'ไม่ต้อง',
         ));
 
-        if (config('gym.payments.driver') === 'omise' && (blank(config('services.omise.public_key')) || blank(config('services.omise.secret_key')))) {
-            $this->broken('เลือกชำระผ่าน Omise แต่ยังไม่ได้ใส่คีย์ ผู้จองจะสร้าง QR ไม่ได้', 'ใส่ OMISE_PUBLIC_KEY และ OMISE_SECRET_KEY ใน .env หรือกลับไปใช้ GYM_PAYMENT_DRIVER=manual');
+        if (config('gym.payments.driver') === 'omise') {
+            $this->checkOmise();
+        }
+    }
+
+    /** ตรวจกับ Omise จริง: คีย์ใช้ได้ไหม โหมดตรงกันไหม และช่องทางที่เปิดให้ลูกค้าเลือกถูกเปิดในบัญชีหรือยัง */
+    protected function checkOmise(): void
+    {
+        $public = (string) config('services.omise.public_key');
+        $secret = (string) config('services.omise.secret_key');
+
+        if ($public === '' || $secret === '') {
+            $this->broken('เลือกชำระผ่าน Omise แต่ยังไม่ได้ใส่คีย์ ผู้จองจะชำระเงินไม่ได้', 'ใส่ OMISE_PUBLIC_KEY และ OMISE_SECRET_KEY ใน .env หรือกลับไปใช้ GYM_PAYMENT_DRIVER=manual');
+
+            return;
+        }
+
+        if (! str_starts_with($public, 'pkey_') || ! str_starts_with($secret, 'skey_')) {
+            $this->broken('รูปแบบคีย์ Omise ไม่ถูกต้อง (public ขึ้นต้น pkey_ และ secret ขึ้นต้น skey_)', 'คัดลอกคีย์ใหม่จาก Omise Dashboard → Keys');
+
+            return;
+        }
+
+        $testPublic = str_contains($public, '_test_');
+
+        if ($testPublic !== str_contains($secret, '_test_')) {
+            $this->broken('คีย์ Omise ปนกันระหว่างโหมดทดสอบกับโหมดจริง', 'ใช้คู่ของโหมดเดียวกันทั้ง public และ secret');
+
+            return;
+        }
+
+        $client = app(\App\Services\Payments\Omise\OmiseClient::class);
+
+        try {
+            $account = $client->account();
+            $capability = $client->capability();
+        } catch (\App\Services\Payments\Omise\OmiseException $e) {
+            $this->broken('เชื่อมต่อ Omise ไม่ได้: '.$e->getMessage(), 'ตรวจคีย์ใน .env และว่าเซิร์ฟเวอร์ออกอินเทอร์เน็ตไปที่ api.omise.co ได้');
+
+            return;
+        }
+
+        $this->ok('เชื่อมต่อ Omise ได้ บัญชี '.($account['email'] ?? '-').' · '.($testPublic ? 'โหมดทดสอบ' : 'โหมดจริง'));
+
+        if ($testPublic) {
+            $this->caution('Omise ยังเป็นโหมดทดสอบ ลูกค้าจะจ่ายเงินจริงไม่ได้', 'พร้อมเปิดจริงให้เปลี่ยนเป็นคีย์ pkey_/skey_ ที่ไม่มีคำว่า test และ OMISE_WEBHOOK_SECRET ของโหมดจริง');
+        }
+
+        $enabled = collect($capability['payment_methods'] ?? [])->pluck('name')->all();
+        $wanted = config('services.omise.methods', []);
+        $missing = array_diff($wanted, $enabled);
+
+        $missing === []
+            ? $this->ok('ช่องทางที่เปิดให้ลูกค้า: '.implode(', ', $wanted))
+            : $this->broken('บัญชี Omise ยังไม่เปิดช่องทาง: '.implode(', ', $missing), 'ติดต่อ support@omise.co ให้เปิด หรือเอาออกจาก OMISE_METHODS ใน .env');
+
+        blank(config('services.omise.webhook_secret'))
+            ? $this->caution('ยังไม่ได้ตั้ง OMISE_WEBHOOK_SECRET ระบบยังตรวจผลกับ Omise เองได้ แต่ไม่ได้ตรวจลายเซ็นของ webhook', 'Omise Dashboard → Webhooks: ใส่ URL '.route('webhooks.omise').' แล้วคัดลอก secret มาใส่ .env')
+            : $this->ok('ตรวจลายเซ็น webhook ด้วย OMISE_WEBHOOK_SECRET · URL ที่ต้องตั้งใน Omise: '.route('webhooks.omise'));
+
+        $tooCheap = Branch::active()->where('hourly_rate', '<', 20)->where('hourly_rate', '>', 0)->pluck('name');
+
+        if ($tooCheap->isNotEmpty()) {
+            $this->broken('ราคาต่อชั่วโมงต่ำกว่า 20 บาท (ขั้นต่ำของ Omise): '.$tooCheap->implode(', '), 'ตั้งราคาอย่างน้อย 20 บาทที่หน้าสาขา');
         }
     }
 

@@ -15,6 +15,7 @@ use App\Services\Reservations\ReservationLocker;
 use App\Services\Reservations\ReservationNotifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * รับผลชำระ ยืนยันการจอง และคืนเงิน
@@ -76,6 +77,11 @@ class PaymentService
                 'note' => $note,
                 'payload' => $payload,
             ];
+
+            // ช่องทางย่อยที่ Omise บอกมา ใส่เฉพาะเมื่อรู้ ไม่ทับค่าที่บันทึกไว้ตอนเริ่มชำระด้วย null
+            if ($method = $payload['method'] ?? null) {
+                $attributes['method'] = $method;
+            }
 
             $payment = $chargeId
                 ? Payment::updateOrCreate(['provider' => $provider, 'provider_charge_id' => $chargeId], ['reservation_id' => $r->id] + $attributes)
@@ -272,39 +278,111 @@ class PaymentService
     /** ตรวจผลกับ Omise โดยตรงก่อนเชื่อ payload ทุกครั้ง */
     public function handleOmiseEvent(array $event): void
     {
-        if (($event['key'] ?? null) !== 'charge.complete') {
+        $key = $event['key'] ?? null;
+
+        // ใช้แค่รหัสรายการจาก event แล้วไปดึงของจริงจาก Omise เอง ไม่เชื่อสถานะใน payload
+        if (in_array($key, ['charge.create', 'charge.complete', 'charge.update', 'charge.capture', 'charge.reverse'], true)) {
+            $chargeId = data_get($event, 'data.id');
+
+            if (is_string($chargeId) && str_starts_with($chargeId, 'chrg_')) {
+                $this->syncOmiseCharge($chargeId);
+            }
+
             return;
         }
 
-        $chargeId = data_get($event, 'data.id');
-
-        if ($chargeId) {
-            $this->syncOmiseCharge($chargeId);
+        if ($key === 'refund.create') {
+            $this->syncOmiseRefund((string) data_get($event, 'data.charge'), (string) data_get($event, 'data.id'));
         }
     }
 
     /**
-     * ดึงสถานะ charge จาก Omise แล้วบันทึกผล ใช้ทั้งจาก webhook และหน้าการจองที่รอผลอยู่
-     * เผื่อ webhook มาช้าหรือไม่มาเลย ผู้จ่ายจะได้เห็นผลทันทีที่จ่ายเสร็จ
+     * ดึงสถานะ charge จาก Omise แล้วบันทึกผล
+     * ใช้ทั้งจาก webhook หน้าการจองที่รอผล หน้ากลับจาก 3-D Secure และงานกระทบยอดอัตโนมัติ
+     * เรียกซ้ำกี่ครั้งก็ได้ผลเดิม เพราะบันทึกยอดสำเร็จซ้ำไม่ได้
      */
     public function syncOmiseCharge(string $chargeId): void
     {
         $charge = app(OmiseGateway::class)->fetchCharge($chargeId);
+
+        $payment = Payment::where('provider', Payment::PROVIDER_OMISE)->where('provider_charge_id', $chargeId)->first();
         $reference = data_get($charge, 'metadata.reservation');
-        $reservation = $reference ? Reservation::where('reference', $reference)->first() : null;
+        $reservation = $payment?->reservation ?? ($reference ? Reservation::where('reference', $reference)->first() : null);
 
-        if (! $reservation) {
-            return;
-        }
-
-        if (($charge['status'] ?? null) === 'successful' && ($charge['paid'] ?? false)) {
-            $this->recordSuccess($reservation, Payment::PROVIDER_OMISE, ((int) $charge['amount']) / 100, $chargeId, null, null, $charge);
+        // charge ที่ระบบนี้ไม่ได้สร้าง หรือเลขการจองไม่ตรงกับที่บันทึกไว้ ไม่แตะ
+        if (! $reservation || ($reference && $reference !== $reservation->reference)) {
+            Log::warning('ข้ามผลชำระ Omise ที่ไม่ตรงกับการจองในระบบ', ['charge' => $chargeId, 'reference' => $reference]);
 
             return;
         }
 
-        if (in_array($charge['status'] ?? null, ['failed', 'expired', 'reversed'], true)) {
-            $this->recordFailure(Payment::PROVIDER_OMISE, $chargeId, $charge['failure_message'] ?? $charge['status'], $charge);
+        $status = $charge['status'] ?? null;
+
+        if ($status === 'successful' && ($charge['paid'] ?? false)) {
+            // จ่ายเป็นสกุลอื่นถือว่ายอดไม่ตรง ระบบจะส่งให้แอดมินตรวจแทนการยืนยันอัตโนมัติ
+            $amount = strtoupper((string) ($charge['currency'] ?? 'THB')) === 'THB' ? ((int) $charge['amount']) / 100 : 0;
+
+            $this->recordSuccess($reservation, Payment::PROVIDER_OMISE, $amount, $chargeId, null, null, $this->omiseSummary($charge));
+
+            return;
         }
+
+        if (in_array($status, ['failed', 'expired', 'reversed'], true)) {
+            $message = $status === 'expired'
+                ? 'QR หมดอายุ'
+                : app(OmiseGateway::class)->failureMessage($charge);
+
+            $this->recordFailure(Payment::PROVIDER_OMISE, $chargeId, $message, $this->omiseSummary($charge));
+        }
+    }
+
+    /** Omise ยืนยันการคืนเงิน: ปิดรายการคืนเงินที่ยังค้างอยู่ของ charge นั้น */
+    public function syncOmiseRefund(string $chargeId, string $refundId): void
+    {
+        if (! str_starts_with($chargeId, 'chrg_') || ! str_starts_with($refundId, 'rfnd_')) {
+            return;
+        }
+
+        $refund = Refund::query()
+            ->where('provider_refund_id', $refundId)
+            ->whereIn('status', [RefundStatus::Pending->value, RefundStatus::Failed->value])
+            ->first();
+
+        if (! $refund) {
+            return;
+        }
+
+        $remote = app(\App\Services\Payments\Omise\OmiseClient::class)->retrieveRefund($chargeId, $refundId);
+
+        if (($remote['charge'] ?? null) === $chargeId) {
+            $this->settleRefund($refund, RefundStatus::Succeeded, null, null, $refundId);
+        }
+    }
+
+    /**
+     * เก็บเฉพาะข้อมูลที่ต้องใช้ ไม่เก็บ payload ทั้งก้อน
+     * ชื่อเจ้าของบัตรและที่อยู่ไม่ใช่ธุระของเรา บัตรเก็บแค่ยี่ห้อกับเลขท้ายไว้ให้ผู้ชำระจำได้
+     */
+    protected function omiseSummary(array $charge): array
+    {
+        return array_filter([
+            'id' => $charge['id'] ?? null,
+            'status' => $charge['status'] ?? null,
+            'amount' => $charge['amount'] ?? null,
+            'currency' => $charge['currency'] ?? null,
+            'paid_at' => $charge['paid_at'] ?? null,
+            'failure_code' => $charge['failure_code'] ?? null,
+            'livemode' => $charge['livemode'] ?? null,
+            'source_type' => data_get($charge, 'source.type'),
+            'method' => match (true) {
+                isset($charge['card']) => Payment::METHOD_CARD,
+                data_get($charge, 'source.type') === 'promptpay' => Payment::METHOD_PROMPTPAY,
+                default => null,
+            },
+            'card' => isset($charge['card']) ? array_filter([
+                'brand' => data_get($charge, 'card.brand'),
+                'last_digits' => data_get($charge, 'card.last_digits'),
+            ]) : null,
+        ], fn ($v) => $v !== null);
     }
 }

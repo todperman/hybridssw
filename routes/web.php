@@ -72,9 +72,16 @@ Route::get('reservations/{reference}', ReservationDetail::class)
     ->middleware('auth')
     ->name('reservations.show');
 
+// ธนาคารพากลับมาหลังยืนยันบัตร (3-D Secure)
+Route::get('reservations/{reference}/payment-return', \App\Http\Controllers\OmiseReturnController::class)
+    ->middleware('auth')
+    ->name('reservations.payment-return');
+
 Route::view('profile', 'profile')->middleware(['auth'])->name('profile');
 
 // Omise แจ้งผลชำระ ยกเว้น CSRF ไว้ใน bootstrap/app.php
-Route::post('webhooks/omise', \App\Http\Controllers\OmiseWebhookController::class)->name('webhooks.omise');
+Route::post('webhooks/omise', \App\Http\Controllers\OmiseWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.omise');
 
 require __DIR__.'/auth.php';
