@@ -107,6 +107,12 @@ class DemoData
 
             // คนเดียวที่เข้าใช้ได้โดยไม่มี Trainer ไว้ลองตัวเลือก "ไม่ใช้ Trainer"
             $this->members[5]->setNoTrainerPrivilege(true, $this->admin, 'ข้อมูลตัวอย่าง: นักกีฬาที่ฝึกเองได้');
+
+            // บุคลากร รพ. หนึ่งคน ไว้ลองสิทธิ์ใช้ฟรี
+            if ($staff = \App\Models\MemberType::where('code', 'hospital_staff')->first()) {
+                $this->members[4]->update(['benefit_claim' => 'บุคลากร/แพทย์ รพ. · ตัวอย่าง 00001']);
+                $this->members[4]->setMemberType($staff, now()->addYear(), $this->admin, 'ข้อมูลตัวอย่าง: พนักงาน รพ.');
+            }
         });
 
         $this->log[] = 'สร้าง Trainer 2 คน ลูกเทรน 6 คน และกลุ่มลูกทีม 1 กลุ่ม';
@@ -135,7 +141,7 @@ class DemoData
         }, 'เข้าใช้โดยไม่มี Trainer');
 
         $this->at($today->subDays(8), function () use ($t2, $m, $today) {
-            $r = $this->book($today->subDays(7), 1, 19, [$m[4]], $m[4], $t2, $m[4]->user);
+            $r = $this->book($today->subDays(7), 1, 19, [$m[3]], $m[3], $t2, $m[3]->user);
 
             if ($r) {
                 Carbon::setTestNow(now()->addMinutes(31));
@@ -187,7 +193,7 @@ class DemoData
             $this->reservations->requestTrainerWithdrawal($r->refresh(), $t2->user, 'ตัวอย่าง: ติดสอบใบรับรอง');
         }
 
-        $this->log[] = ($r ? 'สร้าง' : 'ข้าม').': ยืนยันแล้ว อีก 4 วัน พร้อมคำขอยกเลิกงานของครูฝน (รอแอดมินพิจารณา)';
+        $this->log[] = ($r ? 'สร้าง' : 'ข้าม').': ฟ้าใส (บุคลากร รพ.) จองฟรี ยืนยันทันที อีก 4 วัน พร้อมคำขอยกเลิกงานของครูฝน (รอแอดมินพิจารณา)';
 
         $r = $this->book($today->addDays(2), 1, 17, [$m[1], $m[3]], $m[1], $t1, $m[1]->user);
         $this->log[] = ($r ? 'สร้าง' : 'ข้าม').': รอชำระเงิน (จะหมดอายุเองใน 30 นาที)';

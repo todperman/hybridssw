@@ -66,6 +66,8 @@ class AuditLog extends Model
             'request.approved' => 'อนุมัติคำขอ',
             'request.rejected' => 'ไม่อนุมัติคำขอ',
             'member.no_trainer_privilege' => 'เปลี่ยนสิทธิ์เข้าใช้โดยไม่มี Trainer',
+            'member.type_changed' => 'เปลี่ยนประเภทสมาชิก (สิทธิ์ฟรี)',
+            'reservation.waived' => 'ยืนยันการจองโดยใช้สิทธิ์ฟรี',
             default => $this->action,
         };
     }

@@ -128,6 +128,13 @@
                     <p class="mt-4 text-[12px] leading-relaxed text-muted">
                         จองได้ครั้งละ 1–{{ $branch->max_booking_hours }} ชั่วโมงต่อเนื่อง · ผู้ชำระเงินจ่ายเต็มจำนวนคนเดียว · ราคาเป็นของกลุ่ม ไม่ใช่ต่อคน
                     </p>
+                    @php($benefitTypes = \App\Models\MemberType::active()->orderBy('sort_order')->get())
+                    @if ($benefitTypes->isNotEmpty())
+                        <p class="mt-2 flex items-start gap-2 text-[12px] leading-relaxed text-muted">
+                            @svg('lucide-badge-check', 'mt-0.5 h-4 w-4 shrink-0 text-emerald-600', ['stroke-width' => '2'])
+                            {{ $benefitTypes->pluck('name')->join(' / ') }} ที่ได้รับสิทธิ์แล้ว ส่วนของตัวเองฟรี{{ $benefitTypes->contains(fn ($t) => ! $t->isUnlimited()) ? ' ตามโควตาต่อเดือน' : '' }} เพื่อนที่มาด้วยจ่ายตามส่วนของตัวเอง
+                        </p>
+                    @endif
                 </div>
 
                 <div class="glass-foot">

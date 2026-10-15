@@ -112,7 +112,7 @@ class BookingWizard extends Component
     #[Computed]
     public function participants(): Collection
     {
-        $members = Member::with('user')->whereKey($this->memberIds)->get()->keyBy('id');
+        $members = Member::with(['user', 'memberType'])->whereKey($this->memberIds)->get()->keyBy('id');
 
         return collect($this->memberIds)->map(fn ($id) => $members->get($id))->filter()->values();
     }
@@ -166,8 +166,10 @@ class BookingWizard extends Component
     public function quote(): \App\Support\PriceQuote
     {
         $withTrainer = $this->isTrainee() ? ! $this->noTrainer : true;
+        $month = $this->startAt ?? CarbonImmutable::parse($this->date);
+        $free = app(ReservationService::class)->freeHoursFor($this->participants, $month, $this->hours);
 
-        return $this->branch->priceTable()->quote(max(1, count($this->memberIds)), $withTrainer, $this->hours);
+        return $this->branch->priceTable()->quote(max(1, count($this->memberIds)), $withTrainer, $this->hours, $free);
     }
 
     #[Computed]

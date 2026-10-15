@@ -95,17 +95,29 @@ final class PriceTable
         return $all === [] ? 0.0 : (float) min($all);
     }
 
-    /** ราคาสำหรับการจองหนึ่งรายการ พร้อมรายละเอียดเก็บไว้กับการจอง */
-    public function quote(int $people, bool $withTrainer, int $hours): PriceQuote
+    /**
+     * ราคาสำหรับการจองหนึ่งรายการ พร้อมรายละเอียดเก็บไว้กับการจอง
+     *
+     * @param  array<int, int>  $freeHours  ชั่วโมงฟรีของแต่ละคน (member_id => ชม.) จากสิทธิ์ประเภทสมาชิก
+     *                                      ส่วนของคนนั้นคือ ราคารวม ÷ จำนวนคน จึงหักออกเท่านั้น ไม่กระทบคนอื่น
+     */
+    public function quote(int $people, bool $withTrainer, int $hours, array $freeHours = []): PriceQuote
     {
+        $people = max(1, $people);
+        $hours = max(1, $hours);
         $perHour = $this->perHour($people, $withTrainer);
+        $perPerson = $perHour / $people;
+
+        $free = array_filter(array_map(fn ($h) => min((int) $h, $hours), $freeHours), fn ($h) => $h > 0);
+        $discount = $perPerson * array_sum($free);
 
         return new PriceQuote(
             mode: $withTrainer ? self::WITH_TRAINER : self::WITHOUT_TRAINER,
-            people: max(1, $people),
-            hours: max(1, $hours),
+            people: $people,
+            hours: $hours,
             perHour: $perHour,
-            amount: round($perHour * max(1, $hours), 2),
+            amount: round(max(0, $perHour * $hours - $discount), 2),
+            free: $free,
         );
     }
 

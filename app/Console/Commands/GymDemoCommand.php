@@ -94,6 +94,7 @@ class GymDemoCommand extends Command
         $this->table(['บัญชี', 'ใช้ลองอะไร'], [
             ['member1@'.DemoData::DOMAIN, 'ลูกเทรนในทีมครูต้น มีการจองที่กำลังจะถึงและประวัติย้อนหลัง'],
             ['member2@'.DemoData::DOMAIN, 'มีรายการรอชำระเงิน ลองดูหน้านับถอยหลัง'],
+            ['member5@'.DemoData::DOMAIN, 'บุคลากร รพ. ใช้ฟรี (ส่วนของตัวเอง)'],
             ['member6@'.DemoData::DOMAIN, 'มีสิทธิ์เข้าใช้โดยไม่มี Trainer'],
             ['trainer1@'.DemoData::DOMAIN, 'ครูต้น จองให้ลูกเทรน ดูงาน ตั้งเวลาว่าง'],
             ['trainer2@'.DemoData::DOMAIN, 'ครูฝน มีคำขอยกเลิกงานรอแอดมิน'],

@@ -36,6 +36,10 @@ class MemberRegistration extends Component
 
     public bool $accept = false;
 
+    /** อ้างว่าเป็นบุคลากร/แพทย์ รพ. แอดมินตรวจแล้วค่อยกำหนดประเภทสมาชิกให้ */
+    public bool $hospital_staff = false;
+    public string $staff_reference = '';
+
     public function mount(): void
     {
         abort_unless(RegistrationRules::publicRegistrationOpen(), 404);
@@ -70,7 +74,10 @@ class MemberRegistration extends Component
             'emergency_contact_name' => ['required', 'string', 'max:255'],
             'emergency_contact_phone' => ['required', 'string', 'max:30', new ThaiPhone],
             'accept' => ['accepted'],
+            'hospital_staff' => ['boolean'],
+            'staff_reference' => ['exclude_unless:hospital_staff,true', 'required', 'string', 'max:120'],
         ], [
+            'staff_reference.required' => 'กรุณาระบุรหัสพนักงานหรือเลขใบประกอบวิชาชีพ',
             'branch_id.required' => 'กรุณาเลือกสาขา',
             'accept.accepted' => 'กรุณายืนยันว่าข้อมูลที่กรอกเป็นความจริง',
         ]);
@@ -95,6 +102,7 @@ class MemberRegistration extends Component
                 'approved_at' => RegistrationRules::memberRegistrationNeedsApproval() ? null : now(),
                 'emergency_contact_name' => $data['emergency_contact_name'],
                 'emergency_contact_phone' => ThaiPhone::digits($data['emergency_contact_phone']),
+                'benefit_claim' => $data['hospital_staff'] ? 'บุคลากร/แพทย์ รพ. · '.trim($data['staff_reference']) : null,
             ]);
 
             return $user;

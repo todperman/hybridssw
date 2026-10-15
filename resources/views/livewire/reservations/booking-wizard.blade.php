@@ -117,6 +117,9 @@
                                     <p class="truncate text-sm font-medium text-ink">{{ $m->user->displayName() }}</p>
                                     <p class="text-xs text-muted">{{ $m->member_code }}</p>
                                 </div>
+                                @if (isset($this->quote->free[$m->id]))
+                                    <span class="chip bg-emerald-100 text-emerald-800" title="{{ $m->benefitLabel() }}">ฟรี{{ $this->quote->free[$m->id] < $hours ? ' '.$this->quote->free[$m->id].' ชม.' : '' }}</span>
+                                @endif
                                 @if ($trainee && $m->id === auth()->user()->member->id)
                                     <span class="chip bg-mist text-muted">คุณ</span>
                                 @else
@@ -299,7 +302,7 @@
                 <button type="button" wire:click="submit" wire:loading.attr="disabled" wire:target="submit"
                         @disabled(! $ready)
                         class="btn-grad shrink-0 px-5 py-3 text-[15px] font-semibold disabled:cursor-not-allowed disabled:opacity-50">
-                    <span wire:loading.remove wire:target="submit">จองและไปชำระเงิน</span>
+                    <span wire:loading.remove wire:target="submit">{{ $this->quote->isFree() ? 'ยืนยันการจอง (ฟรี)' : 'จองและไปชำระเงิน' }}</span>
                     <span wire:loading wire:target="submit">กำลังจอง…</span>
                 </button>
             </div>

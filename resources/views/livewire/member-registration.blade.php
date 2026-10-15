@@ -98,6 +98,23 @@
             </div>
         </div>
 
+        {{-- บุคลากร รพ. ใช้ฟรีได้ แต่ต้องให้แอดมินตรวจก่อน ตอนสมัครแค่บอกไว้ --}}
+        <div class="fade-up d-5 rounded-2xl border border-line bg-white/60 p-4" x-data="{ staff: @entangle('hospital_staff') }">
+            <label class="flex cursor-pointer items-start gap-3 text-[13.5px] leading-relaxed text-ink">
+                <input type="checkbox" wire:model="hospital_staff" x-model="staff" class="mt-0.5 h-5 w-5 shrink-0 rounded border-line text-brand-deep focus:ring-brand-deep/30">
+                <span>
+                    <span class="font-medium">ฉันเป็นบุคลากรหรือแพทย์ของโรงพยาบาลศรีสวรรค์</span>
+                    <span class="block text-[12.5px] text-muted">แอดมินตรวจสอบแล้วจะได้สิทธิ์ใช้ยิมฟรีตามเงื่อนไข</span>
+                </span>
+            </label>
+            <div x-show="staff" x-cloak class="field mt-3">
+                <input wire:model.blur="staff_reference" id="staff_reference" type="text" placeholder=" " autocomplete="off"
+                       class="peer field-input">
+                <label for="staff_reference" class="field-label">รหัสพนักงาน หรือเลขที่ใบประกอบวิชาชีพ</label>
+                @error('staff_reference') <p class="field-error">{{ $message }}</p> @enderror
+            </div>
+        </div>
+
         <label class="fade-up d-5 flex cursor-pointer items-start gap-3 text-[13.5px] leading-relaxed text-muted">
             <input type="checkbox" wire:model="accept" class="mt-0.5 h-5 w-5 shrink-0 rounded border-line text-brand-deep focus:ring-brand-deep/30">
             <span>ข้าพเจ้ายืนยันว่าข้อมูลข้างต้นเป็นความจริง และรับทราบความเสี่ยงจากการออกกำลังกาย</span>

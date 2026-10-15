@@ -26,6 +26,7 @@
                     ['อีเมล', $member->user->email],
                     ['เบอร์โทร', $member->user->phone],
                     ['สาขา', $member->branch?->name],
+                    ...($member->benefit_claim ? [['สิทธิ์ที่แจ้ง', $member->benefit_claim]] : []),
                     ['สมัครเมื่อ', $member->created_at?->locale('th')->isoFormat('D MMM YYYY · HH:mm')],
                 ] as [$label, $value])
                     <div class="flex items-start justify-between gap-4 px-5 py-3">

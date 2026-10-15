@@ -11,6 +11,8 @@ final class PriceQuote
         public readonly int $hours,
         public readonly float $perHour,
         public readonly float $amount,
+        /** @var array<int, int> member_id => ชั่วโมงที่ได้ฟรี */
+        public readonly array $free = [],
     ) {}
 
     public static function fromArray(?array $raw): ?self
@@ -25,12 +27,23 @@ final class PriceQuote
             (int) ($raw['hours'] ?? 1),
             (float) $raw['per_hour'],
             (float) ($raw['amount'] ?? 0),
+            array_map('intval', (array) ($raw['free'] ?? [])),
         );
     }
 
     public function perPersonPerHour(): float
     {
         return round($this->perHour / $this->people, 2);
+    }
+
+    public function freePeople(): int
+    {
+        return count($this->free);
+    }
+
+    public function isFree(): bool
+    {
+        return $this->amount <= 0;
     }
 
     public function withTrainer(): bool
@@ -44,7 +57,9 @@ final class PriceQuote
         $perPerson = '฿'.number_format($this->perPersonPerHour(), 0).'/คน/ชม.';
         $hours = $this->hours.' ชม.';
 
-        return $this->people.' คน × '.$perPerson.' × '.$hours.($this->withTrainer() ? ' (มี Trainer)' : ' (ไม่มี Trainer)');
+        $label = $this->people.' คน × '.$perPerson.' × '.$hours.($this->withTrainer() ? ' (มี Trainer)' : ' (ไม่มี Trainer)');
+
+        return $this->freePeople() > 0 ? $label.' · ฟรี '.$this->freePeople().' คน' : $label;
     }
 
     public function toArray(): array
@@ -56,6 +71,7 @@ final class PriceQuote
             'per_hour' => $this->perHour,
             'per_person_per_hour' => $this->perPersonPerHour(),
             'amount' => $this->amount,
+            'free' => $this->free,
         ];
     }
 }

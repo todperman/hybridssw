@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\Members\Tables;
 
 use App\Models\Member;
+use App\Models\MemberType;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -66,6 +69,15 @@ class MembersTable
                     ->badge()
                     ->sortable(),
 
+                TextColumn::make('memberType.name')
+                    ->label('ประเภท')
+                    ->badge()
+                    ->color(fn (Member $record) => $record->hasBenefit() ? 'success' : 'gray')
+                    ->placeholder('ทั่วไป')
+                    ->description(fn (Member $record) => $record->benefit_expires_at
+                        ? ($record->hasBenefit() ? 'ถึง ' : 'หมดอายุ ').$record->benefit_expires_at->format('d/m/Y')
+                        : ($record->benefit_claim && ! $record->member_type_id ? 'แจ้งว่า: '.$record->benefit_claim : null)),
+
                 IconColumn::make('can_book_without_trainer')
                     ->label('ไม่มี Trainer ได้')
                     ->boolean()
@@ -110,6 +122,19 @@ class MembersTable
                     ->relationship('primaryTrainer.user', 'name')
                     ->searchable(),
 
+                SelectFilter::make('member_type_id')
+                    ->label('ประเภทสมาชิก')
+                    ->options(fn () => ['none' => 'ทั่วไป'] + MemberType::options())
+                    ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
+                        null, '' => $query,
+                        'none' => $query->whereNull('member_type_id'),
+                        default => $query->where('member_type_id', $data['value']),
+                    }),
+
+                Filter::make('claims_benefit')
+                    ->label('แจ้งว่าเป็นบุคลากร รพ. แต่ยังไม่ได้กำหนดประเภท')
+                    ->query(fn ($query) => $query->whereNotNull('benefit_claim')->whereNull('member_type_id')),
+
                 Filter::make('no_trainer')
                     ->label('มีสิทธิ์เข้าใช้โดยไม่มี Trainer')
                     ->query(fn ($query) => $query->where('can_book_without_trainer', true)),
@@ -125,7 +150,8 @@ class MembersTable
                     ->visible(fn (Member $record) => $record->awaitsApproval())
                     ->requiresConfirmation()
                     ->modalHeading('อนุมัติการสมัครนี้')
-                    ->modalDescription(fn (Member $record) => $record->user->name.' · '.$record->user->phone.' · '.$record->user->email)
+                    ->modalDescription(fn (Member $record) => $record->user->name.' · '.$record->user->phone.' · '.$record->user->email
+                        .($record->benefit_claim ? ' · แจ้งว่า: '.$record->benefit_claim.' (กำหนดประเภทสมาชิกแยกหลังอนุมัติ)' : ''))
                     ->modalSubmitActionLabel('อนุมัติ')
                     ->action(function (Member $record) {
                         $record->approve(auth()->user());
@@ -150,6 +176,47 @@ class MembersTable
                     ->action(function (Member $record, array $data) {
                         $record->reject(auth()->user(), $data['note']);
                         Notification::make()->title('ไม่อนุมัติแล้ว')->success()->send();
+                    }),
+
+                Action::make('memberType')
+                    ->label('ประเภทสมาชิก')
+                    ->icon('heroicon-o-identification')
+                    ->color(fn (Member $record) => $record->member_type_id ? 'success' : 'gray')
+                    ->visible(fn (Member $record) => ! $record->awaitsApproval())
+                    ->modalHeading('กำหนดประเภทสมาชิก (สิทธิ์ใช้ฟรี)')
+                    ->modalDescription(fn (Member $record) => $record->user->name
+                        .($record->benefit_claim ? ' · แจ้งตอนสมัครว่า: '.$record->benefit_claim : '')
+                        .' · ส่วนของคนนี้ในทุกการจองจะฟรีตามโควตาของประเภท ระบบเก็บประวัติว่าใครเปลี่ยน เมื่อไร เหตุผลอะไร')
+                    ->schema([
+                        Select::make('member_type_id')
+                            ->label('ประเภท')
+                            ->options(fn () => ['' => 'สมาชิกทั่วไป (ไม่มีสิทธิ์ฟรี)'] + MemberType::options())
+                            ->default(fn (Member $record) => $record->member_type_id ?? '')
+                            ->selectablePlaceholder(false)
+                            ->live(),
+                        DatePicker::make('benefit_expires_at')
+                            ->label('สิทธิ์หมดอายุ')
+                            ->helperText('เว้นว่าง = ไม่หมดอายุ แนะนำตั้งตามวันสิ้นสุดสัญญาหรือรอบปี')
+                            ->native(false)
+                            ->minDate(today())
+                            ->default(fn (Member $record) => $record->benefit_expires_at)
+                            ->visible(fn ($get) => filled($get('member_type_id'))),
+                        Textarea::make('reason')
+                            ->label('เหตุผล / หลักฐานที่ตรวจ')
+                            ->placeholder('เช่น ตรวจบัตรพนักงานเลข 12345 แล้ว')
+                            ->required()
+                            ->rows(2),
+                    ])
+                    ->action(function (Member $record, array $data) {
+                        $type = filled($data['member_type_id']) ? MemberType::findOrFail($data['member_type_id']) : null;
+                        $expires = $type && filled($data['benefit_expires_at'] ?? null) ? \Carbon\Carbon::parse($data['benefit_expires_at']) : null;
+
+                        $record->setMemberType($type, $expires, auth()->user(), $data['reason']);
+
+                        Notification::make()
+                            ->title($type ? 'กำหนดเป็น '.$type->name.' แล้ว' : 'เปลี่ยนเป็นสมาชิกทั่วไปแล้ว')
+                            ->success()
+                            ->send();
                     }),
 
                 Action::make('noTrainerPrivilege')

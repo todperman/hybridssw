@@ -23,6 +23,10 @@ class Member extends Model
         'user_id',
         'branch_id',
         'primary_trainer_id',
+        'member_type_id',
+        'benefit_expires_at',
+        'benefit_note',
+        'benefit_claim',
         'member_code',
         'approved_at',
         'approved_by_user_id',
@@ -46,6 +50,7 @@ class Member extends Model
         return [
             'status' => MemberStatus::class,
             'approved_at' => 'datetime',
+            'benefit_expires_at' => 'date',
             'can_book_without_trainer' => 'boolean',
             'date_of_birth' => 'date',
             'parq_answers' => 'array',
@@ -74,6 +79,83 @@ class Member extends Model
     public function primaryTrainer(): BelongsTo
     {
         return $this->belongsTo(Trainer::class, 'primary_trainer_id');
+    }
+
+    public function memberType(): BelongsTo
+    {
+        return $this->belongsTo(MemberType::class);
+    }
+
+    /** ได้สิทธิ์ใช้ฟรีอยู่ตอนนี้: มีประเภทที่เปิดใช้ และสิทธิ์ยังไม่หมดอายุ */
+    public function hasBenefit(): bool
+    {
+        $type = $this->memberType;
+
+        return $type !== null
+            && $type->is_active
+            && ($this->benefit_expires_at === null || $this->benefit_expires_at->endOfDay()->isFuture());
+    }
+
+    /** ป้ายสั้น ๆ เช่น "บุคลากร รพ. · ถึง 31/12/2026" */
+    public function benefitLabel(): ?string
+    {
+        if (! $this->memberType) {
+            return null;
+        }
+
+        $label = $this->memberType->name;
+
+        if ($this->benefit_expires_at) {
+            $label .= ($this->hasBenefit() ? ' · ถึง ' : ' · หมดอายุ ').$this->benefit_expires_at->format('d/m/Y');
+        }
+
+        return $label;
+    }
+
+    /** ชั่วโมงฟรีที่ใช้ไปแล้วในเดือนนั้น นับจากการจองที่ยังถือเวลาอยู่ (รอชำระหรือยืนยัน) */
+    public function freeHoursUsedIn(\Carbon\CarbonInterface $month): int
+    {
+        return (int) $this->reservations()
+            ->whereIn('reservations.status', \App\Enums\ReservationStatus::holding())
+            ->whereBetween('reservations.starts_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()])
+            ->sum('reservation_participants.free_hours');
+    }
+
+    /** ชั่วโมงฟรีที่เหลือใช้ได้ในเดือนนั้น null = ไม่จำกัด 0 = หมดหรือไม่มีสิทธิ์ */
+    public function freeHoursLeftIn(\Carbon\CarbonInterface $month): ?int
+    {
+        if (! $this->hasBenefit()) {
+            return 0;
+        }
+
+        $quota = $this->memberType->free_hours_per_month;
+
+        return $quota === null ? null : max(0, $quota - $this->freeHoursUsedIn($month));
+    }
+
+    /**
+     * กำหนดหรือถอนประเภทสมาชิก (สิทธิ์ใช้ฟรี) ทำได้เฉพาะแอดมินและต้องมีเหตุผล
+     * เก็บประวัติว่าใครเปลี่ยน เมื่อไร เพราะอะไร เหมือนสิทธิ์ไม่มี Trainer
+     */
+    public function setMemberType(?MemberType $type, ?\Carbon\CarbonInterface $expiresAt, User $admin, string $reason): void
+    {
+        $before = [
+            'member_type' => $this->memberType?->name,
+            'benefit_expires_at' => $this->benefit_expires_at?->toDateString(),
+        ];
+
+        $this->update([
+            'member_type_id' => $type?->id,
+            'benefit_expires_at' => $type ? $expiresAt?->toDateString() : null,
+            'benefit_note' => $reason,
+        ]);
+
+        $this->unsetRelation('memberType');
+
+        AuditLog::record('member.type_changed', $this, $before, [
+            'member_type' => $type?->name,
+            'benefit_expires_at' => $type ? $expiresAt?->toDateString() : null,
+        ], $reason, $admin);
     }
 
     public function trainers(): BelongsToMany

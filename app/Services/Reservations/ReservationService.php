@@ -84,8 +84,9 @@ class ReservationService
 
         $this->assertResourcesFree($branch, $start, $hours, $trainer, $members);
 
-        // ราคาตามจำนวนคนและว่ามี Trainer หรือไม่ เก็บรายละเอียดไว้กับการจอง แก้ตารางราคาทีหลังไม่กระทบ
-        $quote = $branch->priceTable()->quote($members->count(), $trainer !== null, $hours);
+        // ราคาตามจำนวนคนและว่ามี Trainer หรือไม่ หักส่วนของคนที่มีสิทธิ์ฟรี
+        // เก็บรายละเอียดไว้กับการจอง แก้ตารางราคาหรือสิทธิ์ทีหลังไม่กระทบ
+        $quote = $branch->priceTable()->quote($members->count(), $trainer !== null, $hours, $this->freeHoursFor($members, $start, $hours));
 
         $holdUntil = now()->addMinutes((int) config('gym.reservation.hold_minutes', 30));
 
@@ -93,8 +94,11 @@ class ReservationService
             $holdUntil = $start;
         }
 
+        // ทุกคนได้ฟรี ไม่มีอะไรให้ชำระ ยืนยันทันทีโดยไม่ต้องกันเวลารอ
+        $waived = $quote->isFree();
+
         try {
-            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil, $quote) {
+            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil, $quote, $waived) {
                 $this->releaseStaleHolds($branch, $start, $hours, $trainer, $members);
 
                 $reservation = Reservation::create([
@@ -106,16 +110,23 @@ class ReservationService
                     'starts_at' => $start,
                     'ends_at' => $start->addHours($hours),
                     'hours' => $hours,
-                    'status' => ReservationStatus::PendingPayment,
-                    'hold_expires_at' => $holdUntil,
+                    'status' => $waived ? ReservationStatus::Confirmed : ReservationStatus::PendingPayment,
+                    'hold_expires_at' => $waived ? null : $holdUntil,
+                    'confirmed_at' => $waived ? now() : null,
                     'hourly_rate' => $quote->perHour,
                     'amount' => $quote->amount,
                     'pricing' => $quote->toArray(),
                     'currency' => 'THB',
                 ]);
 
-                $reservation->participants()->attach($members->pluck('id'));
+                $reservation->participants()->attach(
+                    $members->mapWithKeys(fn (Member $m) => [$m->id => ['free_hours' => $quote->free[$m->id] ?? 0]])->all(),
+                );
                 $this->locker->lock($reservation->setRelation('participants', $members));
+
+                if ($waived) {
+                    AuditLog::record('reservation.waived', $reservation, null, ['free' => $quote->free], 'ผู้เข้าร่วมทุกคนมีสิทธิ์ใช้ฟรี', $actor);
+                }
 
                 return $reservation;
             });
@@ -124,6 +135,18 @@ class ReservationService
         }
 
         $reservation->load('participants.user', 'trainer.user', 'payer.user');
+
+        if ($waived) {
+            $this->notify->send(
+                $reservation,
+                $this->notify->everyone($reservation),
+                'ยืนยันการจองแล้ว',
+                'การจอง '.$reservation->dateLabel().' '.$reservation->timeLabel().' ใช้สิทธิ์ฟรี ไม่ต้องชำระเงิน',
+                $this->notify->urlFor($reservation),
+            );
+
+            return $reservation;
+        }
 
         $this->notify->send(
             $reservation,
@@ -565,6 +588,7 @@ class ReservationService
     /** @return Collection<int, Member> */
     public function participants(Branch $branch, array $memberIds): Collection
     {
+        // memberType ใช้ตอนคิดสิทธิ์ฟรี โหลดมาทีเดียว
         $ids = array_values(array_unique(array_map('intval', $memberIds)));
         $max = max(1, (int) $branch->max_trainees);
 
@@ -572,7 +596,7 @@ class ReservationService
             throw ReservationException::groupSize($max);
         }
 
-        $members = Member::with('user')->whereKey($ids)->get();
+        $members = Member::with(['user', 'memberType'])->whereKey($ids)->get();
 
         foreach ($ids as $id) {
             $member = $members->firstWhere('id', $id);
@@ -590,6 +614,28 @@ class ReservationService
     }
 
     /** ข้อ 13 ยังไม่ยืนยัน ค่าเริ่มต้นตามข้อเสนอในเอกสาร: ทุกคนต้องมีสิทธิ์ */
+    /**
+     * ชั่วโมงฟรีของแต่ละคนสำหรับการจองนี้ ตามสิทธิ์ประเภทสมาชิกและโควตาที่เหลือในเดือนนั้น
+     *
+     * @param  Collection<int, Member>  $members
+     * @return array<int, int> member_id => ชม.
+     */
+    public function freeHoursFor(Collection $members, CarbonInterface $start, int $hours): array
+    {
+        $free = [];
+
+        foreach ($members as $member) {
+            $left = $member->freeHoursLeftIn($start);
+            $granted = $left === null ? $hours : min($left, $hours);
+
+            if ($granted > 0) {
+                $free[$member->id] = $granted;
+            }
+        }
+
+        return $free;
+    }
+
     public function mayGoWithoutTrainer(Collection $members): bool
     {
         return config('gym.reservation.no_trainer_rule', 'all') === 'any'

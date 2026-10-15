@@ -79,7 +79,7 @@ class Reservation extends Model
 
     public function participants(): BelongsToMany
     {
-        return $this->belongsToMany(Member::class, 'reservation_participants')->withTimestamps();
+        return $this->belongsToMany(Member::class, 'reservation_participants')->withPivot('free_hours')->withTimestamps();
     }
 
     public function locks(): HasMany

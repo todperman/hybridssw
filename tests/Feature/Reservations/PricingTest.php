@@ -67,7 +67,7 @@ class PricingTest extends TestCase
 
         $this->assertSame('3900.00', (string) $r->amount);
         $this->assertSame('1950.00', (string) $r->hourly_rate);
-        $this->assertEquals(['mode' => 'with_trainer', 'people' => 3, 'hours' => 2, 'per_hour' => 1950, 'per_person_per_hour' => 650, 'amount' => 3900], $r->pricing);
+        $this->assertEquals(['mode' => 'with_trainer', 'people' => 3, 'hours' => 2, 'per_hour' => 1950, 'per_person_per_hour' => 650, 'amount' => 3900, 'free' => []], $r->pricing);
         $this->assertSame('3 คน × ฿650/คน/ชม. × 2 ชม. (มี Trainer)', $r->priceLabel());
 
         $gym->update(['pricing' => PriceTable::flat(99)->toArray()]);
