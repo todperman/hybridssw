@@ -72,18 +72,33 @@
                                 <p class="rounded-lg bg-accent-light px-3 py-2 text-xs font-medium text-accent-ink">โหมดทดสอบ ไม่มีการตัดเงินจริง</p>
                             @endif
 
+                            @php($catalog = \App\Services\Payments\Omise\PaymentMethods::all())
+                            @php($waiting = $this->pendingRedirect)
+
+                            @if ($waiting)
+                                <div class="flex items-start gap-3 rounded-xl border border-accent/40 bg-accent-light/60 px-4 py-3 text-sm text-accent-ink" wire:key="waiting-{{ $waiting->id }}">
+                                    <span class="mt-0.5 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent-ink/30 border-t-accent-ink"></span>
+                                    <span>กำลังรอผลจาก {{ $waiting->methodLabel() }} ถ้ายืนยันในแอปแล้ว หน้านี้จะอัปเดตเองภายในไม่กี่วินาที ยังไม่ได้ยืนยันก็เลือกช่องทางใหม่ได้</span>
+                                </div>
+                            @endif
+
                             @if (count($methods) > 1)
-                                <div class="grid grid-cols-2 gap-2" role="tablist" aria-label="ช่องทางชำระเงิน">
-                                    @foreach ($methods as $m)
+                                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist" aria-label="ช่องทางชำระเงิน">
+                                    @foreach ($methods as $m => $sources)
+                                        @php($meta = $catalog[$m])
                                         <button type="button" role="tab" aria-selected="{{ $method === $m ? 'true' : 'false' }}"
                                                 wire:click="setMethod('{{ $m }}')" wire:key="pm-{{ $m }}"
-                                                class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition
-                                                       {{ $method === $m ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
-                                            @if ($m === 'promptpay')
-                                                @svg('lucide-qr-code', 'h-4 w-4') พร้อมเพย์
-                                            @else
-                                                @svg('lucide-credit-card', 'h-4 w-4') บัตรเครดิต/เดบิต
-                                            @endif
+                                                class="flex min-h-[76px] flex-col items-start justify-between gap-2 rounded-2xl border p-3 text-left transition
+                                                       {{ $method === $m ? 'border-brand-dark bg-brand-light/25 ring-2 ring-brand-dark/60' : 'border-line bg-white/70 hover:bg-mist' }}">
+                                            <span class="flex h-7 items-center gap-1">
+                                                @foreach (array_slice($meta['logos'], 0, 3) as $logo)
+                                                    <img src="{{ asset('img/payments/'.$logo) }}" alt="" class="h-7 w-auto max-w-[44px] rounded-md object-contain" loading="lazy">
+                                                @endforeach
+                                                @if (count($meta['logos']) > 3)
+                                                    <span class="text-[11px] text-muted">+{{ count($meta['logos']) - 3 }}</span>
+                                                @endif
+                                            </span>
+                                            <span class="block text-[13px] font-medium leading-tight text-ink">{{ $meta['label'] }}</span>
                                         </button>
                                     @endforeach
                                 </div>
@@ -159,6 +174,54 @@
                                         ข้อมูลบัตรส่งตรงถึง Omise ผู้ให้บริการชำระเงินที่ได้มาตรฐาน PCI DSS ไม่ผ่านและไม่ถูกเก็บในระบบของยิม รองรับ Visa, Mastercard และ JCB
                                     </p>
                                 </div>
+                            @endif
+                            @if ($method === 'mobile_banking')
+                                <div class="space-y-2">
+                                    <p class="text-sm text-muted">เลือกธนาคาร แล้วแอปธนาคารจะเปิดขึ้นมาให้ยืนยันยอด ฿{{ number_format((float) $r->amount, 2) }}</p>
+                                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        @foreach ($methods['mobile_banking'] as $bankSource)
+                                            @php($bank = \App\Services\Payments\Omise\PaymentMethods::BANKS[$bankSource])
+                                            <button type="button" wire:click="payRedirect('{{ $bankSource }}')" wire:key="bank-{{ $bankSource }}"
+                                                    wire:loading.attr="disabled" wire:target="payRedirect"
+                                                    class="flex min-h-[56px] items-center gap-3 rounded-xl border border-line bg-white/80 px-3 text-left transition hover:border-brand/50 hover:bg-mist disabled:opacity-60">
+                                                <img src="{{ asset('img/payments/'.$bank['logo']) }}" alt="" class="h-9 w-9 rounded-lg object-contain">
+                                                <span class="min-w-0 flex-1">
+                                                    <span class="block text-sm font-medium text-ink">{{ $bank['label'] }}</span>
+                                                    <span class="block text-xs text-muted">ธนาคาร{{ $bank['bank'] }}</span>
+                                                </span>
+                                                @svg('lucide-chevron-right', 'h-4 w-4 shrink-0 text-muted')
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                    <p class="text-xs text-muted">ใช้ได้บนมือถือที่ติดตั้งแอปของธนาคารนั้น</p>
+                                </div>
+                            @endif
+
+                            @if ($method === 'rabbit_linepay')
+                                <div class="space-y-3">
+                                    <button type="button" wire:click="payRedirect('rabbit_linepay')" wire:loading.attr="disabled" wire:target="payRedirect"
+                                            class="flex w-full items-center justify-center gap-3 rounded-xl bg-[#06C755] py-3 text-[15px] font-semibold text-white transition hover:brightness-95 disabled:opacity-60">
+                                        <img src="{{ asset('img/payments/rabbit-linepay.svg') }}" alt="" class="h-7 w-7 rounded-md bg-white object-contain p-0.5">
+                                        <span wire:loading.remove wire:target="payRedirect">ชำระด้วย Rabbit LINE Pay ฿{{ number_format((float) $r->amount, 2) }}</span>
+                                        <span wire:loading wire:target="payRedirect">กำลังไปที่ LINE…</span>
+                                    </button>
+                                    <p class="text-xs text-muted">บนมือถือจะเปิดแอป LINE ให้ยืนยัน บนคอมพิวเตอร์จะได้ QR ให้สแกนด้วย LINE ต้องยืนยันภายใน 20 นาที</p>
+                                </div>
+                            @endif
+
+                            @if ($method === 'truemoney')
+                                <form wire:submit="payRedirect('truemoney')" class="space-y-3">
+                                    <label for="walletPhone" class="text-sm font-medium text-ink">เบอร์ที่ผูกกับ TrueMoney Wallet</label>
+                                    <input id="walletPhone" type="tel" inputmode="numeric" wire:model="walletPhone" maxlength="12" autocomplete="tel"
+                                           placeholder="0812345678" class="min-h-[44px] w-full rounded-xl border-line bg-white/70 text-sm">
+                                    <button type="submit" wire:loading.attr="disabled" wire:target="payRedirect"
+                                            class="flex w-full items-center justify-center gap-3 rounded-xl bg-[#F0612A] py-3 text-[15px] font-semibold text-white transition hover:brightness-95 disabled:opacity-60">
+                                        <img src="{{ asset('img/payments/truemoney.svg') }}" alt="" class="h-7 w-7 rounded-md bg-white object-contain p-0.5">
+                                        <span wire:loading.remove wire:target="payRedirect">ชำระด้วย TrueMoney ฿{{ number_format((float) $r->amount, 2) }}</span>
+                                        <span wire:loading wire:target="payRedirect">กำลังไปหน้ายืนยัน…</span>
+                                    </button>
+                                    <p class="text-xs text-muted">ระบบจะส่ง OTP ไปที่เบอร์นี้เพื่อยืนยันยอด</p>
+                                </form>
                             @endif
                         @else
                             <div class="rounded-xl border border-line bg-mist/60 p-4 text-sm leading-relaxed text-ink">

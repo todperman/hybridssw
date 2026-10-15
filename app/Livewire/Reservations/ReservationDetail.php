@@ -41,6 +41,9 @@ class ReservationDetail extends Component
     /** ช่องทาง Omise ที่ผู้ชำระเลือกอยู่ */
     public string $method = '';
 
+    /** เบอร์ TrueMoney Wallet */
+    public string $walletPhone = '';
+
     // เลื่อนวันเวลา
     public bool $rescheduling = false;
     public string $newDate = '';
@@ -62,7 +65,8 @@ class ReservationDetail extends Component
 
         $this->reference = $reference;
         $this->newDate = $reservation->starts_at->toDateString();
-        $this->method = $this->omiseMethods[0] ?? '';
+        $this->method = array_key_first($this->omiseMethods) ?? '';
+        $this->walletPhone = (string) (auth()->user()->phone ?? '');
 
         // ผลที่ส่งมาจากหน้ากลับจากธนาคาร (3-D Secure)
         $this->flash = session('payment_success') ?? session('payment_info');
@@ -103,13 +107,29 @@ class ReservationDetail extends Component
         return app(PaymentGateways::class)->current()->isOnline();
     }
 
-    /** ช่องทางของ Omise ที่เปิดให้เลือก ว่างถ้าไม่ได้ใช้ Omise */
+    /**
+     * ช่องทางของ Omise ที่เปิดให้เลือก (method => source types) ว่างถ้าไม่ได้ใช้ Omise
+     * ช่องทางที่ยัง "รอผล" อยู่ (เช่นเพิ่งกลับจากแอปธนาคาร) ไม่ให้กดซ้ำจนกว่าจะรู้ผล
+     */
     #[Computed]
     public function omiseMethods(): array
     {
         $gateway = app(PaymentGateways::class)->current();
 
         return $gateway instanceof OmiseGateway ? $gateway->methods() : [];
+    }
+
+    /** รายการที่กำลังรอผลจากช่องทางที่พาไปยืนยันที่อื่น */
+    #[Computed]
+    public function pendingRedirect(): ?Payment
+    {
+        return $this->reservation->payments
+            ->filter(fn (Payment $p) => $p->provider === Payment::PROVIDER_OMISE
+                && $p->status === PaymentStatus::Pending
+                && filled($p->provider_charge_id)
+                && ! in_array($p->method, [Payment::METHOD_PROMPTPAY, Payment::METHOD_CARD], true))
+            ->sortByDesc('id')
+            ->first();
     }
 
     #[Computed]
@@ -195,10 +215,75 @@ class ReservationDetail extends Component
 
         public function setMethod(string $method): void
     {
-        if (in_array($method, $this->omiseMethods, true)) {
+        if (isset($this->omiseMethods[$method])) {
             $this->method = $method;
             $this->error = null;
         }
+    }
+
+    /**
+     * ช่องทางที่พาไปยืนยันที่อื่น: Mobile Banking (เลือกธนาคาร) Rabbit LINE Pay TrueMoney (ใส่เบอร์)
+     * สร้าง charge แล้วพาไปที่ authorize_uri ของ Omise กลับมาที่หน้ารับผลเอง
+     */
+    public function payRedirect(string $source, PaymentGateways $gateways, PaymentService $payments): void
+    {
+        $this->error = null;
+        $r = $this->reservation;
+        $gateway = $gateways->current();
+
+        if (! $gateway instanceof OmiseGateway || ! $this->canPayNow() || ! $this->allowAttempt('redirect', 5)) {
+            return;
+        }
+
+        $params = [];
+
+        if ($source === Payment::METHOD_TRUEMONEY) {
+            $phone = preg_replace('/\D+/', '', $this->walletPhone);
+
+            if (! preg_match('/^0\d{9}$/', $phone)) {
+                $this->error = 'กรอกเบอร์ TrueMoney Wallet 10 หลัก ขึ้นต้นด้วย 0';
+
+                return;
+            }
+
+            $params['phone_number'] = $phone;
+        }
+
+        // เคยสร้าง QR ไว้ ตรวจก่อนว่าสแกนจ่ายไปแล้วหรือยัง จะได้ไม่จ่ายซ้ำ
+        $this->syncPending($payments, $r->payments->filter(fn (Payment $p) => $p->method === Payment::METHOD_PROMPTPAY && $p->status === PaymentStatus::Pending));
+
+        if ($this->reservation->status !== ReservationStatus::PendingPayment) {
+            return;
+        }
+
+        try {
+            $result = $gateway->chargeRedirect($this->reservation, $source, $params, request()->ip());
+        } catch (OmiseException $e) {
+            $this->error = $e->getMessage();
+            unset($this->reservation);
+
+            return;
+        } catch (\Throwable $e) {
+            Log::error('เริ่มชำระผ่าน Omise ไม่สำเร็จ', ['reference' => $r->reference, 'source' => $source, 'error' => $e->getMessage()]);
+            $this->error = 'ระบบชำระเงินขัดข้อง ยังไม่มีการตัดเงิน ลองใหม่อีกครั้ง';
+
+            return;
+        }
+
+        if ($result['status'] === 'redirect') {
+            $this->redirect($result['authorize_uri']);
+
+            return;
+        }
+
+        if ($result['status'] === 'failed') {
+            $payments->recordFailure(Payment::PROVIDER_OMISE, $result['charge']['id'], $result['message']);
+            $this->error = 'ชำระไม่สำเร็จ: '.$result['message'];
+        } else {
+            $this->syncPending($payments, collect([(object) ['provider_charge_id' => $result['charge']['id']]]));
+        }
+
+        unset($this->reservation, $this->pendingRedirect);
     }
 
     /** สร้างหรือเรียก QR พร้อมเพย์เดิม */

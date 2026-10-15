@@ -42,7 +42,7 @@ return [
         // Webhook Settings ใน Omise Dashboard (แยกของโหมดทดสอบกับโหมดจริง) ใช้ตรวจลายเซ็น webhook
         'webhook_secret' => env('OMISE_WEBHOOK_SECRET'),
         // ช่องทางที่เปิดให้ผู้ชำระเลือก ต้องเปิดใช้ในบัญชี Omise ด้วย (PromptPay ต้องขอเปิดกับ Omise)
-        'methods' => array_values(array_filter(array_map('trim', explode(',', (string) env('OMISE_METHODS', 'promptpay,card'))))),
+        'methods' => array_values(array_filter(array_map('trim', explode(',', (string) env('OMISE_METHODS', 'promptpay,card,mobile_banking,rabbit_linepay,truemoney'))))),
         'api_url' => env('OMISE_API_URL', 'https://api.omise.co'),
         // ล็อกเวอร์ชัน API ไว้ Omise เปลี่ยนรูปแบบข้อมูลตามเวอร์ชันของบัญชี ล็อกไว้จะไม่พังเมื่อบัญชีถูกอัปเกรด
         'api_version' => env('OMISE_API_VERSION', '2019-05-29'),

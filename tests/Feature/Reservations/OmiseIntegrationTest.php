@@ -35,9 +35,22 @@ class OmiseIntegrationTest extends TestCase
             'gym.payments.driver' => 'omise',
             'services.omise.public_key' => 'pkey_test_abc',
             'services.omise.secret_key' => 'skey_test_abc',
-            'services.omise.methods' => ['promptpay', 'card'],
+            'services.omise.methods' => ['promptpay', 'card', 'mobile_banking', 'rabbit_linepay', 'truemoney'],
             'services.omise.webhook_secret' => null,
         ]);
+
+        // ช่องทางที่บัญชี Omise จำลองเปิดไว้ เทสต์ที่ต้องการชุดอื่นเปลี่ยน $this->enabled ก่อนเปิดหน้า
+        // (Http::fake ที่ลงทะเบียนก่อนชนะเสมอ จึงอ่านจาก property ตอนถูกเรียกแทนการ fake ทับ)
+        Http::fake(['api.omise.co/capability' => fn () => Http::response($this->capability($this->enabled))]);
+    }
+
+    /** @var array<int, string> */
+    protected array $enabled = ['promptpay', 'card', 'mobile_banking_kbank', 'mobile_banking_scb', 'mobile_banking_bay', 'mobile_banking_bbl', 'mobile_banking_ktb', 'rabbit_linepay', 'truemoney'];
+
+    /** จำนวนคำขอที่ยิงไปสร้างรายการจริง ไม่นับการถาม capability */
+    protected function postCount(): int
+    {
+        return Http::recorded(fn (Request $req) => $req->method() === 'POST')->count();
     }
 
     protected function booking(): Reservation
@@ -81,8 +94,8 @@ class OmiseIntegrationTest extends TestCase
         Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
             ->assertSee('https://api.omise.co/qr.svg', false);
 
-        Http::assertSentCount(1);
-        Http::assertSent(fn (Request $req) => $req['amount'] === 80000
+        $this->assertSame(1, $this->postCount());
+        Http::assertSent(fn (Request $req) => $req->method() === 'POST' && $req['amount'] === 80000
             && $req['currency'] === 'thb'
             && $req['source[type]'] === 'promptpay'
             && $req['expires_at'] === $r->hold_expires_at->utc()->format('Y-m-d\TH:i:s\Z')
@@ -97,13 +110,11 @@ class OmiseIntegrationTest extends TestCase
     {
         $r = $this->booking();
 
-        Http::fake(function (Request $req) use ($r) {
-            $card = ['brand' => 'Visa', 'last_digits' => '4242', 'name' => 'SOMCHAI JAIDEE'];
-
-            return $req->method() === 'POST'
-                ? Http::response($this->charge('chrg_card', $r, 'successful', ['card' => $card]))
-                : Http::response($this->charge('chrg_card', $r, 'successful', ['card' => $card]));
-        });
+        $card = ['brand' => 'Visa', 'last_digits' => '4242', 'name' => 'SOMCHAI JAIDEE'];
+        Http::fake([
+            'api.omise.co/charges' => Http::response($this->charge('chrg_card', $r, 'successful', ['card' => $card])),
+            'api.omise.co/charges/*' => Http::response($this->charge('chrg_card', $r, 'successful', ['card' => $card])),
+        ]);
 
         Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
             ->call('setMethod', 'card')
@@ -125,13 +136,12 @@ class OmiseIntegrationTest extends TestCase
         $r = $this->booking();
         $paid = false;
 
-        Http::fake(function (Request $req) use ($r, &$paid) {
-            if ($req->method() === 'POST') {
-                return Http::response($this->charge('chrg_3ds', $r, 'pending', ['authorize_uri' => 'https://bank.example/3ds']));
-            }
-
-            return Http::response($this->charge('chrg_3ds', $r, $paid ? 'successful' : 'pending'));
-        });
+        Http::fake([
+            'api.omise.co/charges' => Http::response($this->charge('chrg_3ds', $r, 'pending', ['authorize_uri' => 'https://bank.example/3ds'])),
+            'api.omise.co/charges/*' => function () use ($r, &$paid) {
+                return Http::response($this->charge('chrg_3ds', $r, $paid ? 'successful' : 'pending'));
+            },
+        ]);
 
         Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
             ->call('setMethod', 'card')
@@ -201,7 +211,7 @@ class OmiseIntegrationTest extends TestCase
 
         Livewire::actingAs($friend->user)->test(ReservationDetail::class, ['reference' => $r->reference])
             ->call('payByCard', 'tokn_test_1');
-        Http::assertNothingSent();
+        $this->assertSame(0, $this->postCount());
 
         $page = Livewire::actingAs($payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])->call('setMethod', 'card');
 
@@ -210,7 +220,7 @@ class OmiseIntegrationTest extends TestCase
         }
 
         $page->assertSet('error', fn ($e) => str_contains($e, 'ลองบ่อยเกินไป'));
-        Http::assertSentCount(5);
+        $this->assertSame(5, $this->postCount());
     }
 
     #[Test]
@@ -282,19 +292,101 @@ class OmiseIntegrationTest extends TestCase
     {
         $this->makeAvailableTrainer($this->makeGym());
 
-        Http::fake([
-            'api.omise.co/account' => Http::response(['object' => 'account', 'email' => 'owner@example.test']),
-            'api.omise.co/capability' => Http::response(['object' => 'capability', 'payment_methods' => [['name' => 'card']]]),
-        ]);
+        $this->enabled = ['card'];
+        Http::fake(['api.omise.co/account' => Http::response(['object' => 'account', 'email' => 'owner@example.test'])]);
 
         $this->artisan('gym:doctor')
             ->expectsOutputToContain('เชื่อมต่อ Omise ได้')
             ->expectsOutputToContain('Omise ยังเป็นโหมดทดสอบ')
             ->expectsOutputToContain('ยังไม่เปิดช่องทาง: promptpay')
             ->expectsOutputToContain('ยังไม่ได้ตั้ง OMISE_WEBHOOK_SECRET')
-            ->assertFailed();
+            ->assertSuccessful();
 
         config(['services.omise.public_key' => 'pkey_live_abc']);
         $this->artisan('gym:doctor')->expectsOutputToContain('ปนกันระหว่างโหมดทดสอบกับโหมดจริง')->assertFailed();
+    }
+
+    protected function capability(array $names): array
+    {
+        return ['object' => 'capability', 'payment_methods' => array_map(fn ($n) => ['name' => $n], $names)];
+    }
+
+    #[Test]
+    public function only_methods_the_omise_account_has_enabled_are_offered(): void
+    {
+        $r = $this->booking();
+        $this->enabled = ['promptpay', 'card', 'mobile_banking_kbank', 'mobile_banking_scb', 'truemoney'];
+
+        $page = Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
+            ->assertSee('TrueMoney Wallet')
+            ->assertDontSee('Rabbit LINE Pay')
+            ->assertSee('img/payments/promptpay.svg', false);
+
+        $this->assertSame(['mobile_banking_kbank', 'mobile_banking_scb'], $page->instance()->omiseMethods['mobile_banking']);
+
+        // ส่ง source ของธนาคารที่บัญชีไม่ได้เปิด ต้องถูกปฏิเสธโดยไม่ยิง charge
+        $page->call('setMethod', 'mobile_banking')->call('payRedirect', 'mobile_banking_bbl')
+            ->assertSet('error', 'ช่องทางชำระนี้ยังไม่เปิดใช้');
+        Http::assertNotSent(fn (Request $req) => str_contains($req->url(), '/charges'));
+    }
+
+    #[Test]
+    public function mobile_banking_sends_the_bank_source_and_redirects_to_the_bank_app(): void
+    {
+        $r = $this->booking();
+        $this->enabled = ['mobile_banking_kbank'];
+        Http::fake(['api.omise.co/charges' => Http::response($this->charge('chrg_mb', $r, 'pending', ['authorize_uri' => 'https://bank.example/app', 'source' => ['type' => 'mobile_banking_kbank']]))]);
+
+        Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
+            ->call('setMethod', 'mobile_banking')
+            ->assertSee('K PLUS')
+            ->call('payRedirect', 'mobile_banking_kbank')
+            ->assertRedirect('https://bank.example/app');
+
+        Http::assertSent(fn (Request $req) => $req->method() === 'POST' && $req['source[type]'] === 'mobile_banking_kbank'
+            && $req['return_uri'] === route('reservations.payment-return', $r->reference));
+        $payment = Payment::sole();
+        $this->assertSame('mobile_banking_kbank', $payment->method);
+        $this->assertSame('K PLUS (กสิกรไทย)', $payment->methodLabel());
+        $this->assertFalse($payment->refundableOnline());
+    }
+
+    #[Test]
+    public function truemoney_needs_a_valid_wallet_phone_and_is_refundable_online(): void
+    {
+        $r = $this->booking();
+        $this->enabled = ['truemoney'];
+        Http::fake(['api.omise.co/charges' => Http::response($this->charge('chrg_tm', $r, 'pending', ['authorize_uri' => 'https://omise.example/otp', 'source' => ['type' => 'truemoney']]))]);
+
+        $page = Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
+            ->call('setMethod', 'truemoney')
+            ->set('walletPhone', '12345')
+            ->call('payRedirect', 'truemoney')
+            ->assertSet('error', fn ($e) => str_contains($e, '10 หลัก'));
+        Http::assertNotSent(fn (Request $req) => $req->method() === 'POST');
+
+        $page->set('walletPhone', '081-234-5678')->call('payRedirect', 'truemoney')->assertRedirect('https://omise.example/otp');
+
+        Http::assertSent(fn (Request $req) => $req->method() === 'POST' && $req['source[type]'] === 'truemoney' && $req['source[phone_number]'] === '0812345678');
+        $this->assertTrue(Payment::sole()->refundableOnline());
+    }
+
+    #[Test]
+    public function rabbit_linepay_redirects_and_a_pending_redirect_is_shown_while_waiting(): void
+    {
+        $r = $this->booking();
+        $this->enabled = ['rabbit_linepay'];
+        Http::fake([
+            'api.omise.co/charges' => Http::response($this->charge('chrg_rl', $r, 'pending', ['authorize_uri' => 'https://line.example/pay'])),
+            'api.omise.co/charges/chrg_rl' => Http::response($this->charge('chrg_rl', $r, 'pending')),
+        ]);
+
+        Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
+            ->call('setMethod', 'rabbit_linepay')
+            ->call('payRedirect', 'rabbit_linepay')
+            ->assertRedirect('https://line.example/pay');
+
+        Livewire::actingAs($r->payer->user)->test(ReservationDetail::class, ['reference' => $r->reference])
+            ->assertSee('กำลังรอผลจาก Rabbit LINE Pay');
     }
 }

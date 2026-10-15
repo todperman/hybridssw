@@ -672,6 +672,14 @@ cd public/img/stations && for f in *.svg; do magick -background none -density 60
 |---|---|---|
 | พร้อมเพย์ | QR ที่หมดอายุพร้อมเวลากันจอง บันทึกรูปไปสแกนจากอัลบั้มได้ | Omise คืนให้ไม่ได้ แอดมินโอนคืนเองแล้วกด "บันทึกผลคืนเงิน" |
 | บัตร Visa/Mastercard/JCB | ฟอร์มของ Omise (Omise.js) รองรับ 3-D Secure | คืนเข้าบัตรเดิมผ่าน Omise อัตโนมัติ |
+| Mobile Banking (K PLUS, SCB EASY, KMA, Bualuang, Krungthai NEXT) | เลือกธนาคาร → เปิดแอปธนาคารยืนยัน → กลับมาหน้าการจอง | Omise คืนให้ไม่ได้ โอนคืนเอง |
+| Rabbit LINE Pay | ยืนยันในแอป LINE (คอมพิวเตอร์ได้ QR) ภายใน 20 นาที | คืนผ่าน Omise ได้ภายใน 60 วัน |
+| TrueMoney Wallet | ใส่เบอร์ → OTP | คืนผ่าน Omise ได้ภายใน 30 วัน |
+
+รายการช่องทางอยู่ที่เดียวใน `App\Services\Payments\Omise\PaymentMethods` (ชื่อ โลโก้ source type คืนเงินได้ไหม)
+โลโก้เป็นไฟล์ทางการจาก Omise ใน `public/img/payments/` หน้าชำระจะแสดงเฉพาะช่องทางที่ตั้งใน `OMISE_METHODS`
+**และ**บัญชี Omise เปิดแล้วจริง (ถาม capability ของ Omise ชั่วโมงละครั้ง) ช่องทางที่ยังไม่ได้ขอเปิดจะไม่โผล่ให้ลูกค้ากด
+ช่องทางที่พาไปยืนยันที่อื่นทุกตัวกลับมาที่ `reservations.payment-return` แล้วถามผลจาก Omise ทันที
 
 ผลชำระได้มาสามทาง ทุกทางจบที่ `PaymentService::syncOmiseCharge()` ซึ่งดึงสถานะจาก Omise ด้วย secret key เสมอ
 และบันทึกซ้ำไม่ได้: webhook (`/webhooks/omise` ตรวจลายเซ็น HMAC ด้วย `OMISE_WEBHOOK_SECRET`),

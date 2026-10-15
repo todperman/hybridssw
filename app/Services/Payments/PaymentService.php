@@ -374,11 +374,7 @@ class PaymentService
             'failure_code' => $charge['failure_code'] ?? null,
             'livemode' => $charge['livemode'] ?? null,
             'source_type' => data_get($charge, 'source.type'),
-            'method' => match (true) {
-                isset($charge['card']) => Payment::METHOD_CARD,
-                data_get($charge, 'source.type') === 'promptpay' => Payment::METHOD_PROMPTPAY,
-                default => null,
-            },
+            'method' => isset($charge['card']) ? Payment::METHOD_CARD : data_get($charge, 'source.type'),
             'card' => isset($charge['card']) ? array_filter([
                 'brand' => data_get($charge, 'card.brand'),
                 'last_digits' => data_get($charge, 'card.last_digits'),

@@ -9,6 +9,9 @@ use App\Models\Refund;
 use App\Models\Reservation;
 use App\Services\Payments\Omise\OmiseClient;
 use App\Services\Payments\Omise\OmiseException;
+use App\Services\Payments\Omise\PaymentMethods;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -38,10 +41,41 @@ class OmiseGateway implements PaymentGateway
         return true;
     }
 
-    /** @return array<int, string> */
+    /**
+     * ช่องทางที่ให้ลูกค้าเลือก = ที่ตั้งใน config และบัญชี Omise เปิดแล้วจริง
+     * ถาม capability ของ Omise ไม่บ่อยกว่าชั่วโมงละครั้ง ถามไม่ได้ก็ใช้ตาม config
+     *
+     * @return array<string, array<int, string>> method => source types ที่ใช้ได้
+     */
     public function methods(): array
     {
-        return array_values(array_intersect(config('services.omise.methods', []), [Payment::METHOD_PROMPTPAY, Payment::METHOD_CARD]));
+        return PaymentMethods::available(config('services.omise.methods', []), $this->enabledInOmise());
+    }
+
+    /** @return array<int, string> ชื่อช่องทางที่ใช้ได้ */
+    public function methodKeys(): array
+    {
+        return array_keys($this->methods());
+    }
+
+    /** @return array<int, string>|null */
+    protected function enabledInOmise(): ?array
+    {
+        if (! $this->omise->isConfigured()) {
+            return null;
+        }
+
+        $cacheKey = 'omise:capability:'.md5((string) $this->omise->publicKey());
+
+        return Cache::remember($cacheKey, now()->addHour(), function () {
+            try {
+                return collect($this->omise->capability()['payment_methods'] ?? [])->pluck('name')->filter()->values()->all();
+            } catch (\Throwable $e) {
+                Log::warning('ถาม capability ของ Omise ไม่ได้ ใช้ช่องทางตาม config ไปก่อน', ['error' => $e->getMessage()]);
+
+                return null;
+            }
+        });
     }
 
     public function isTestMode(): bool
@@ -117,14 +151,45 @@ class OmiseGateway implements PaymentGateway
             throw new OmiseException('ข้อมูลบัตรไม่ถูกต้อง กรุณากรอกใหม่');
         }
 
-        $payment = DB::transaction(function () use ($reservation) {
+        return $this->charge($reservation, Payment::METHOD_CARD, ['card' => $token], $ip);
+    }
+
+    /**
+     * ช่องทางที่พาไปยืนยันที่อื่นแล้วกลับมา: Mobile Banking, Rabbit LINE Pay, TrueMoney
+     *
+     * @param  string  $sourceType  เช่น mobile_banking_kbank, rabbit_linepay, truemoney
+     * @param  array<string, string>  $sourceParams  ข้อมูลเพิ่มของ source เช่น phone_number ของ TrueMoney
+     * @return array{status: string, authorize_uri?: string, message?: string, charge: array}
+     */
+    public function chargeRedirect(Reservation $reservation, string $sourceType, array $sourceParams = [], ?string $ip = null): array
+    {
+        $method = isset(PaymentMethods::BANKS[$sourceType]) ? PaymentMethods::MOBILE_BANKING : $sourceType;
+        $this->assertMethod($method);
+
+        if (! in_array($sourceType, $this->methods()[$method] ?? [], true)) {
+            throw new OmiseException('ช่องทางชำระนี้ยังไม่เปิดใช้');
+        }
+
+        $params = ['source[type]' => $sourceType];
+
+        foreach ($sourceParams as $key => $value) {
+            $params['source['.$key.']'] = $value;
+        }
+
+        return $this->charge($reservation, $sourceType, $params, $ip);
+    }
+
+    /** สร้างรายการรอผล ยิง charge แล้วแปลผลเป็น redirect / successful / pending / failed */
+    protected function charge(Reservation $reservation, string $method, array $params, ?string $ip): array
+    {
+        $payment = DB::transaction(function () use ($reservation, $method) {
             $reservation = Reservation::whereKey($reservation->id)->lockForUpdate()->firstOrFail();
             $this->assertPayable($reservation);
 
             return $reservation->payments()->create([
                 'payer_member_id' => $reservation->payer_member_id,
                 'provider' => $this->key(),
-                'method' => Payment::METHOD_CARD,
+                'method' => $method,
                 'amount' => $reservation->amount,
                 'currency' => 'THB',
                 'status' => PaymentStatus::Pending,
@@ -132,8 +197,7 @@ class OmiseGateway implements PaymentGateway
         });
 
         try {
-            $charge = $this->omise->createCharge($this->chargeParams($reservation) + array_filter([
-                'card' => $token,
+            $charge = $this->omise->createCharge($this->chargeParams($reservation) + $params + array_filter([
                 'return_uri' => route('reservations.payment-return', $reservation->reference),
                 'ip' => $ip,
                 'metadata[payment_id]' => (string) $payment->id,
@@ -162,7 +226,7 @@ class OmiseGateway implements PaymentGateway
     public function refund(Payment $payment, Refund $refund): RefundResult
     {
         if (! $payment->refundableOnline()) {
-            return RefundResult::pending('ชำระด้วยพร้อมเพย์ Omise คืนเงินให้ไม่ได้ ต้องโอนคืนให้ผู้ชำระเองแล้วกดบันทึกผลคืนเงิน');
+            return RefundResult::pending('ชำระด้วย'.$payment->methodLabel().' Omise คืนเงินให้ไม่ได้ ต้องโอนคืนให้ผู้ชำระเองแล้วกดบันทึกผลคืนเงิน');
         }
 
         if (! $payment->provider_charge_id) {
@@ -196,6 +260,9 @@ class OmiseGateway implements PaymentGateway
             'failed_fraud_check' => 'ธนาคารไม่อนุมัติรายการนี้ กรุณาใช้บัตรอื่น',
             'invalid_account_number', 'invalid_security_code' => 'ข้อมูลบัตรไม่ถูกต้อง',
             'payment_cancelled' => 'ยกเลิกการชำระแล้ว',
+            'timeout' => 'ไม่ได้ยืนยันภายในเวลา กรุณาลองใหม่',
+            'invalid_account' => 'ไม่พบบัญชีวอลเล็ตของเบอร์นี้',
+            'insufficient_balance' => 'ยอดเงินในบัญชีไม่พอ',
             'failed_processing', 'payment_rejected' => 'ธนาคารปฏิเสธรายการ กรุณาลองบัตรอื่นหรือติดต่อธนาคาร',
             default => $charge['failure_message'] ?? 'ชำระไม่สำเร็จ กรุณาลองใหม่',
         };
@@ -230,7 +297,7 @@ class OmiseGateway implements PaymentGateway
 
     protected function assertMethod(string $method): void
     {
-        if (! in_array($method, $this->methods(), true)) {
+        if (! isset($this->methods()[$method])) {
             throw new OmiseException('ช่องทางชำระนี้ยังไม่เปิดใช้');
         }
     }

@@ -160,11 +160,20 @@ class GymDoctorCommand extends Command
 
         $enabled = collect($capability['payment_methods'] ?? [])->pluck('name')->all();
         $wanted = config('services.omise.methods', []);
-        $missing = array_diff($wanted, $enabled);
+        $available = \App\Services\Payments\Omise\PaymentMethods::available($wanted, $enabled);
+        $missing = array_values(array_diff($wanted, array_keys($available)));
 
-        $missing === []
-            ? $this->ok('ช่องทางที่เปิดให้ลูกค้า: '.implode(', ', $wanted))
-            : $this->broken('บัญชี Omise ยังไม่เปิดช่องทาง: '.implode(', ', $missing), 'ติดต่อ support@omise.co ให้เปิด หรือเอาออกจาก OMISE_METHODS ใน .env');
+        if ($available !== []) {
+            $this->ok('ช่องทางที่ลูกค้าเลือกได้: '.collect($available)->map(fn ($sources, $m) => $m === 'mobile_banking' ? 'mobile_banking ('.count($sources).' ธนาคาร)' : $m)->implode(', '));
+        }
+
+        if ($missing !== []) {
+            $this->caution('บัญชี Omise ยังไม่เปิดช่องทาง: '.implode(', ', $missing).' (ลูกค้าจะไม่เห็นช่องทางเหล่านี้)', 'ติดต่อ support@omise.co ให้เปิด หรือเอาออกจาก OMISE_METHODS ใน .env');
+        }
+
+        if ($available === []) {
+            $this->broken('บัญชี Omise ไม่มีช่องทางที่ตั้งไว้เลย ลูกค้าจะชำระไม่ได้', 'ขอเปิดช่องทางกับ Omise หรือกลับไปใช้ GYM_PAYMENT_DRIVER=manual');
+        }
 
         blank(config('services.omise.webhook_secret'))
             ? $this->caution('ยังไม่ได้ตั้ง OMISE_WEBHOOK_SECRET ระบบยังตรวจผลกับ Omise เองได้ แต่ไม่ได้ตรวจลายเซ็นของ webhook', 'Omise Dashboard → Webhooks: ใส่ URL '.route('webhooks.omise').' แล้วคัดลอก secret มาใส่ .env')

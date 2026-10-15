@@ -15,6 +15,10 @@ class Payment extends Model
     public const METHOD_CARD = 'card';
     public const METHOD_TRANSFER = 'transfer';
 
+    public const METHOD_TRUEMONEY = 'truemoney';
+
+    public const METHOD_RABBIT_LINEPAY = 'rabbit_linepay';
+
     protected $fillable = [
         'reservation_id', 'payer_member_id', 'provider', 'method', 'provider_charge_id',
         'amount', 'currency', 'status', 'failure_message', 'paid_at',
@@ -49,10 +53,11 @@ class Payment extends Model
 
     public function methodLabel(): string
     {
-        $label = match ($this->method) {
-            self::METHOD_PROMPTPAY => 'พร้อมเพย์',
-            self::METHOD_CARD => 'บัตร',
-            default => $this->provider === self::PROVIDER_MANUAL ? 'แอดมินบันทึก' : 'Omise',
+        $label = match (true) {
+            $this->provider === self::PROVIDER_MANUAL => 'แอดมินบันทึก',
+            $this->method === self::METHOD_CARD => 'บัตร',
+            $this->method !== null => \App\Services\Payments\Omise\PaymentMethods::label($this->method),
+            default => 'Omise',
         };
 
         $card = $this->payload['card'] ?? null;
@@ -60,10 +65,10 @@ class Payment extends Model
         return $card ? $label.' '.($card['brand'] ?? '').' ••'.($card['last_digits'] ?? '') : $label;
     }
 
-    /** Omise คืนเงินให้อัตโนมัติได้เฉพาะบัตร พร้อมเพย์ต้องโอนคืนเอง */
+    /** Omise คืนเงินอัตโนมัติได้เฉพาะบางช่องทาง (บัตร TrueMoney Rabbit LINE Pay) พร้อมเพย์และ Mobile Banking ต้องโอนคืนเอง */
     public function refundableOnline(): bool
     {
-        return $this->provider === self::PROVIDER_OMISE && $this->method === self::METHOD_CARD;
+        return $this->provider === self::PROVIDER_OMISE && \App\Services\Payments\Omise\PaymentMethods::refundable($this->method);
     }
 
     public function providerLabel(): string
