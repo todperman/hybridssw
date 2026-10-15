@@ -212,7 +212,13 @@
                 </div>
                 <div class="flex justify-between gap-4 px-5 py-3">
                     <dt class="text-muted">ยอดเงิน</dt>
-                    <dd class="text-right font-medium text-ink">฿{{ number_format((float) $r->amount, 2) }} <span class="block text-xs font-normal text-muted">{{ $r->priceLabel() }}</span></dd>
+                    <dd class="text-right font-medium text-ink">
+                        ฿{{ number_format((float) $r->amount, 2) }}
+                        <span class="block text-xs font-normal text-muted">{{ $r->priceLabel() }}</span>
+                        @if ((float) $r->discount_amount > 0)
+                            <span class="block text-xs font-normal text-emerald-700">ใช้โค้ด {{ $r->coupon?->code ?? $r->pricing['coupon'] ?? '' }} ลด ฿{{ number_format((float) $r->discount_amount, 0) }}</span>
+                        @endif
+                    </dd>
                 </div>
                 @if ($paid = $r->payments->firstWhere('status', \App\Enums\PaymentStatus::Succeeded))
                     <div class="flex justify-between gap-4 px-5 py-3">

@@ -9,6 +9,7 @@ use App\Enums\ReservationStatus;
 use App\Exceptions\ReservationException;
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\Coupon;
 use App\Models\Member;
 use App\Models\Reservation;
 use App\Models\ReservationRequest;
@@ -55,6 +56,7 @@ class ReservationService
         ?Trainer $trainer,
         User $actor,
         string $via,
+        ?string $couponCode = null,
     ): Reservation {
         $start = CarbonImmutable::parse($start)->second(0);
 
@@ -88,6 +90,14 @@ class ReservationService
         // เก็บรายละเอียดไว้กับการจอง แก้ตารางราคาหรือสิทธิ์ทีหลังไม่กระทบ
         $quote = $branch->priceTable()->quote($members->count(), $trainer !== null, $hours, $this->freeHoursFor($members, $start, $hours));
 
+        // คูปองหักจากยอดที่เหลือจริง ตรวจเงื่อนไขทุกข้อตอนนี้ (ไม่ใช่แค่ตอนกรอกในหน้าเว็บ)
+        $coupon = null;
+
+        if (filled($couponCode)) {
+            $coupon = Coupon::findByCode($couponCode) ?? throw new ReservationException('ไม่พบโค้ดส่วนลดนี้', 'coupon_unknown');
+            $quote = $coupon->apply($quote, $branch, $members->firstWhere('id', $payerMemberId));
+        }
+
         $holdUntil = now()->addMinutes((int) config('gym.reservation.hold_minutes', 30));
 
         if (config('gym.reservation.hold_ends_at_start', true) && $start->lt($holdUntil)) {
@@ -98,7 +108,7 @@ class ReservationService
         $waived = $quote->isFree();
 
         try {
-            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil, $quote, $waived) {
+            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil, $quote, $waived, $coupon) {
                 $this->releaseStaleHolds($branch, $start, $hours, $trainer, $members);
 
                 $reservation = Reservation::create([
@@ -116,6 +126,8 @@ class ReservationService
                     'hourly_rate' => $quote->perHour,
                     'amount' => $quote->amount,
                     'pricing' => $quote->toArray(),
+                    'coupon_id' => $coupon?->id,
+                    'discount_amount' => $quote->discount,
                     'currency' => 'THB',
                 ]);
 
@@ -125,7 +137,7 @@ class ReservationService
                 $this->locker->lock($reservation->setRelation('participants', $members));
 
                 if ($waived) {
-                    AuditLog::record('reservation.waived', $reservation, null, ['free' => $quote->free], 'ผู้เข้าร่วมทุกคนมีสิทธิ์ใช้ฟรี', $actor);
+                    AuditLog::record('reservation.waived', $reservation, null, ['free' => $quote->free, 'coupon' => $quote->coupon], $quote->coupon ? 'ส่วนลดครอบคลุมทั้งยอด' : 'ผู้เข้าร่วมทุกคนมีสิทธิ์ใช้ฟรี', $actor);
                 }
 
                 return $reservation;
@@ -141,7 +153,7 @@ class ReservationService
                 $reservation,
                 $this->notify->everyone($reservation),
                 'ยืนยันการจองแล้ว',
-                'การจอง '.$reservation->dateLabel().' '.$reservation->timeLabel().' ใช้สิทธิ์ฟรี ไม่ต้องชำระเงิน',
+                'การจอง '.$reservation->dateLabel().' '.$reservation->timeLabel().' ไม่มียอดต้องชำระ'.($quote->coupon ? ' (ใช้โค้ด '.$quote->coupon.')' : ' (ใช้สิทธิ์ฟรี)'),
                 $this->notify->urlFor($reservation),
             );
 

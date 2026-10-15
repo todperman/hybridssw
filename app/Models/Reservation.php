@@ -27,7 +27,7 @@ class Reservation extends Model
     protected $fillable = [
         'reference', 'branch_id', 'trainer_id', 'payer_member_id', 'created_by_user_id', 'created_via',
         'starts_at', 'ends_at', 'hours', 'status', 'hold_expires_at',
-        'hourly_rate', 'amount', 'pricing', 'currency',
+        'hourly_rate', 'amount', 'pricing', 'coupon_id', 'discount_amount', 'currency',
         'confirmed_at', 'expired_at', 'cancelled_at', 'cancelled_by_user_id', 'cancellation_reason',
         'refund_status', 'notes',
     ];
@@ -44,6 +44,7 @@ class Reservation extends Model
             'hours' => 'integer',
             'hourly_rate' => 'decimal:2',
             'amount' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'pricing' => 'array',
             'status' => ReservationStatus::class,
             'refund_status' => RefundStatus::class,
@@ -70,6 +71,11 @@ class Reservation extends Model
     public function payer(): BelongsTo
     {
         return $this->belongsTo(Member::class, 'payer_member_id');
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function createdBy(): BelongsTo

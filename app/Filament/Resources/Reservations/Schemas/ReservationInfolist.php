@@ -26,6 +26,9 @@ class ReservationInfolist
                     TextEntry::make('payer.user.name')->label('ผู้ชำระเงิน')->helperText(fn (Reservation $record) => $record->payer?->user?->phone),
                     TextEntry::make('amount')->label('ยอด')->money('THB')
                         ->helperText(fn (Reservation $record) => $record->priceLabel()),
+                    TextEntry::make('coupon.code')->label('โค้ดส่วนลด')->badge()->color('success')
+                        ->helperText(fn (Reservation $record) => 'ลด ฿'.number_format((float) $record->discount_amount, 2))
+                        ->visible(fn (Reservation $record) => (float) $record->discount_amount > 0),
                     TextEntry::make('hold_expires_at')->label('ต้องชำระภายใน')->dateTime('d/m/Y H:i')->placeholder('—'),
                     TextEntry::make('createdBy.name')->label('จองโดย')
                         ->helperText(fn (Reservation $record) => $record->created_at->format('d/m/Y H:i')),

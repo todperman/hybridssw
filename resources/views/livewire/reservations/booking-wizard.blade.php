@@ -248,6 +248,35 @@
             </section>
         @endif
 
+        {{-- โค้ดส่วนลด --}}
+        <section class="card overflow-hidden">
+            <div class="card-head">
+                <h2 class="font-display text-[17px] font-bold text-grad">โค้ดส่วนลด</h2>
+                <p class="mt-0.5 text-xs text-muted">มีโค้ดก็กรอกได้เลย ส่วนลดหักจากยอดที่ต้องชำระ</p>
+            </div>
+            <div class="space-y-2 p-4 sm:p-5">
+                @if ($couponApplied && $this->quote->coupon)
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                        <span class="text-sm text-emerald-800">
+                            @svg('lucide-ticket-percent', 'mr-1 inline h-4 w-4 align-text-bottom')
+                            ใช้โค้ด <span class="font-mono font-semibold">{{ $this->quote->coupon }}</span> ลด ฿{{ number_format($this->quote->discount, 0) }}
+                        </span>
+                        <button type="button" wire:click="removeCoupon" class="text-sm text-emerald-800 underline">เอาออก</button>
+                    </div>
+                @else
+                    <form wire:submit="applyCoupon" class="flex gap-2">
+                        <input type="text" wire:model="couponCode" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                               placeholder="เช่น WELCOME10" aria-label="โค้ดส่วนลด"
+                               class="min-h-[44px] min-w-0 flex-1 rounded-xl border-line bg-white/70 font-mono text-sm uppercase">
+                        <button type="submit" class="btn-primary shrink-0 px-4 text-sm" wire:loading.attr="disabled" wire:target="applyCoupon">ใช้โค้ด</button>
+                    </form>
+                @endif
+                @if ($couponError)
+                    <p class="text-sm text-red-600" role="alert">{{ $couponError }}</p>
+                @endif
+            </div>
+        </section>
+
         {{-- 5. ผู้ชำระเงิน --}}
         <section class="card overflow-hidden">
             <div class="card-head">
@@ -293,7 +322,7 @@
                         ฿{{ number_format($q->amount, 0) }}
                         <button type="button" x-on:click="$dispatch('price-sheet-open')"
                                 class="ml-1 inline-flex items-center gap-1 align-middle text-xs font-medium text-brand-deep underline decoration-brand-deep/40 underline-offset-2">
-                            {{ $q->people }} คน × ฿{{ number_format($q->perPersonPerHour(), 0) }} × {{ $hours }} ชม.{{ $q->withTrainer() ? '' : ' · ไม่มี Trainer' }}
+                            {{ $q->people }} คน × ฿{{ number_format($q->perPersonPerHour(), 0) }} × {{ $hours }} ชม.{{ $q->withTrainer() ? '' : ' · ไม่มี Trainer' }}{{ $q->discount > 0 ? ' · ลด ฿'.number_format($q->discount, 0) : '' }}
                             @svg('lucide-info', 'h-3.5 w-3.5')
                         </button>
                     </p>

@@ -4,6 +4,7 @@ namespace App\Livewire\Reservations;
 
 use App\Exceptions\ReservationException;
 use App\Models\Branch;
+use App\Models\Coupon;
 use App\Models\Member;
 use App\Models\Reservation;
 use App\Models\Trainer;
@@ -42,6 +43,11 @@ class BookingWizard extends Component
     public array $memberIds = [];
     public string $lookup = '';
     public ?string $lookupError = null;
+
+    /** โค้ดที่พิมพ์ และโค้ดที่ตรวจผ่านแล้ว (ตรวจซ้ำอีกครั้งตอนบันทึกเสมอ) */
+    public string $couponCode = '';
+    public ?string $couponApplied = null;
+    public ?string $couponError = null;
 
     public ?int $trainerId = null;
     public bool $noTrainer = false;
@@ -168,8 +174,27 @@ class BookingWizard extends Component
         $withTrainer = $this->isTrainee() ? ! $this->noTrainer : true;
         $month = $this->startAt ?? CarbonImmutable::parse($this->date);
         $free = app(ReservationService::class)->freeHoursFor($this->participants, $month, $this->hours);
+        $quote = $this->branch->priceTable()->quote(max(1, count($this->memberIds)), $withTrainer, $this->hours, $free);
 
-        return $this->branch->priceTable()->quote(max(1, count($this->memberIds)), $withTrainer, $this->hours, $free);
+        if ($this->couponApplied) {
+            $payer = $this->participants->firstWhere('id', $this->payerId) ?? $this->participants->first();
+            $coupon = Coupon::findByCode($this->couponApplied);
+
+            try {
+                if (! $coupon || ! $payer) {
+                    throw new ReservationException('ไม่พบโค้ดส่วนลดนี้', 'coupon_unknown');
+                }
+
+                $quote = $coupon->apply($quote, $this->branch, $payer);
+                $this->couponError = null;
+            } catch (ReservationException $e) {
+                // เงื่อนไขเปลี่ยน (เช่นเปลี่ยนจำนวนคน) จนโค้ดใช้ไม่ได้แล้ว บอกและถอดออก
+                $this->couponError = $e->getMessage();
+                $this->couponApplied = null;
+            }
+        }
+
+        return $quote;
     }
 
     #[Computed]
@@ -305,6 +330,33 @@ class BookingWizard extends Component
         }
     }
 
+    public function applyCoupon(): void
+    {
+        $this->couponError = null;
+        $code = Coupon::normalize($this->couponCode);
+
+        if ($code === '') {
+            return;
+        }
+
+        $this->couponApplied = $code;
+        unset($this->quote);
+
+        // quote ตรวจเงื่อนไขให้ ถ้าไม่ผ่านจะถอดโค้ดและใส่ข้อความใน couponError
+        $this->quote;
+
+        if ($this->couponApplied) {
+            $this->couponCode = '';
+        }
+    }
+
+    public function removeCoupon(): void
+    {
+        $this->couponApplied = null;
+        $this->couponError = null;
+        unset($this->quote);
+    }
+
     // --- ยืนยัน ---
 
     public function submit(ReservationService $reservations): void
@@ -335,6 +387,7 @@ class BookingWizard extends Component
                 $trainer,
                 auth()->user(),
                 $this->isTrainee() ? Reservation::VIA_TRAINEE : Reservation::VIA_TRAINER,
+                $this->couponApplied,
             );
         } catch (ReservationException $e) {
             $this->error = $e->getMessage();

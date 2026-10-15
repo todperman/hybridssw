@@ -13,7 +13,24 @@ final class PriceQuote
         public readonly float $amount,
         /** @var array<int, int> member_id => ชั่วโมงที่ได้ฟรี */
         public readonly array $free = [],
+        /** โค้ดคูปองที่ใช้ และส่วนลดที่หักจากยอด (หลังหักส่วนฟรีแล้ว) */
+        public readonly ?string $coupon = null,
+        public readonly float $discount = 0.0,
     ) {}
+
+    /** ราคาเดียวกันแต่หักคูปองแล้ว ยอดไม่ติดลบ */
+    public function withDiscount(string $code, float $discount): self
+    {
+        $discount = round(min(max(0, $discount), $this->amount), 2);
+
+        return new self($this->mode, $this->people, $this->hours, $this->perHour, round($this->amount - $discount, 2), $this->free, $code, $discount);
+    }
+
+    /** ยอดก่อนหักคูปอง */
+    public function subtotal(): float
+    {
+        return round($this->amount + $this->discount, 2);
+    }
 
     public static function fromArray(?array $raw): ?self
     {
@@ -28,6 +45,8 @@ final class PriceQuote
             (float) $raw['per_hour'],
             (float) ($raw['amount'] ?? 0),
             array_map('intval', (array) ($raw['free'] ?? [])),
+            $raw['coupon'] ?? null,
+            (float) ($raw['discount'] ?? 0),
         );
     }
 
@@ -59,7 +78,15 @@ final class PriceQuote
 
         $label = $this->people.' คน × '.$perPerson.' × '.$hours.($this->withTrainer() ? ' (มี Trainer)' : ' (ไม่มี Trainer)');
 
-        return $this->freePeople() > 0 ? $label.' · ฟรี '.$this->freePeople().' คน' : $label;
+        if ($this->freePeople() > 0) {
+            $label .= ' · ฟรี '.$this->freePeople().' คน';
+        }
+
+        if ($this->coupon && $this->discount > 0) {
+            $label .= ' · โค้ด '.$this->coupon.' −฿'.number_format($this->discount, 0);
+        }
+
+        return $label;
     }
 
     public function toArray(): array
@@ -72,6 +99,8 @@ final class PriceQuote
             'per_person_per_hour' => $this->perPersonPerHour(),
             'amount' => $this->amount,
             'free' => $this->free,
+            'coupon' => $this->coupon,
+            'discount' => $this->discount,
         ];
     }
 }
