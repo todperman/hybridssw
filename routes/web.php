@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureMemberIsApproved;
 use App\Http\Middleware\EnsureUserIsTrainer;
 use App\Livewire\MemberRegistration;
+use App\Livewire\Reservations\AvailabilityCalendar;
 use App\Livewire\Reservations\BookingWizard;
 use App\Livewire\Reservations\ReservationDetail;
 use App\Livewire\Reservations\ReservationList;
@@ -54,6 +55,7 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
     Route::get('pending', \App\Livewire\Trainer\PendingApproval::class)->name('pending');
 
     Route::get('jobs', ReservationList::class)->name('jobs');
+    Route::get('calendar', AvailabilityCalendar::class)->name('calendar');
     Route::get('book', BookingWizard::class)->name('book');
     Route::get('availability', \App\Livewire\Trainer\AvailabilityPlanner::class)->name('availability');
     Route::get('team', TeamRoster::class)->name('team');
@@ -64,6 +66,7 @@ Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->na
     Route::get('pending', \App\Livewire\Member\PendingApproval::class)->name('pending');
 
     Route::get('book', BookingWizard::class)->name('book');
+    Route::get('calendar', AvailabilityCalendar::class)->name('calendar');
     Route::get('reservations', ReservationList::class)->name('reservations');
 });
 

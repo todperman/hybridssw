@@ -23,6 +23,7 @@ new class extends Component
             // ยังไม่อนุมัติก็เข้าหน้าพวกนี้ไม่ได้ ขึ้นเมนูไว้มีแต่จะกดแล้วเด้งกลับ
             if ($user->trainer->isApproved()) {
                 $links[] = ['route' => 'trainer.jobs', 'label' => 'งาน', 'icon' => 'clipboard-list'];
+                $links[] = ['route' => 'trainer.calendar', 'label' => 'ปฏิทิน', 'icon' => 'calendar-days'];
                 $links[] = ['route' => 'trainer.book', 'label' => 'จองให้ลูกเทรน', 'icon' => 'calendar-plus'];
                 $links[] = ['route' => 'trainer.availability', 'label' => 'เวลาว่าง', 'icon' => 'clock'];
                 $links[] = ['route' => 'trainer.team', 'label' => 'ทีม', 'icon' => 'users'];
@@ -36,6 +37,7 @@ new class extends Component
             if ($user->member->awaitsApproval()) {
                 $links[] = ['route' => 'member.pending', 'label' => 'สถานะการสมัคร', 'icon' => 'clock'];
             } else {
+                $links[] = ['route' => 'member.calendar', 'label' => 'ปฏิทิน', 'icon' => 'calendar-days'];
                 $links[] = ['route' => 'member.book', 'label' => 'จองยิม', 'icon' => 'calendar-plus'];
                 $links[] = ['route' => 'member.reservations', 'label' => 'การจองของฉัน', 'icon' => 'ticket'];
             }

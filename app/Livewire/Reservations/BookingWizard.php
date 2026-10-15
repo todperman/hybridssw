@@ -69,6 +69,33 @@ class BookingWizard extends Component
         } else {
             $this->trainerId = $user->trainer->id;
         }
+
+        $this->prefillFromQuery();
+    }
+
+    /** มาจากปฏิทิน: ?date=&start=&hours= เลือกวัน ชั่วโมง และเวลาเริ่มให้ ถ้าช่องนั้นยังว่างอยู่ */
+    protected function prefillFromQuery(): void
+    {
+        $date = request()->query('date');
+        $start = request()->query('start');
+        $hours = (int) request()->query('hours', 1);
+
+        if (! is_string($date) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return;
+        }
+
+        $this->date = $date;
+        $this->hours = max(1, min($hours, (int) $this->branch->max_booking_hours));
+
+        if (is_string($start) && preg_match('/^\d{2}:\d{2}$/', $start)) {
+            $open = collect($this->startTimes)->contains(fn ($t) => $t->format('H:i') === $start);
+
+            if ($open) {
+                $this->start = $start;
+            } else {
+                $this->error = 'ช่วง '.$start.' ถูกจองไปแล้วหรือเลยเวลา เลือกเวลาอื่นได้เลย';
+            }
+        }
     }
 
     public function isTrainee(): bool
