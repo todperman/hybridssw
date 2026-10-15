@@ -38,12 +38,11 @@ class BranchesTable
                     ->placeholder('ไม่มี')
                     ->searchable(),
 
-                TextColumn::make('hourly_rate')
-                    ->label('ราคาต่อชั่วโมง')
-                    ->money('THB')
-                    ->color(fn ($state) => (float) $state > 0 ? null : 'danger')
-                    ->description(fn ($record) => (float) $record->hourly_rate > 0 ? null : 'ยังไม่ตั้ง จองไม่ได้')
-                    ->sortable(),
+                TextColumn::make('pricing')
+                    ->label('ราคา 1 คน/ชม.')
+                    ->formatStateUsing(fn ($record) => 'มี Trainer ฿'.number_format($record->priceTable()->perHour(1, true), 0).' · ไม่มี ฿'.number_format($record->priceTable()->perHour(1, false), 0))
+                    ->color(fn ($record) => $record->priceTable()->isSet() ? null : 'danger')
+                    ->description(fn ($record) => $record->priceTable()->isSet() ? null : 'ยังไม่ตั้ง จองไม่ได้'),
 
                 TextColumn::make('max_trainees')
                     ->label('ต่อการจอง')

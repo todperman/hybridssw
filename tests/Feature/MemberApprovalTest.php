@@ -39,7 +39,7 @@ class MemberApprovalTest extends TestCase
     protected function bookFor(User $user): \App\Models\Reservation
     {
         $branch = $user->member->branch;
-        $branch->update(['hourly_rate' => 800]);
+        $branch->update(['pricing' => \App\Support\PriceTable::flat(800)->toArray()]);
 
         foreach (range(0, 6) as $day) {
             $this->makeTemplate($branch, ['day_of_week' => $day, 'start_time' => '06:00', 'end_time' => '22:00']);

@@ -312,7 +312,7 @@ class CreateReservationTest extends TestCase
     #[Test]
     public function a_branch_without_a_price_cannot_take_bookings(): void
     {
-        $gym = $this->makeGym(['hourly_rate' => 0]);
+        $gym = $this->makeGym(['pricing' => \App\Support\PriceTable::flat(0)->toArray()]);
 
         try {
             $this->bookAsTrainee($gym, $this->makeMember($gym), [], $this->makeAvailableTrainer($gym));

@@ -35,5 +35,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- เทสต์ต้องไม่พึ่งคีย์จริงใน .env ของเครื่องนั้น ๆ -->
+        <env name="GYM_PAYMENT_DRIVER" value="manual"/>
+        <env name="OMISE_PUBLIC_KEY" value=""/>
+        <env name="OMISE_SECRET_KEY" value=""/>
+        <env name="OMISE_WEBHOOK_SECRET" value=""/>
+        <env name="OMISE_METHODS" value="promptpay,card"/>
     </php>
 </phpunit>

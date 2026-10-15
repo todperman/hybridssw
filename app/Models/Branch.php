@@ -18,7 +18,7 @@ class Branch extends Model
         'address',
         'timezone',
         'max_group_size',
-        'hourly_rate',
+        'pricing',
         'max_trainees',
         'booking_window_days',
         'max_booking_hours',
@@ -30,12 +30,18 @@ class Branch extends Model
     {
         return [
             'max_group_size' => 'integer',
-            'hourly_rate' => 'decimal:2',
+            'pricing' => 'array',
             'max_trainees' => 'integer',
             'booking_window_days' => 'integer',
             'max_booking_hours' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /** ตารางราคาของสาขา ไม่ตั้งเองใช้ค่าตั้งต้นจาก config */
+    public function priceTable(): \App\Support\PriceTable
+    {
+        return \App\Support\PriceTable::for($this);
     }
 
     public function users(): HasMany

@@ -4,11 +4,15 @@
     @php($trainee = $this->isTrainee())
     @php($maxHours = (int) $branch->max_booking_hours)
     @php($maxTrainees = (int) $branch->max_trainees)
-    @php($priced = (float) $branch->hourly_rate > 0)
+    @php($priced = $this->priced)
 
     <x-page-hero :eyebrow="$trainee ? 'จองยิม' : 'จองให้ลูกเทรน'"
                  :title="$trainee ? 'จองยิมทั้งยิมเป็นรายชั่วโมง' : 'จองยิมให้ลูกเทรน'"
                  :subtitle="$branch->name" pattern="rower" pattern-alt="kettlebell">
+        <x-slot:action>
+            @php($q = $this->quote)
+            <x-price-sheet :branch="$branch" :people="$q->people" :with-trainer="$q->withTrainer()" :hours="$hours" />
+        </x-slot:action>
         <x-slot:stats>
             <p class="mt-4 flex max-w-md items-start gap-2 text-[13px] leading-relaxed text-white/80">
                 @svg('lucide-info', 'mt-0.5 h-4 w-4 shrink-0 text-brand-light', ['stroke-width' => '2'])
@@ -21,7 +25,7 @@
     <div class="mx-auto max-w-3xl space-y-4 px-4 pt-6 sm:px-6">
         @unless ($priced)
             <div class="card border-accent/40 bg-accent-light/60 px-5 py-4 text-sm text-accent-ink">
-                สาขานี้ยังไม่ได้ตั้งราคาต่อชั่วโมง จึงยังเปิดจองไม่ได้ กรุณาติดต่อแอดมิน
+                สาขานี้ยังไม่ได้ตั้งราคา จึงยังเปิดจองไม่ได้ กรุณาติดต่อแอดมิน
             </div>
         @endunless
 
@@ -202,7 +206,7 @@
                                            {{ $noTrainer ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
                                 @svg('lucide-user-round', 'h-4 w-4') เข้าใช้เอง ไม่มี Trainer
                             </button>
-                            <button type="button" wire:click="$set('noTrainer', false)" role="radio" aria-checked="{{ $noTrainer ? 'false' : 'true' }}"
+                            <button type="button" wire:click="chooseWithTrainer" role="radio" aria-checked="{{ $noTrainer ? 'false' : 'true' }}"
                                     class="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition
                                            {{ ! $noTrainer ? 'border-brand-dark bg-brand-dark text-white' : 'border-line bg-white/60 text-ink hover:bg-mist' }}">
                                 @svg('lucide-users', 'h-4 w-4') ไปกับ Trainer
@@ -281,9 +285,14 @@
                             เลือกเวลาเริ่มเพื่อดูสรุป
                         @endif
                     </p>
+                    @php($q = $this->quote)
                     <p class="font-display text-xl font-bold text-ink">
-                        ฿{{ number_format((float) $this->amount, 0) }}
-                        <span class="text-xs font-normal text-muted">{{ $hours }} ชม. × ฿{{ number_format((float) $branch->hourly_rate, 0) }}</span>
+                        ฿{{ number_format($q->amount, 0) }}
+                        <button type="button" x-on:click="$dispatch('price-sheet-open')"
+                                class="ml-1 inline-flex items-center gap-1 align-middle text-xs font-medium text-brand-deep underline decoration-brand-deep/40 underline-offset-2">
+                            {{ $q->people }} คน × ฿{{ number_format($q->perPersonPerHour(), 0) }} × {{ $hours }} ชม.{{ $q->withTrainer() ? '' : ' · ไม่มี Trainer' }}
+                            @svg('lucide-info', 'h-3.5 w-3.5')
+                        </button>
                     </p>
                 </div>
                 @php($ready = $priced && $start && $payerId && count($memberIds) > 0 && (! $trainee || $trainerId || $noTrainer))

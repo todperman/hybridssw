@@ -11,11 +11,11 @@ use Illuminate\Support\Str;
 /**
  * ใส่หรือลบข้อมูลตัวอย่างบนเซิร์ฟเวอร์จริง ไว้ลองระบบก่อนเปิดให้บริการ
  *
- *   php artisan gym:demo --rate=800      ใส่ข้อมูลตัวอย่าง (ตั้งราคาให้ถ้าสาขายังไม่มีราคา)
+ *   php artisan gym:demo                 ใส่ข้อมูลตัวอย่าง
  *   php artisan gym:demo --remove        ลบข้อมูลตัวอย่างทั้งหมด
  *   php artisan gym:demo --reset-password ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่าง (เมื่อลืมรหัสเดิม)
  *
- * ไม่แตะเวลาเปิดของสาขา ต้องตั้งในหลังบ้านก่อน และตั้งราคาให้เฉพาะเมื่อยังเป็น 0 และสั่งมาเอง
+ * ไม่แตะเวลาเปิดและราคาของสาขา ต้องตั้งในหลังบ้านก่อน
  */
 class GymDemoCommand extends Command
 {
@@ -23,7 +23,6 @@ class GymDemoCommand extends Command
         {--remove : ลบข้อมูลตัวอย่างทั้งหมด}
         {--reset-password : ตั้งรหัสผ่านใหม่ให้บัญชีตัวอย่างทุกบัญชี}
         {--branch= : รหัสสาขา (ค่าเริ่มต้นคือสาขาแรกที่เปิดใช้)}
-        {--rate= : ราคาต่อชั่วโมง ใช้เฉพาะเมื่อสาขายังไม่ได้ตั้งราคา}
         {--no-bookings : สร้างแค่บัญชี ไม่สร้างการจองตัวอย่าง}
         {--force : ไม่ถามยืนยัน}';
 
@@ -63,17 +62,10 @@ class GymDemoCommand extends Command
             return self::FAILURE;
         }
 
-        if ((float) $branch->hourly_rate <= 0) {
-            $rate = (float) $this->option('rate');
+        if (! $branch->priceTable()->isSet()) {
+            $this->error("{$branch->name} ยังไม่ได้ตั้งราคา ตั้งที่หลังบ้าน → สาขา → ราคา ก่อน");
 
-            if ($rate <= 0) {
-                $this->error("{$branch->name} ยังไม่ได้ตั้งราคาต่อชั่วโมง ตั้งในหลังบ้าน หรือใส่ --rate=800 มากับคำสั่งนี้");
-
-                return self::FAILURE;
-            }
-
-            $branch->update(['hourly_rate' => $rate]);
-            $this->warn("ตั้งราคา {$branch->name} เป็น ฿".number_format($rate, 0).'/ชม. แล้ว (ค่านี้ไม่ถูกลบตอน --remove)');
+            return self::FAILURE;
         }
 
         $this->line("จะสร้างข้อมูลตัวอย่างในสาขา <options=bold>{$branch->name}</> อีเมลทุกบัญชีลงท้าย @".DemoData::DOMAIN);

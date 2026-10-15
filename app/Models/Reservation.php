@@ -27,7 +27,7 @@ class Reservation extends Model
     protected $fillable = [
         'reference', 'branch_id', 'trainer_id', 'payer_member_id', 'created_by_user_id', 'created_via',
         'starts_at', 'ends_at', 'hours', 'status', 'hold_expires_at',
-        'hourly_rate', 'amount', 'currency',
+        'hourly_rate', 'amount', 'pricing', 'currency',
         'confirmed_at', 'expired_at', 'cancelled_at', 'cancelled_by_user_id', 'cancellation_reason',
         'refund_status', 'notes',
     ];
@@ -44,6 +44,7 @@ class Reservation extends Model
             'hours' => 'integer',
             'hourly_rate' => 'decimal:2',
             'amount' => 'decimal:2',
+            'pricing' => 'array',
             'status' => ReservationStatus::class,
             'refund_status' => RefundStatus::class,
         ];
@@ -175,6 +176,18 @@ class Reservation extends Model
             || ($this->trainer_id && $user->trainer?->id === $this->trainer_id)
             || ($user->member && $user->member->id === $this->payer_member_id)
             || $user->id === $this->created_by_user_id;
+    }
+
+    /** รายละเอียดการคิดราคาที่บันทึกไว้ตอนจอง */
+    public function priceQuote(): ?\App\Support\PriceQuote
+    {
+        return \App\Support\PriceQuote::fromArray($this->pricing);
+    }
+
+    /** เช่น "3 คน × ฿450/คน/ชม. × 2 ชม." การจองเก่าที่ไม่มีรายละเอียดแสดงแบบต่อชั่วโมง */
+    public function priceLabel(): string
+    {
+        return $this->priceQuote()?->label() ?? $this->hours.' ชม. × ฿'.number_format((float) $this->hourly_rate, 0).'/ชม.';
     }
 
     public function timeLabel(): string

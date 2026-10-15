@@ -84,6 +84,9 @@ class ReservationService
 
         $this->assertResourcesFree($branch, $start, $hours, $trainer, $members);
 
+        // ราคาตามจำนวนคนและว่ามี Trainer หรือไม่ เก็บรายละเอียดไว้กับการจอง แก้ตารางราคาทีหลังไม่กระทบ
+        $quote = $branch->priceTable()->quote($members->count(), $trainer !== null, $hours);
+
         $holdUntil = now()->addMinutes((int) config('gym.reservation.hold_minutes', 30));
 
         if (config('gym.reservation.hold_ends_at_start', true) && $start->lt($holdUntil)) {
@@ -91,7 +94,7 @@ class ReservationService
         }
 
         try {
-            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil) {
+            $reservation = DB::transaction(function () use ($branch, $start, $hours, $members, $payerMemberId, $trainer, $actor, $via, $holdUntil, $quote) {
                 $this->releaseStaleHolds($branch, $start, $hours, $trainer, $members);
 
                 $reservation = Reservation::create([
@@ -105,8 +108,9 @@ class ReservationService
                     'hours' => $hours,
                     'status' => ReservationStatus::PendingPayment,
                     'hold_expires_at' => $holdUntil,
-                    'hourly_rate' => $branch->hourly_rate,
-                    'amount' => bcmul((string) $branch->hourly_rate, (string) $hours, 2),
+                    'hourly_rate' => $quote->perHour,
+                    'amount' => $quote->amount,
+                    'pricing' => $quote->toArray(),
                     'currency' => 'THB',
                 ]);
 
@@ -553,8 +557,8 @@ class ReservationService
         }
 
         // ยังไม่ตั้งราคา = ห้ามเปิดจอง กันแอดมินลืมแล้วกลายเป็นจองฟรี
-        if ($checkPrice && (float) $branch->hourly_rate <= 0) {
-            throw new ReservationException('สาขายังไม่ได้ตั้งราคาต่อชั่วโมง ติดต่อแอดมิน', 'price_not_set');
+        if ($checkPrice && ! $branch->priceTable()->isSet()) {
+            throw new ReservationException('สาขายังไม่ได้ตั้งราคา ติดต่อแอดมิน', 'price_not_set');
         }
     }
 

@@ -43,11 +43,10 @@ class GymDemoTest extends TestCase
     public function it_creates_real_bookings_in_every_state_through_the_normal_services(): void
     {
         Mail::fake();
-        $gym = $this->makeGym(['hourly_rate' => 0]);
+        $gym = $this->makeGym();
 
-        $this->artisan('gym:demo', ['--rate' => 900, '--force' => true])->assertSuccessful();
+        $this->artisan('gym:demo', ['--force' => true])->assertSuccessful();
 
-        $this->assertSame('900.00', (string) $gym->refresh()->hourly_rate);
         $this->assertSame(2, Trainer::count());
         $this->assertSame(6, Member::count());
 
@@ -112,11 +111,11 @@ class GymDemoTest extends TestCase
     #[Test]
     public function it_will_not_invent_opening_hours_or_a_price(): void
     {
-        $this->makeBranch(['hourly_rate' => 800]);
+        $this->makeBranch();
         $this->artisan('gym:demo', ['--force' => true])->expectsOutputToContain('ยังไม่มีเวลาเปิด')->assertFailed();
 
-        $this->makeGym(['code' => 'NOPRICE', 'hourly_rate' => 0]);
-        $this->artisan('gym:demo', ['--branch' => 'NOPRICE', '--force' => true])->expectsOutputToContain('ใส่ --rate')->assertFailed();
+        $this->makeGym(['code' => 'NOPRICE', 'pricing' => \App\Support\PriceTable::flat(0)->toArray()]);
+        $this->artisan('gym:demo', ['--branch' => 'NOPRICE', '--force' => true])->expectsOutputToContain('ยังไม่ได้ตั้งราคา')->assertFailed();
     }
 
     #[Test]

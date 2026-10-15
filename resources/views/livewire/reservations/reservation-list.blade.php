@@ -6,11 +6,14 @@
                  :title="$trainer ? 'งานที่ได้รับมอบหมาย' : 'การจองยิม'"
                  pattern="kettlebell" pattern-alt="rower">
         <x-slot:action>
-            <a href="{{ route($bookRoute) }}" wire:navigate
-               class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
-                @svg('lucide-plus', 'h-4 w-4', ['stroke-width' => '2'])
-                {{ $trainer ? 'จองให้ลูกเทรน' : 'จองยิม' }}
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <x-price-sheet :branch="$trainer ? auth()->user()->trainer->branch : auth()->user()->member->branch" />
+                <a href="{{ route($bookRoute) }}" wire:navigate
+                   class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
+                    @svg('lucide-plus', 'h-4 w-4', ['stroke-width' => '2'])
+                    {{ $trainer ? 'จองให้ลูกเทรน' : 'จองยิม' }}
+                </a>
+            </div>
         </x-slot:action>
         @if ($this->awaitingPayment > 0)
             <x-slot:stats>

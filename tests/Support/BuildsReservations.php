@@ -17,11 +17,14 @@ trait BuildsReservations
 {
     use BuildsGym;
 
-    /** สาขาที่ตั้งราคาแล้ว เปิดทุกวัน 06:00–22:00 */
+    /**
+     * สาขาที่ตั้งราคาแล้ว เปิดทุกวัน 06:00–22:00
+     * ราคาแบบเดียว 800/ชม. ทุกขนาดกลุ่ม เทสต์ส่วนใหญ่จะได้คิดเลขง่าย ตารางราคาจริงมีเทสต์แยก
+     */
     protected function makeGym(array $attributes = []): Branch
     {
         $branch = $this->makeBranch(array_merge([
-            'hourly_rate' => 800,
+            'pricing' => \App\Support\PriceTable::flat(800)->toArray(),
             'max_trainees' => 6,
             'booking_window_days' => 45,
             'max_booking_hours' => 4,

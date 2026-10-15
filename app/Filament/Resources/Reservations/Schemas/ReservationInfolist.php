@@ -25,7 +25,7 @@ class ReservationInfolist
                     TextEntry::make('trainer.user.name')->label('Trainer')->placeholder('เข้าใช้โดยไม่มี Trainer'),
                     TextEntry::make('payer.user.name')->label('ผู้ชำระเงิน')->helperText(fn (Reservation $record) => $record->payer?->user?->phone),
                     TextEntry::make('amount')->label('ยอด')->money('THB')
-                        ->helperText(fn (Reservation $record) => $record->hours.' ชม. × ฿'.number_format((float) $record->hourly_rate, 2)),
+                        ->helperText(fn (Reservation $record) => $record->priceLabel()),
                     TextEntry::make('hold_expires_at')->label('ต้องชำระภายใน')->dateTime('d/m/Y H:i')->placeholder('—'),
                     TextEntry::make('createdBy.name')->label('จองโดย')
                         ->helperText(fn (Reservation $record) => $record->created_at->format('d/m/Y H:i')),

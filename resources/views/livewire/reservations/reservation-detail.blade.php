@@ -55,7 +55,7 @@
                 </div>
                 <div class="space-y-4 p-4 sm:p-5">
                     <div class="flex items-baseline justify-between">
-                        <span class="text-sm text-muted">ยอดชำระ ({{ $r->hours }} ชม. × ฿{{ number_format((float) $r->hourly_rate, 0) }})</span>
+                        <span class="text-sm text-muted">ยอดชำระ ({{ $r->priceLabel() }})</span>
                         <span class="font-display text-2xl font-bold text-ink">฿{{ number_format((float) $r->amount, 2) }}</span>
                     </div>
                     <p class="text-sm text-muted">
@@ -212,7 +212,7 @@
                 </div>
                 <div class="flex justify-between gap-4 px-5 py-3">
                     <dt class="text-muted">ยอดเงิน</dt>
-                    <dd class="text-right font-medium text-ink">฿{{ number_format((float) $r->amount, 2) }}</dd>
+                    <dd class="text-right font-medium text-ink">฿{{ number_format((float) $r->amount, 2) }} <span class="block text-xs font-normal text-muted">{{ $r->priceLabel() }}</span></dd>
                 </div>
                 @if ($paid = $r->payments->firstWhere('status', \App\Enums\PaymentStatus::Succeeded))
                     <div class="flex justify-between gap-4 px-5 py-3">

@@ -21,7 +21,7 @@ class GymDoctorTest extends TestCase
     #[Test]
     public function a_branch_without_opening_hours_is_reported_as_the_reason_nothing_can_be_booked(): void
     {
-        $this->makeBranch(['name' => 'สาขาทดสอบ', 'hourly_rate' => 800]);
+        $this->makeBranch(['name' => 'สาขาทดสอบ']);
 
         $this->artisan('gym:doctor')
             ->expectsOutputToContain('สาขาทดสอบ: ยังไม่มีตารางเวลาเปิด')
@@ -32,17 +32,17 @@ class GymDoctorTest extends TestCase
     #[Test]
     public function a_branch_without_a_price_cannot_take_bookings(): void
     {
-        $this->makeGym(['name' => 'สาขาทดสอบ', 'hourly_rate' => 0]);
+        $this->makeGym(['name' => 'สาขาทดสอบ', 'pricing' => \App\Support\PriceTable::flat(0)->toArray()]);
 
         $this->artisan('gym:doctor')
-            ->expectsOutputToContain('สาขาทดสอบ: ยังไม่ตั้งราคาต่อชั่วโมง')
+            ->expectsOutputToContain('สาขาทดสอบ: ยังไม่ตั้งราคา')
             ->assertFailed();
     }
 
     #[Test]
     public function opening_hours_for_only_some_days_are_called_out(): void
     {
-        $branch = $this->makeBranch(['name' => 'สาขาทดสอบ', 'hourly_rate' => 800]);
+        $branch = $this->makeBranch(['name' => 'สาขาทดสอบ']);
         // เคยเจอจริง ตั้งชื่อว่า "จันทร์-อาทิตย์" แต่ day_of_week เป็น 0 จึงเปิดแค่วันอาทิตย์
         $this->makeTemplate($branch, ['name' => 'จันทร์-อาทิตย์', 'day_of_week' => 0]);
         $this->makeAvailableTrainer($branch);

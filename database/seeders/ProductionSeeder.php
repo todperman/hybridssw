@@ -46,8 +46,7 @@ class ProductionSeeder extends Seeder
                     'name' => env('BRANCH_NAME', config('app.name')),
                     'timezone' => config('app.timezone', 'Asia/Bangkok'),
                     'max_group_size' => 5,
-                    // ราคาตั้งเองในหลังบ้าน ยังไม่ตั้ง = ยังเปิดจองไม่ได้ gym:doctor จะเตือน
-                    'hourly_rate' => 0,
+                    // ราคาใช้ตารางตั้งต้นจาก config/gym.php แก้ได้ที่หลังบ้าน → สาขา
                     'is_active' => true,
                 ],
             );

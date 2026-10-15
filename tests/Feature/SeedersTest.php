@@ -24,7 +24,7 @@ class SeedersTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $main = Branch::where('code', 'SSW-MAIN')->sole();
-        $this->assertGreaterThan(0, (float) $main->hourly_rate);
+        $this->assertTrue($main->priceTable()->isSet());
 
         $trainers = app(Availability::class)->availableTrainers($main, CarbonImmutable::parse('2026-10-07 18:00'), 1);
         $this->assertCount(2, $trainers);
@@ -46,7 +46,9 @@ class SeedersTest extends TestCase
         }
 
         $this->assertSame(1, Branch::count());
-        $this->assertSame('0.00', (string) Branch::sole()->hourly_rate);
+        // ยังไม่ตั้งราคาเอง จึงใช้ตารางตั้งต้นจาก config ซึ่งใช้งานได้ทันที
+        $this->assertNull(Branch::sole()->pricing);
+        $this->assertSame(1050.0, Branch::sole()->priceTable()->perHour(1, true));
         $this->assertSame(0, Trainer::count());
     }
 }

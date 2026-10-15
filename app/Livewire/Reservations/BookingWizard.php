@@ -161,10 +161,19 @@ class BookingWizard extends Component
             ->values();
     }
 
+    /** ราคาตามจำนวนคนที่เลือกอยู่ และว่าไปกับ Trainer หรือไม่ */
     #[Computed]
-    public function amount(): string
+    public function quote(): \App\Support\PriceQuote
     {
-        return bcmul((string) $this->branch->hourly_rate, (string) $this->hours, 2);
+        $withTrainer = $this->isTrainee() ? ! $this->noTrainer : true;
+
+        return $this->branch->priceTable()->quote(max(1, count($this->memberIds)), $withTrainer, $this->hours);
+    }
+
+    #[Computed]
+    public function priced(): bool
+    {
+        return $this->branch->priceTable()->isSet();
     }
 
     // --- การเลือก ---
@@ -202,6 +211,14 @@ class BookingWizard extends Component
 
         $this->trainerId = $id;
         $this->noTrainer = $id === null;
+        unset($this->quote);
+    }
+
+    /** กลับมาเลือก Trainer หลังจากเคยเลือกเข้าใช้เอง */
+    public function chooseWithTrainer(): void
+    {
+        $this->noTrainer = false;
+        unset($this->quote);
     }
 
     public function addMember(MemberLookup $lookup): void
@@ -339,7 +356,7 @@ class BookingWizard extends Component
 
     protected function afterGroupChanged(): void
     {
-        unset($this->participants, $this->mayGoWithoutTrainer, $this->teamShortcuts, $this->groups);
+        unset($this->participants, $this->mayGoWithoutTrainer, $this->teamShortcuts, $this->groups, $this->quote);
 
         // กลุ่มเปลี่ยนแล้วไม่มีสิทธิ์ไปแบบไม่มี Trainer แล้ว ต้องกลับมาเลือก Trainer
         if ($this->noTrainer && ! $this->mayGoWithoutTrainer) {
@@ -358,7 +375,7 @@ class BookingWizard extends Component
             $this->trainerId = null;
         }
 
-        unset($this->startTimes, $this->trainers, $this->startAt, $this->amount);
+        unset($this->startTimes, $this->trainers, $this->startAt, $this->quote);
     }
 
     /** ใช้เส้นทางที่เปิดก่อน ถ้าไม่มี (เช่นถูกฝังในหน้าอื่น) ดูจากโปรไฟล์ที่ผู้ใช้มี */

@@ -24,7 +24,6 @@ class DatabaseSeeder extends Seeder
             'name' => 'Srisawan Hybrid Workout — สาขาสำนักงานใหญ่',
             'phone' => '056-000000',
             'address' => 'นครสวรรค์',
-            'hourly_rate' => 800,
             'payment_instructions' => "โอนเข้าบัญชีตัวอย่าง 000-0-00000-0\nส่งสลิปให้เจ้าหน้าที่พร้อมเลขการจอง",
         ]);
 
@@ -32,7 +31,7 @@ class DatabaseSeeder extends Seeder
             'code' => 'SSW-ANNEX',
             'name' => 'Srisawan Hybrid Workout — สาขาย่อย',
             'phone' => '056-000001',
-            'hourly_rate' => 600,
+            'pricing' => \App\Support\PriceTable::flat(600)->toArray(),
         ]);
 
         User::create([

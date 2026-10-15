@@ -170,10 +170,10 @@ class GymDoctorCommand extends Command
             ? $this->caution('ยังไม่ได้ตั้ง OMISE_WEBHOOK_SECRET ระบบยังตรวจผลกับ Omise เองได้ แต่ไม่ได้ตรวจลายเซ็นของ webhook', 'Omise Dashboard → Webhooks: ใส่ URL '.route('webhooks.omise').' แล้วคัดลอก secret มาใส่ .env')
             : $this->ok('ตรวจลายเซ็น webhook ด้วย OMISE_WEBHOOK_SECRET · URL ที่ต้องตั้งใน Omise: '.route('webhooks.omise'));
 
-        $tooCheap = Branch::active()->where('hourly_rate', '<', 20)->where('hourly_rate', '>', 0)->pluck('name');
+        $tooCheap = Branch::active()->get()->filter(fn ($b) => $b->priceTable()->isSet() && $b->priceTable()->minPerHour() < 20)->pluck('name');
 
         if ($tooCheap->isNotEmpty()) {
-            $this->broken('ราคาต่อชั่วโมงต่ำกว่า 20 บาท (ขั้นต่ำของ Omise): '.$tooCheap->implode(', '), 'ตั้งราคาอย่างน้อย 20 บาทที่หน้าสาขา');
+            $this->broken('มีราคาต่ำกว่า 20 บาท (ขั้นต่ำของ Omise): '.$tooCheap->implode(', '), 'ตั้งราคาทุกช่องอย่างน้อย 20 บาทที่หน้าสาขา');
         }
     }
 
@@ -190,9 +190,11 @@ class GymDoctorCommand extends Command
         $this->ok("สาขาที่เปิดใช้ {$count} สาขา");
 
         foreach (Branch::active()->get() as $branch) {
-            (float) $branch->hourly_rate > 0
-                ? $this->ok("{$branch->name}: ราคา ฿".number_format((float) $branch->hourly_rate, 0).'/ชม. ไม่เกิน '.$branch->max_trainees.' คน จองล่วงหน้า '.$branch->booking_window_days.' วัน')
-                : $this->broken("{$branch->name}: ยังไม่ตั้งราคาต่อชั่วโมง จองไม่ได้", 'หลังบ้าน → สาขา → แก้ไข → ราคาต่อชั่วโมง');
+            $prices = $branch->priceTable();
+
+            $prices->isSet()
+                ? $this->ok("{$branch->name}: 1 คน/ชม. มี Trainer ฿".number_format($prices->perHour(1, true), 0).' ไม่มี ฿'.number_format($prices->perHour(1, false), 0).' · ไม่เกิน '.$branch->max_trainees.' คน จองล่วงหน้า '.$branch->booking_window_days.' วัน')
+                : $this->broken("{$branch->name}: ยังไม่ตั้งราคา จองไม่ได้", 'หลังบ้าน → สาขา → แก้ไข → ราคา');
 
             if (config('gym.payments.driver', 'manual') === 'manual' && blank($branch->payment_instructions)) {
                 $this->caution("{$branch->name}: ยังไม่ได้เขียนวิธีชำระเงิน ผู้จองจะไม่รู้ว่าโอนไปที่ไหน", 'หลังบ้าน → สาขา → แก้ไข → วิธีชำระเงิน');
