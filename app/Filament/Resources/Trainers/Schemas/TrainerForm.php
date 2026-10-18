@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Trainers\Schemas;
 use App\Enums\TrainerStatus;
 use App\Enums\TrainerType;
 use App\Models\Trainer;
+use App\Models\User;
+use App\Rules\ThaiPhone;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -12,6 +14,7 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -22,6 +25,37 @@ class TrainerForm
     {
         return $schema
             ->components([
+                // ข้อมูลติดต่ออยู่บนบัญชีผู้ใช้ แก้ที่นี่ได้เลยไม่ต้องไปหน้า "ผู้ใช้" (เฉพาะตอนแก้ไข ตอนสร้างเลือกบัญชีก่อน)
+                Section::make('ข้อมูลติดต่อ')
+                    ->description('ข้อมูลเดียวกับที่เทรนเนอร์กรอกตอนสมัคร แก้ที่นี่มีผลกับบัญชีเข้าสู่ระบบด้วย')
+                    ->visibleOn('edit')
+                    ->schema([
+                        Group::make()
+                            ->relationship('user')
+                            ->columns(['default' => 1, 'md' => 2])
+                            ->schema([
+                                TextInput::make('first_name')->label('ชื่อ')->required()->maxLength(120),
+                                TextInput::make('last_name')->label('นามสกุล')->required()->maxLength(120),
+                                TextInput::make('nickname')->label('ชื่อเล่น')->maxLength(60),
+                                TextInput::make('phone')
+                                    ->label('เบอร์โทร')
+                                    ->tel()
+                                    ->required()
+                                    ->rules([new ThaiPhone])
+                                    ->dehydrateStateUsing(fn (?string $state) => ThaiPhone::digits($state))
+                                    ->unique(table: User::class, column: 'phone', ignoreRecord: true)
+                                    ->validationMessages(['unique' => 'เบอร์นี้มีบัญชีอื่นใช้อยู่แล้ว']),
+                                TextInput::make('email')
+                                    ->label('อีเมล')
+                                    ->email()
+                                    ->required()
+                                    ->maxLength(190)
+                                    ->unique(table: User::class, column: 'email', ignoreRecord: true)
+                                    ->validationMessages(['unique' => 'อีเมลนี้มีบัญชีอื่นใช้อยู่แล้ว'])
+                                    ->columnSpanFull(),
+                            ]),
+                    ]),
+
                 Section::make('ข้อมูลเทรนเนอร์')
                     ->columns(2)
                     ->schema([
@@ -31,7 +65,7 @@ class TrainerForm
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->disabledOn('edit'),
+                            ->hiddenOn('edit'),
 
                         Select::make('branch_id')
                             ->label('สาขา')

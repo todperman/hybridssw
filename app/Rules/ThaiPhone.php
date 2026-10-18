@@ -52,4 +52,17 @@ class ThaiPhone implements ValidationRule
     {
         return preg_replace('/\D+/', '', (string) $value) ?? '';
     }
+
+    /** แสดงเบอร์ให้อ่านง่าย 0812345678 → 081-234-5678, 021234567 → 02-123-4567 ค่าอื่นคืนตามเดิม */
+    public static function format(mixed $value): ?string
+    {
+        $digits = self::digits($value);
+
+        return match (strlen($digits)) {
+            10 => substr($digits, 0, 3).'-'.substr($digits, 3, 3).'-'.substr($digits, 6),
+            9 => substr($digits, 0, 2).'-'.substr($digits, 2, 3).'-'.substr($digits, 5),
+            0 => null,
+            default => $digits,
+        };
+    }
 }

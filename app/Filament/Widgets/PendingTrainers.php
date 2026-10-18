@@ -43,7 +43,7 @@ class PendingTrainers extends TableWidget
                 TextColumn::make('user.name')
                     ->label('ชื่อ')
                     ->weight('bold')
-                    ->description(fn (Trainer $r) => $r->user->email),
+                    ->description(fn (Trainer $r) => implode(' · ', array_filter([\App\Rules\ThaiPhone::format($r->user?->phone), $r->user?->email]))),
 
                 TextColumn::make('type')
                     ->label('ประเภท')

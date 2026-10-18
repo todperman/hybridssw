@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Members\Tables;
 
 use App\Models\Member;
 use App\Models\MemberType;
+use App\Rules\ThaiPhone;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Actions\Action;
@@ -34,14 +35,40 @@ class MembersTable
                 TextColumn::make('user.name')
                     ->label('ชื่อ')
                     ->weight('bold')
-                    ->description(fn ($record) => $record->user?->nickname ?: $record->user?->email)
+                    ->description(fn ($record) => $record->user?->nickname ? 'ชื่อเล่น '.$record->user->nickname : null)
+                    // ค้นชื่อ ชื่อเล่น อีเมล และเบอร์โทร (พิมพ์ติดกันหรือมีขีดก็เจอ เพราะเก็บเป็นตัวเลขล้วน)
                     ->searchable(query: fn ($query, string $search) => $query->whereHas(
                         'user',
-                        fn ($q) => $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('nickname', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%")
+                        function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('nickname', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+
+                            if (($digits = ThaiPhone::digits($search)) !== '') {
+                                $q->orWhere('phone', 'like', "%{$digits}%");
+                            }
+                        }
                     ))
                     ->sortable(),
+
+                TextColumn::make('user.phone')
+                    ->label('เบอร์โทร')
+                    ->formatStateUsing(fn (?string $state) => ThaiPhone::format($state))
+                    ->url(fn ($record) => $record->user?->phone ? 'tel:'.$record->user->phone : null)
+                    ->icon('heroicon-m-phone')
+                    ->copyable()
+                    ->copyableState(fn ($record) => $record->user?->phone)
+                    ->copyMessage('คัดลอกเบอร์แล้ว')
+                    ->placeholder('ไม่มี'),
+
+                TextColumn::make('user.email')
+                    ->label('อีเมล')
+                    ->icon('heroicon-m-envelope')
+                    ->copyable()
+                    ->copyMessage('คัดลอกอีเมลแล้ว')
+                    ->limit(28)
+                    ->tooltip(fn ($record) => $record->user?->email)
+                    ->toggleable(),
 
                 TextColumn::make('member_code')
                     ->label('รหัสสมาชิก')

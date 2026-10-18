@@ -42,7 +42,7 @@ class ReservationsTable
 
                 TextColumn::make('payer.user.name')
                     ->label('ผู้ชำระเงิน')
-                    ->description(fn (Reservation $record) => $record->participants_count.' คน')
+                    ->description(fn (Reservation $record) => implode(' · ', array_filter([$record->participants_count.' คน', \App\Rules\ThaiPhone::format($record->payer?->user?->phone)])))
                     ->searchable(),
 
                 TextColumn::make('amount')

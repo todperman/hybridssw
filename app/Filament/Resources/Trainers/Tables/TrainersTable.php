@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Trainers\Tables;
 use App\Enums\TrainerStatus;
 use App\Enums\TrainerType;
 use App\Models\Trainer;
+use App\Rules\ThaiPhone;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
@@ -30,9 +31,40 @@ class TrainersTable
 
                 TextColumn::make('user.name')
                     ->label('ชื่อ')
-                    ->description(fn (Trainer $r) => $r->user->email)
-                    ->searchable()
+                    ->weight('bold')
+                    ->description(fn (Trainer $r) => $r->user?->nickname ? 'ชื่อเล่น '.$r->user->nickname : null)
+                    ->searchable(query: fn ($query, string $search) => $query->whereHas(
+                        'user',
+                        function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                                ->orWhere('nickname', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+
+                            if (($digits = ThaiPhone::digits($search)) !== '') {
+                                $q->orWhere('phone', 'like', "%{$digits}%");
+                            }
+                        }
+                    ))
                     ->sortable(),
+
+                TextColumn::make('user.phone')
+                    ->label('เบอร์โทร')
+                    ->formatStateUsing(fn (?string $state) => ThaiPhone::format($state))
+                    ->url(fn (Trainer $r) => $r->user?->phone ? 'tel:'.$r->user->phone : null)
+                    ->icon('heroicon-m-phone')
+                    ->copyable()
+                    ->copyableState(fn (Trainer $r) => $r->user?->phone)
+                    ->copyMessage('คัดลอกเบอร์แล้ว')
+                    ->placeholder('ไม่มี'),
+
+                TextColumn::make('user.email')
+                    ->label('อีเมล')
+                    ->icon('heroicon-m-envelope')
+                    ->copyable()
+                    ->copyMessage('คัดลอกอีเมลแล้ว')
+                    ->limit(28)
+                    ->tooltip(fn (Trainer $r) => $r->user?->email)
+                    ->toggleable(),
 
                 TextColumn::make('branch.name')
                     ->label('สาขา')
