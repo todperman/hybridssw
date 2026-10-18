@@ -88,6 +88,12 @@ new class extends Component
 
             {{-- แจ้งเตือนเห็นทั้งจอเล็กและจอใหญ่ เมนูผู้ใช้บนมือถืออยู่ที่แถบล่าง --}}
             <div class="flex items-center gap-2">
+                {{-- คู่มือการใช้งาน เห็นทุกขนาดจอ อยู่ข้างกระดิ่งเพราะเป็นที่ที่คนมองหาความช่วยเหลือ --}}
+                <a href="{{ route('guide') }}" wire:navigate aria-label="คู่มือการใช้งาน" title="คู่มือการใช้งาน"
+                   class="glass-icon {{ request()->routeIs('guide') ? 'glass-toggle-on text-brand-dark' : '' }}">
+                    @svg('lucide-circle-help', 'h-5 w-5', ['stroke-width' => '1.9'])
+                </a>
+
                 <livewire:notification-bell />
 
             <div class="hidden items-center sm:flex">
@@ -107,6 +113,7 @@ new class extends Component
                         </div>
 
                         <x-dropdown-link :href="route('profile')" wire:navigate>โปรไฟล์</x-dropdown-link>
+                        <x-dropdown-link :href="route('guide')" wire:navigate>คู่มือการใช้งาน</x-dropdown-link>
 
                         <button wire:click="logout" class="w-full text-start">
                             <x-dropdown-link>ออกจากระบบ</x-dropdown-link>
@@ -174,6 +181,12 @@ new class extends Component
                class="glass-row w-full gap-3 px-4 py-3 text-sm text-ink">
                 @svg('lucide-user-round', 'h-4 w-4 text-brand-deep', ['stroke-width' => '1.9'])
                 โปรไฟล์
+            </a>
+
+            <a href="{{ route('guide') }}" wire:navigate @click="account = false"
+               class="glass-row w-full gap-3 px-4 py-3 text-sm text-ink">
+                @svg('lucide-book-open', 'h-4 w-4 text-brand-deep', ['stroke-width' => '1.9'])
+                คู่มือการใช้งาน
             </a>
 
             <button wire:click="logout" class="glass-row w-full gap-3 px-4 py-3 text-start text-sm text-red-700">

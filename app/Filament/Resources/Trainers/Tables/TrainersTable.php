@@ -104,11 +104,7 @@ class TrainersTable
                             return;
                         }
 
-                        $record->update([
-                            'status' => TrainerStatus::Approved,
-                            'approved_at' => now(),
-                            'approved_by' => auth()->id(),
-                        ]);
+                        $record->approve(auth()->user());
 
                         Notification::make()
                             ->title('อนุมัติแล้ว')
@@ -130,11 +126,7 @@ class TrainersTable
                             ->helperText('เหตุผลนี้จะถูกส่งให้เทรนเนอร์ทราบ'),
                     ])
                     ->action(function (Trainer $record, array $data) {
-                        $record->update([
-                            'status' => TrainerStatus::Rejected,
-                            'review_note' => $data['review_note'],
-                            'approved_by' => auth()->id(),
-                        ]);
+                        $record->reject(auth()->user(), $data['review_note']);
 
                         Notification::make()->title('บันทึกการไม่อนุมัติแล้ว')->success()->send();
                     }),

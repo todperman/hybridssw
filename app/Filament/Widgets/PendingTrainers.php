@@ -89,11 +89,7 @@ class PendingTrainers extends TableWidget
                             return;
                         }
 
-                        $record->update([
-                            'status' => TrainerStatus::Approved,
-                            'approved_at' => now(),
-                            'approved_by' => auth()->id(),
-                        ]);
+                        $record->approve(auth()->user());
 
                         Notification::make()
                             ->title('อนุมัติแล้ว')

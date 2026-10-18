@@ -113,6 +113,32 @@ class GymDoctorCommand extends Command
         if (config('gym.payments.driver') === 'omise') {
             $this->checkOmise();
         }
+
+        $this->checkMail();
+    }
+
+    /** อีเมลแจ้งเตือน: ส่งจริงหรือแค่ลง log ผู้ส่งเป็นใคร และสำเนาถึงผู้ดูแลตั้งไว้ไหม */
+    protected function checkMail(): void
+    {
+        if (! config('gym.notifications.mail', true)) {
+            $this->caution('ปิดการส่งอีเมลแจ้งเตือนไว้ (GYM_NOTIFY_MAIL=false) แจ้งในเว็บอย่างเดียว');
+
+            return;
+        }
+
+        if (config('mail.default') === 'log') {
+            $this->caution('อีเมลยังเป็นโหมด log ไม่ได้ส่งถึงใครจริง', 'ตั้ง SMTP ที่หลังบ้าน → ตั้งค่าระบบ → อีเมลแจ้งเตือน แล้วกด "ส่งเมลทดสอบ"');
+        } else {
+            $this->ok(\App\Support\MailSettings::summary());
+        }
+
+        $admin = \App\Services\Notify\Notifier::adminEmail();
+
+        if ($admin) {
+            $this->ok('สำเนาทุกเหตุการณ์ส่งถึง '.$admin);
+        } else {
+            $this->caution('ยังไม่ได้ตั้งอีเมลผู้ดูแลที่รับสำเนา', 'ใส่ที่หลังบ้าน → อีเมลแจ้งเตือน หรือ GYM_NOTIFY_ADMIN_EMAIL ใน .env');
+        }
     }
 
     /** ตรวจกับ Omise จริง: คีย์ใช้ได้ไหม โหมดตรงกันไหม และช่องทางที่เปิดให้ลูกค้าเลือกถูกเปิดในบัญชีหรือยัง */

@@ -240,6 +240,104 @@
     margin-bottom: 0.125rem;
 }
 
+/* หน้านี้พื้นสว่างเสมอ แต่มือถือที่เปิดโหมดมืดจะทำให้ Filament ใส่ .dark ที่ <html>
+   ป้ายช่องกรอกจึงกลายเป็นสีขาวบนพื้นขาวจนมองไม่เห็น (เจอบน iPhone)
+   ตรึงสีทุกชิ้นในฟอร์มไว้ตรงนี้ ใช้ html นำหน้าให้ชนะกฎ .dark ของ Filament เสมอ
+   พร้อมขยายป้ายและช่องกรอกให้อ่านง่ายและแตะง่ายบนจอเล็ก (ตัวอักษร 16px กัน iOS ซูมเอง) */
+html .ssw-auth {
+    color-scheme: light;
+}
+
+html .ssw-auth .fi-fo-field-label,
+html .ssw-auth .fi-fo-field-label-content {
+    color: var(--ssw-ink);
+    font-size: .9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+html .ssw-auth .fi-fo-field-label-required-mark {
+    color: #c2410c;
+}
+
+html .ssw-auth .fi-input-wrp {
+    border-radius: 14px;
+    background-color: #ffffff;
+    --tw-ring-color: var(--ssw-line);
+    box-shadow: 0 0 0 1px var(--ssw-line), 0 1px 2px rgba(28, 47, 58, .04);
+    transition: box-shadow .15s ease;
+}
+
+html .ssw-auth .fi-input-wrp:focus-within {
+    box-shadow: 0 0 0 2px var(--ssw-brand-deep), 0 0 0 6px rgba(0, 117, 149, .14);
+}
+
+html .ssw-auth .fi-input {
+    min-height: 3rem;
+    padding-block: .75rem;
+    font-size: 1rem;
+    color: var(--ssw-ink);
+    background: transparent;
+}
+
+html .ssw-auth .fi-input::placeholder {
+    color: #94a3b8;
+}
+
+/* ปุ่มลูกตาเปิดดูรหัสผ่าน และไอคอนอื่นในช่อง */
+html .ssw-auth .fi-input-wrp .fi-icon-btn,
+html .ssw-auth .fi-input-wrp .fi-icon-btn svg {
+    color: var(--ssw-muted);
+}
+
+html .ssw-auth .fi-checkbox-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 6px;
+    background-color: #ffffff;
+    border-color: #b8c2c7;
+}
+
+html .ssw-auth .fi-checkbox-input:checked {
+    background-color: var(--ssw-brand-deep);
+    border-color: var(--ssw-brand-deep);
+}
+
+html .ssw-auth .fi-fo-field-wrp-error-message {
+    color: #b91c1c;
+    font-size: .8125rem;
+}
+
+html .ssw-auth .fi-fo-field-wrp-helper-text,
+html .ssw-auth .fi-fo-field-wrp-hint {
+    color: var(--ssw-muted);
+}
+
+/* จอแคบ: ช่องกรอกกับปุ่มสูงเท่ากัน ป้ายห่างจากช่องนิดหน่อยให้หายใจ */
+@media (max-width: 1023px) {
+    html .ssw-auth .fi-fo-field-label,
+    html .ssw-auth .fi-fo-field-label-content {
+        font-size: 1rem;
+    }
+
+    .ssw-auth__form .fi-fo-field-wrp-label {
+        margin-bottom: .375rem;
+    }
+
+    .ssw-auth__form .fi-sc-has-gap {
+        gap: 1.125rem;
+    }
+
+    .ssw-auth__form .fi-btn {
+        min-height: 3.25rem;
+        font-size: 1rem;
+    }
+
+    .ssw-auth__hint {
+        font-size: .875rem;
+    }
+}
+
 /* ปุ่มเข้าสู่ระบบเดิมสูงราว 34px เตี้ยกว่าช่องกรอกและแตะยากบนมือถือ
    ให้สูง 48px เท่าปุ่มเข้าสู่ระบบของหน้าบ้าน */
 .ssw-auth__form .fi-btn {

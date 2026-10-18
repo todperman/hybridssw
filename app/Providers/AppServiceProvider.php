@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
         // ตอนยังไม่ได้ migrate (ติดตั้งครั้งแรก) ตารางยังไม่มี ข้ามไปใช้ .env
         try {
             \App\Support\PaymentSettings::apply();
+            \App\Support\MailSettings::apply();
         } catch (\Throwable) {
             // ใช้ค่าจาก .env ตามเดิม
         }

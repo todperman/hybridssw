@@ -221,6 +221,7 @@ class TrainerRegistration extends Component
         });
 
         event(new Registered($user));
+        app(\App\Services\Notify\AccountNotifier::class)->trainerRegistered($user);
         auth()->login($user);
 
         // เทรนเนอร์ภายในที่ยืนยันตัวตนแล้วอนุมัติอัตโนมัติ เข้าหน้าจองได้เลย

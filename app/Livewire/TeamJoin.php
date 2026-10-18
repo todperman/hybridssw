@@ -101,6 +101,8 @@ class TeamJoin extends Component
             return $user;
         });
 
+        app(\App\Services\Notify\AccountNotifier::class)->teamMemberJoined($user, $this->trainer);
+
         auth()->login($user);
 
         $this->redirect(route('member.reservations'), navigate: true);

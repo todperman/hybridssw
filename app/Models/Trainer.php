@@ -154,6 +154,33 @@ class Trainer extends Model
         return $this->hasUnlimitedTeam() ? 'ไม่จำกัด' : (string) $this->maxTeamSize();
     }
 
+    /** แอดมินอนุมัติ เริ่มรับงานและจองให้ลูกเทรนได้ทันที พร้อมแจ้งเทรนเนอร์ทางกระดิ่งและอีเมล */
+    public function approve(?User $by = null): void
+    {
+        $this->update([
+            'status' => TrainerStatus::Approved,
+            'approved_at' => now(),
+            'approved_by' => $by?->id,
+            'review_note' => null,
+        ]);
+
+        AuditLog::record('trainer.approved', $this, null, null, null, $by);
+        app(\App\Services\Notify\AccountNotifier::class)->trainerApproved($this);
+    }
+
+    /** แอดมินไม่อนุมัติ เหตุผลแสดงที่หน้าสถานะใบสมัครและส่งให้เทรนเนอร์ทราบ */
+    public function reject(?User $by, string $note): void
+    {
+        $this->update([
+            'status' => TrainerStatus::Rejected,
+            'review_note' => $note,
+            'approved_by' => $by?->id,
+        ]);
+
+        AuditLog::record('trainer.rejected', $this, null, null, $note, $by);
+        app(\App\Services\Notify\AccountNotifier::class)->trainerRejected($this, $note);
+    }
+
     public function isApproved(): bool
     {
         return $this->status === TrainerStatus::Approved;

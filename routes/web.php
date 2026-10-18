@@ -82,6 +82,9 @@ Route::get('reservations/{reference}/payment-return', \App\Http\Controllers\Omis
 
 Route::view('profile', 'profile')->middleware(['auth'])->name('profile');
 
+// คู่มือการใช้งาน เนื้อหาตามบทบาท ดึงกติกาจริงจากการตั้งค่า
+Route::get('guide', \App\Http\Controllers\GuideController::class)->middleware(['auth'])->name('guide');
+
 // Omise แจ้งผลชำระ ยกเว้น CSRF ไว้ใน bootstrap/app.php
 Route::post('webhooks/omise', \App\Http\Controllers\OmiseWebhookController::class)
     ->middleware('throttle:120,1')

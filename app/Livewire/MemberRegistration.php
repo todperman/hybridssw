@@ -108,6 +108,9 @@ class MemberRegistration extends Component
             return $user;
         });
 
+        // แจ้งผู้สมัครและผู้ดูแลหลังบันทึกเสร็จ ส่งเมลพังก็ไม่กระทบการสมัคร
+        app(\App\Services\Notify\AccountNotifier::class)->memberRegistered($user);
+
         auth()->login($user);
 
         $this->redirect(route(RegistrationRules::memberRegistrationNeedsApproval() ? 'member.pending' : 'member.book'), navigate: true);

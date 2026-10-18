@@ -243,6 +243,9 @@ class Member extends Model
             'approved_by_user_id' => $by?->id,
             'review_note' => null,
         ]);
+
+        AuditLog::record('member.approved', $this, null, null, null, $by);
+        app(\App\Services\Notify\AccountNotifier::class)->memberApproved($this);
     }
 
     /** แอดมินไม่อนุมัติ เหตุผลจะแสดงให้สมาชิกเห็นที่หน้าสถานะการสมัคร */
@@ -254,6 +257,9 @@ class Member extends Model
             'approved_by_user_id' => $by?->id,
             'review_note' => $note,
         ]);
+
+        AuditLog::record('member.rejected', $this, null, null, $note, $by);
+        app(\App\Services\Notify\AccountNotifier::class)->memberRejected($this, $note);
     }
 
     public function isActive(): bool

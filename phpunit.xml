@@ -37,6 +37,8 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <!-- เทสต์ต้องไม่พึ่งคีย์จริงใน .env ของเครื่องนั้น ๆ -->
         <env name="GYM_PAYMENT_DRIVER" value="manual"/>
+        <env name="GYM_NOTIFY_ADMIN_EMAIL" value=""/>
+        <env name="GYM_NOTIFY_MAIL" value="true"/>
         <env name="OMISE_PUBLIC_KEY" value=""/>
         <env name="OMISE_SECRET_KEY" value=""/>
         <env name="OMISE_WEBHOOK_SECRET" value=""/>
