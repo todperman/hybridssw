@@ -81,7 +81,7 @@ class MemberForm
                             ->maxDate(now()),
                         Select::make('gender')
                             ->label('เพศ')
-                            ->options(['male' => 'ชาย', 'female' => 'หญิง', 'other' => 'อื่น ๆ'])
+                            ->options(Member::GENDERS)
                             ->placeholder('ไม่ระบุ'),
                         TextInput::make('emergency_contact_name')
                             ->label('ผู้ติดต่อฉุกเฉิน')

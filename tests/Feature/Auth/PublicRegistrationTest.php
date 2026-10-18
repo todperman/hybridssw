@@ -92,4 +92,20 @@ class PublicRegistrationTest extends TestCase
             ->assertOk()
             ->assertSee('สมัครเป็นเทรนเนอร์');
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function gender_is_an_optional_choice_from_a_fixed_list(): void
+    {
+        Branch::first() ?? Branch::create(['code' => 'B1', 'name' => 'สาขาทดสอบ']);
+
+        $this->fill(Livewire::test(MemberRegistration::class))->set('gender', 'female')->call('register')->assertHasNoErrors();
+        $this->assertSame('female', \App\Models\User::where('email', 'somchai@example.test')->firstOrFail()->member->gender);
+
+        $this->fill(Livewire::test(MemberRegistration::class))->set('email', 'two@example.test')->set('phone', '0822222222')
+            ->set('gender', 'dragon')->call('register')->assertHasErrors(['gender']);
+
+        $this->fill(Livewire::test(MemberRegistration::class))->set('email', 'three@example.test')->set('phone', '0833333333')
+            ->set('gender', '')->call('register')->assertHasNoErrors();
+        $this->assertNull(\App\Models\User::where('email', 'three@example.test')->firstOrFail()->member->gender);
+    }
 }

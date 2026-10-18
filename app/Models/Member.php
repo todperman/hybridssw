@@ -19,6 +19,14 @@ class Member extends Model
         'can_book_without_trainer' => false,
     ];
 
+    /** ตัวเลือกเพศที่ใช้ทั้งหน้าสมัคร ทีมของเทรนเนอร์ และหลังบ้าน ค่าว่าง = ไม่ระบุ */
+    public const GENDERS = ['male' => 'ชาย', 'female' => 'หญิง', 'other' => 'อื่น ๆ'];
+
+    public function genderLabel(): ?string
+    {
+        return self::GENDERS[$this->gender] ?? null;
+    }
+
     protected $fillable = [
         'user_id',
         'branch_id',

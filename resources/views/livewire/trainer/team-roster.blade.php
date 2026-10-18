@@ -349,7 +349,7 @@
                                     @endif
 
                                     @if ($member->gender)
-                                        <span>{{ ['male' => 'ชาย', 'female' => 'หญิง'][$member->gender] ?? $member->gender }}</span>
+                                        <span>{{ $member->genderLabel() ?? $member->gender }}</span>
                                     @endif
                                 </div>
 
@@ -510,9 +510,9 @@
                                 <label for="editGender" class="mb-1 block text-[12px] font-medium text-muted">เพศ</label>
                                 <select wire:model.blur="editGender" id="editGender" class="glass-input h-11 w-full px-3 text-[13px]">
                                     <option value="">ไม่ระบุ</option>
-                                    <option value="male">ชาย</option>
-                                    <option value="female">หญิง</option>
-                                    <option value="other">อื่น ๆ</option>
+                                    @foreach (\App\Models\Member::GENDERS as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
                                 </select>
                                 @error('editGender') <p class="field-error">{{ $message }}</p> @enderror
                             </div>

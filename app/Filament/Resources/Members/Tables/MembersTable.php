@@ -114,6 +114,12 @@ class MembersTable
                     ->falseColor('gray')
                     ->tooltip(fn (Member $record) => $record->can_book_without_trainer ? 'เข้าใช้ยิมโดยไม่มี Trainer ได้' : null),
 
+                TextColumn::make('gender')
+                    ->label('เพศ')
+                    ->formatStateUsing(fn (Member $record) => $record->genderLabel())
+                    ->placeholder('ไม่ระบุ')
+                    ->toggleable(),
+
                 TextColumn::make('date_of_birth')
                     ->label('อายุ')
                     ->formatStateUsing(fn ($state) => $state ? $state->age.' ปี' : null)

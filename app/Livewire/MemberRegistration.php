@@ -33,6 +33,7 @@ class MemberRegistration extends Component
     public string $password_confirmation = '';
     public string $emergency_contact_name = '';
     public string $emergency_contact_phone = '';
+    public string $gender = '';
 
     public bool $accept = false;
 
@@ -73,6 +74,7 @@ class MemberRegistration extends Component
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'emergency_contact_name' => ['required', 'string', 'max:255'],
             'emergency_contact_phone' => ['required', 'string', 'max:30', new ThaiPhone],
+            'gender' => ['nullable', Rule::in(array_keys(Member::GENDERS))],
             'accept' => ['accepted'],
             'hospital_staff' => ['boolean'],
             'staff_reference' => ['exclude_unless:hospital_staff,true', 'required', 'string', 'max:120'],
@@ -102,6 +104,7 @@ class MemberRegistration extends Component
                 'approved_at' => RegistrationRules::memberRegistrationNeedsApproval() ? null : now(),
                 'emergency_contact_name' => $data['emergency_contact_name'],
                 'emergency_contact_phone' => ThaiPhone::digits($data['emergency_contact_phone']),
+                'gender' => $data['gender'] ?: null,
                 'benefit_claim' => $data['hospital_staff'] ? 'บุคลากร/แพทย์ รพ. · '.trim($data['staff_reference']) : null,
             ]);
 

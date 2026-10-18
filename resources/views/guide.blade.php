@@ -3,6 +3,7 @@
     @php($window = (int) ($branch?->booking_window_days ?? 30))
     @php($maxPeople = max(1, (int) ($branch?->max_trainees ?? 5)))
     @php($chapters = array_filter([
+        'overview' => ['ภาพรวม', 'sparkles', true],
         'start' => ['เริ่มต้น', 'log-in', true],
         'book' => [$showMember ? 'จองยิม' : 'จองให้ลูกเทรน', 'calendar-plus', true],
         'pay' => ['ชำระเงิน', 'wallet', true],
@@ -11,7 +12,7 @@
         'faq' => ['คำถามพบบ่อย', 'circle-help', true],
     ], fn ($c) => $c[2]))
 
-    <div class="pb-16 print:pb-0" x-data="{ chapter: (location.hash || '#start').slice(1) }" x-init="$watch('chapter', c => history.replaceState(null, '', '#' + c))" @hashchange.window="chapter = location.hash.slice(1) || 'start'">
+    <div class="pb-16 print:pb-0" x-data="{ chapter: (location.hash || '#overview').slice(1) }" x-init="$watch('chapter', c => history.replaceState(null, '', '#' + c))" @hashchange.window="chapter = location.hash.slice(1) || 'overview'">
         <x-page-hero eyebrow="คู่มือการใช้งาน" title="ใช้งานยังไง ดูตรงนี้" :subtitle="$branch?->name" pattern="wallball" pattern-alt="ski" class="print:hidden">
             <x-slot:action>
                 <div class="flex flex-wrap gap-2">
@@ -52,6 +53,11 @@
         </div>
 
         <div class="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
+
+            {{-- ================= ภาพรวม (อินโฟกราฟิก) ================= --}}
+            <section x-show="chapter === 'overview'" x-cloak class="space-y-4 print:!block">
+                @include('guide.overview')
+            </section>
 
             {{-- ================= เริ่มต้น ================= --}}
             <section x-show="chapter === 'start'" x-cloak class="space-y-4 print:!block">

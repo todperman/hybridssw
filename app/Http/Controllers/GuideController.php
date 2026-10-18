@@ -24,9 +24,27 @@ class GuideController extends Controller
             ? collect(PaymentMethods::all())->only($configured ?: array_keys(PaymentMethods::all()))
             : collect();
 
+        // ข้อมูลสำหรับอินโฟกราฟิก: ราคาต่อชั่วโมงตามจำนวนคน (ทั้งสองแบบ) และตัวอย่างสิทธิ์ฟรี 3 คน
+        $table = $branch?->priceTable();
+        $maxPeople = max(1, (int) ($branch?->max_trainees ?? 5));
+        $priceRows = $table ? collect(range(1, $maxPeople))->map(fn (int $n) => [
+            'people' => $n,
+            'with' => $table->perHour($n, true),
+            'without' => $table->perHour($n, false),
+        ])->all() : [];
+        $examplePeople = min(3, $maxPeople);
+        $example = $table ? [
+            'people' => $examplePeople,
+            'total' => $table->perHour($examplePeople, true),
+            'share' => round($table->perHour($examplePeople, true) / $examplePeople),
+        ] : null;
+
         return view('guide', [
             'user' => $user,
             'branch' => $branch,
+            'priceRows' => $priceRows,
+            'example' => $example,
+            'memberTypes' => \App\Models\MemberType::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'isAdmin' => $isAdmin,
             'showMember' => $isAdmin || $user->member !== null || $user->trainer === null,
             'showTrainer' => $isAdmin || $user->trainer !== null,
