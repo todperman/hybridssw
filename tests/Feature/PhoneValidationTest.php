@@ -81,6 +81,7 @@ class PhoneValidationTest extends TestCase
         $email = 'dash'.rand(1000, 9999).'@example.com';
 
         Livewire::test(TrainerRegistration::class)
+            ->set('gender', 'male')
             ->set('first_name', 'สมหญิง')
             ->set('last_name', 'ใจงาม')
             ->set('phone', '081-234-5678')

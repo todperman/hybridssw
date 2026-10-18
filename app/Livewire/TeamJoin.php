@@ -55,7 +55,7 @@ class TeamJoin extends Component
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'emergency_contact_name' => ['required', 'string', 'max:255'],
             'emergency_contact_phone' => ['required', 'string', 'max:30', new ThaiPhone],
-            'gender' => ['nullable', Rule::in(array_keys(Member::GENDERS))],
+            'gender' => ['nullable', Rule::in(array_keys(\App\Enums\Gender::options()))],
             'accept' => ['accepted'],
         ], [
             'accept.accepted' => 'กรุณายืนยันว่าข้อมูลที่กรอกเป็นความจริง',

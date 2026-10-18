@@ -27,6 +27,7 @@ class TrainerRegistration extends Component
     public string $first_name = '';
     public string $last_name = '';
     public string $nickname = '';
+    public string $gender = '';
     public string $email = '';
     public string $phone = '';
     public string $password = '';
@@ -100,6 +101,7 @@ class TrainerRegistration extends Component
                 'first_name' => ['required', 'string', 'max:120'],
                 'last_name' => ['required', 'string', 'max:120'],
                 'nickname' => ['nullable', 'string', 'max:60'],
+                'gender' => ['required', Rule::in(array_keys(\App\Enums\Gender::options()))],
                 'phone' => ['required', 'string', 'max:30', new ThaiPhone],
                 // email:filter ใช้ FILTER_VALIDATE_EMAIL ซึ่งเข้มกว่ากฎ email เปล่า ๆ
                 // กันรูปแบบที่ผ่านกฎพื้นฐานแต่ส่งจริงไม่ได้ เช่น a@b หรือมีช่องว่างคั่น
@@ -145,6 +147,8 @@ class TrainerRegistration extends Component
             'certification_expires_at.after' => 'ใบรับรองต้องยังไม่หมดอายุ',
             'internal_code.required' => 'กรุณากรอกรหัสพนักงานที่ได้รับจากแอดมิน',
             'password.confirmed' => 'รหัสผ่านทั้งสองช่องไม่ตรงกัน',
+            'gender.required' => 'กรุณาเลือกเพศ',
+            'gender.in' => 'กรุณาเลือกเพศจากตัวเลือก',
         ];
     }
 
@@ -209,6 +213,7 @@ class TrainerRegistration extends Component
                 'user_id' => $user->id,
                 'branch_id' => $data['branch_id'],
                 'type' => $type,
+                'gender' => $data['gender'],
                 // ภายในเริ่มงานได้เลย ภายนอกต้องรอตรวจเอกสารก่อน
                 'status' => $autoApprove ? TrainerStatus::Approved : TrainerStatus::Pending,
                 'approved_at' => $autoApprove ? now() : null,

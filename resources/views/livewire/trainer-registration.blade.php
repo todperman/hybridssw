@@ -79,11 +79,24 @@
                         @error('last_name') <p class="field-error">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="field fade-up d-2 sm:col-span-2">
+                    <div class="field fade-up d-2">
                         <input wire:model.blur="nickname" id="nickname" type="text" placeholder=" " autocomplete="nickname"
                                class="peer field-input @error('nickname') border-red-400 @enderror">
                         <label for="nickname" class="field-label">ชื่อเล่น (ไม่บังคับ)</label>
                         @error('nickname') <p class="field-error">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- เทรนเนอร์ต้องระบุเพศ ลูกเทรนใช้เลือกคนที่สะดวกเทรนด้วย --}}
+                    <div class="field fade-up d-2">
+                        <select wire:model="gender" id="gender" required class="peer field-input appearance-none @error('gender') border-red-400 @enderror">
+                            <option value="">เลือกเพศ</option>
+                            @foreach (\App\Enums\Gender::options() as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <label for="gender" class="field-label !top-3.5 !text-[11px] !font-medium">เพศ</label>
+                        <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted">@svg('lucide-chevron-down', 'h-4 w-4', ['stroke-width' => '2'])</span>
+                        @error('gender') <p class="field-error">{{ $message }}</p> @enderror
                     </div>
                 </div>
 

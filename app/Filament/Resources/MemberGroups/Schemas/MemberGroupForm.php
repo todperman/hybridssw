@@ -13,6 +13,7 @@ class MemberGroupForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('ข้อมูลกลุ่ม')
                     ->description('ชื่อและคำอธิบายเป็นของเทรนเนอร์ แอดมินดูได้แต่ไม่ควรแก้แทน')

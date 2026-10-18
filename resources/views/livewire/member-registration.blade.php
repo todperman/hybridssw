@@ -46,7 +46,7 @@
             <div class="field fade-up d-2">
                 <select wire:model="gender" id="gender" class="peer field-input appearance-none @error('gender') border-red-400 @enderror">
                     <option value="">ไม่ระบุ</option>
-                    @foreach (\App\Models\Member::GENDERS as $value => $label)
+                    @foreach (\App\Enums\Gender::options() as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>

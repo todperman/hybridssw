@@ -510,7 +510,7 @@
                                 <label for="editGender" class="mb-1 block text-[12px] font-medium text-muted">เพศ</label>
                                 <select wire:model.blur="editGender" id="editGender" class="glass-input h-11 w-full px-3 text-[13px]">
                                     <option value="">ไม่ระบุ</option>
-                                    @foreach (\App\Models\Member::GENDERS as $value => $label)
+                                    @foreach (\App\Enums\Gender::options() as $value => $label)
                                         <option value="{{ $value }}">{{ $label }}</option>
                                     @endforeach
                                 </select>

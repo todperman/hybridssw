@@ -84,6 +84,7 @@ Route::view('profile', 'profile')->middleware(['auth'])->name('profile');
 
 // คู่มือการใช้งาน เนื้อหาตามบทบาท ดึงกติกาจริงจากการตั้งค่า
 Route::get('guide', \App\Http\Controllers\GuideController::class)->middleware(['auth'])->name('guide');
+Route::get('guide.pdf', \App\Http\Controllers\GuidePdfController::class)->middleware(['auth'])->name('guide.pdf');
 
 // Omise แจ้งผลชำระ ยกเว้น CSRF ไว้ใน bootstrap/app.php
 Route::post('webhooks/omise', \App\Http\Controllers\OmiseWebhookController::class)

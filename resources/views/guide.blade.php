@@ -19,11 +19,11 @@
                     @if ($branch)
                         <x-price-sheet :branch="$branch" />
                     @endif
-                    <button type="button" onclick="window.print()"
-                            class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
-                        @svg('lucide-printer', 'h-4 w-4', ['stroke-width' => '2'])
-                        พิมพ์ / บันทึก PDF
-                    </button>
+                    <a href="{{ route('guide.pdf') }}" target="_blank" rel="noopener"
+                       class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 text-sm font-medium text-paper backdrop-blur-sm transition hover:bg-white/20">
+                        @svg('lucide-download', 'h-4 w-4', ['stroke-width' => '2'])
+                        ดาวน์โหลด PDF
+                    </a>
                 </div>
             </x-slot:action>
             <x-slot:stats>

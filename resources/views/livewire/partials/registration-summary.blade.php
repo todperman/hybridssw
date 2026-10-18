@@ -10,6 +10,7 @@
             $rows = [
                 ['ชื่อ-นามสกุล', trim($first_name.' '.$last_name) ?: null],
                 ['ชื่อเล่น', $nickname ?: null],
+                ['เพศ', \App\Enums\Gender::labelFor($gender ?: null)],
                 ['อีเมล', $email ?: null],
                 ['เบอร์โทร', $phone ?: null],
                 ['ประเภทเทรนเนอร์', $this->selectedType()->label()],

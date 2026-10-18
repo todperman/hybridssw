@@ -68,4 +68,21 @@ class GuideTest extends TestCase
         $this->actingAs($user)->get('/guide')->assertOk()
             ->assertSee('สแกนและโอน')->assertSee('ใส่เบอร์ที่ผูกกับ TrueMoney')->assertDontSee('มือถือเปิดแอป LINE ให้ยืนยัน');
     }
+
+    #[Test]
+    public function the_pdf_is_a_real_pdf_in_sarabun_with_the_live_numbers(): void
+    {
+        $this->get('/guide.pdf')->assertRedirect(route('login'));
+
+        $gym = $this->makeGym(['max_booking_hours' => 3]);
+        config(['gym.reservation.hold_minutes' => 25]);
+
+        $response = $this->actingAs($this->makeMember($gym)->user)->get('/guide.pdf');
+
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+        $pdf = $response->getContent();
+        $this->assertStringStartsWith('%PDF', $pdf);
+        $this->assertStringContainsString('THSarabun', $pdf, 'ต้องฝังฟอนต์ TH Sarabun');
+        $this->assertGreaterThan(20000, strlen($pdf));
+    }
 }

@@ -13,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -24,7 +25,11 @@ class TrainerForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(3)
             ->components([
+                Group::make()
+                    ->columnSpan(['default' => 3, 'lg' => 2])
+                    ->schema([
                 // ข้อมูลติดต่ออยู่บนบัญชีผู้ใช้ แก้ที่นี่ได้เลยไม่ต้องไปหน้า "ผู้ใช้" (เฉพาะตอนแก้ไข ตอนสร้างเลือกบัญชีก่อน)
                 Section::make('ข้อมูลติดต่อ')
                     ->description('ข้อมูลเดียวกับที่เทรนเนอร์กรอกตอนสมัคร แก้ที่นี่มีผลกับบัญชีเข้าสู่ระบบด้วย')
@@ -85,6 +90,11 @@ class TrainerForm
                             ->live()
                             ->helperText('ภายนอกต้องแนบใบรับรองและให้แอดมินอนุมัติก่อนจึงจะจองได้'),
 
+                        Select::make('gender')
+                            ->label('เพศ')
+                            ->options(\App\Enums\Gender::options())
+                            ->placeholder('ไม่ระบุ'),
+
                         Textarea::make('bio')
                             ->label('แนะนำตัว')
                             ->rows(3)
@@ -120,8 +130,12 @@ class TrainerForm
                         DatePicker::make('contract_ends_at')->label('สัญญาสิ้นสุด'),
                     ]),
 
+                    ]),
+
+                Group::make()
+                    ->columnSpan(['default' => 3, 'lg' => 1])
+                    ->schema([
                 Section::make('สถานะและทีม')
-                    ->columns(3)
                     ->schema([
                         Select::make('status')
                             ->label('สถานะ')
@@ -169,8 +183,18 @@ class TrainerForm
 
                         Textarea::make('review_note')
                             ->label('บันทึกการตรวจสอบ')
-                            ->rows(2)
-                            ->columnSpan(2),
+                            ->rows(2),
+                    ]),
+
+                Section::make('ข้อมูลระบบ')
+                    ->visibleOn('edit')
+                    ->schema([
+                        TextEntry::make('code')->label('รหัสเทรนเนอร์')->badge()->color('gray')->copyable(),
+                        TextEntry::make('created_at')->label('สมัครเมื่อ')->dateTime('d/m/Y H:i'),
+                        TextEntry::make('approved_at')->label('อนุมัติเมื่อ')->dateTime('d/m/Y H:i')->placeholder('ยังไม่อนุมัติ')
+                            ->helperText(fn (Trainer $record) => $record->approver?->name ? 'โดย '.$record->approver->name : null),
+                        TextEntry::make('team_members_count')->label('ลูกทีม')->state(fn (Trainer $record) => $record->teamMembers()->count().' คน'),
+                    ]),
                     ]),
             ]);
     }

@@ -36,6 +36,7 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <!-- เทสต์ต้องไม่พึ่งคีย์จริงใน .env ของเครื่องนั้น ๆ -->
+        <ini name="memory_limit" value="512M"/>
         <env name="GYM_PAYMENT_DRIVER" value="manual"/>
         <env name="GYM_NOTIFY_ADMIN_EMAIL" value=""/>
         <env name="GYM_NOTIFY_MAIL" value="true"/>

@@ -71,6 +71,12 @@ class TrainersTable
                     ->sortable()
                     ->toggleable(),
 
+                TextColumn::make('gender')
+                    ->label('เพศ')
+                    ->formatStateUsing(fn (Trainer $r) => $r->genderLabel())
+                    ->placeholder('ไม่ระบุ')
+                    ->toggleable(),
+
                 TextColumn::make('type')
                     ->label('ประเภท')
                     ->badge(),

@@ -133,6 +133,7 @@ class RegistrationConfigTest extends TestCase
         $this->fillAccount($component)
             ->set('branch_id', $branch->id)
             ->set('type', TrainerType::Internal->value)
+            ->set('gender', 'male')
             ->call('register');
 
         $trainer = Trainer::firstOrFail();
@@ -156,6 +157,7 @@ class RegistrationConfigTest extends TestCase
         $this->fillAccount($component)
             ->set('branch_id', $branch->id)
             ->set('type', TrainerType::Internal->value)
+            ->set('gender', 'male')
             ->set('internal_code', 'SECRET-CODE')
             ->call('register');
 
@@ -176,6 +178,7 @@ class RegistrationConfigTest extends TestCase
         $this->fillAccount($component)
             ->set('branch_id', $branch->id)
             ->set('type', TrainerType::Internal->value)
+            ->set('gender', 'male')
             ->set('internal_code', 'WRONG')
             ->call('register')
             ->assertHasErrors('internal_code');

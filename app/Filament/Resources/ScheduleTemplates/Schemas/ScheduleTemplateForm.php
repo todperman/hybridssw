@@ -17,6 +17,7 @@ class ScheduleTemplateForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('เวลาเปิดให้จองของวันนี้')
                     ->description('หนึ่งแถวคือหนึ่งวันในสัปดาห์ ถ้าเปิดทุกวันต้องสร้าง 7 แถว')

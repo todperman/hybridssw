@@ -26,6 +26,7 @@ class Trainer extends Model
         'branch_id',
         'code',
         'type',
+        'gender',
         'status',
         'accepts_bookings',
         'bio',
@@ -179,6 +180,11 @@ class Trainer extends Model
 
         AuditLog::record('trainer.rejected', $this, null, null, $note, $by);
         app(\App\Services\Notify\AccountNotifier::class)->trainerRejected($this, $note);
+    }
+
+    public function genderLabel(): ?string
+    {
+        return \App\Enums\Gender::labelFor($this->gender);
     }
 
     public function isApproved(): bool
