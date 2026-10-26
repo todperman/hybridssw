@@ -377,11 +377,66 @@ class TeamRoster extends Component
 
     public string $newPhone = '';
 
+    /** ค้นสมาชิกที่มีบัญชีอยู่แล้วด้วยเบอร์โทรหรือรหัสสมาชิก (ตรงเป๊ะเท่านั้น ไม่เปิดรายชื่อ) */
+    public string $lookupQuery = '';
+
+    public ?int $lookupMemberId = null;
+
     public function openAddForm(): void
     {
-        $this->reset(['newFirstName', 'newLastName', 'newNickname', 'newEmail', 'newPhone']);
+        $this->reset(['newFirstName', 'newLastName', 'newNickname', 'newEmail', 'newPhone', 'lookupQuery', 'lookupMemberId']);
         $this->resetValidation();
         $this->showAddForm = true;
+    }
+
+    public function findExistingMember(\App\Services\Reservations\MemberLookup $lookup): void
+    {
+        $this->resetValidation('lookupQuery');
+        $this->lookupMemberId = null;
+
+        $member = $lookup->find($this->trainer()->branch, $this->lookupQuery);
+
+        if (! $member) {
+            $this->addError('lookupQuery', 'ไม่พบสมาชิกที่ใช้เบอร์หรือรหัสนี้ (ต้องเป็นสมาชิกสาขาเดียวกันที่อนุมัติแล้ว)');
+
+            return;
+        }
+
+        $this->lookupMemberId = $member->id;
+    }
+
+    #[Computed]
+    public function lookupMember(): ?Member
+    {
+        return $this->lookupMemberId ? Member::with('user')->find($this->lookupMemberId) : null;
+    }
+
+    /** เพิ่มสมาชิกเดิมเข้าทีม (ลูกค้าที่สมัครเองแล้วอยากมาอยู่กับเทรนเนอร์คนนี้) */
+    public function addExistingMember(\App\Services\TeamService $team): void
+    {
+        $trainer = $this->trainer();
+        abort_unless($trainer->isApproved(), 403);
+
+        $member = $this->lookupMember;
+
+        if (! $member) {
+            $this->addError('lookupQuery', 'ค้นหาสมาชิกก่อน');
+
+            return;
+        }
+
+        try {
+            $team->join($trainer, $member, \App\Services\TeamService::VIA_MANUAL);
+        } catch (\RuntimeException $e) {
+            $this->addError('lookupQuery', $e->getMessage());
+
+            return;
+        }
+
+        $this->showAddForm = false;
+        unset($this->members, $this->lookupMember);
+
+        $this->dispatch('toast', tone: 'success', title: 'เพิ่มเข้าทีมแล้ว', body: $member->user->displayName().' อยู่ในทีมของคุณแล้ว จองให้ได้เลย');
     }
 
     public function closeAddForm(): void

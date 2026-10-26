@@ -66,6 +66,19 @@ class Member extends Model
 
     protected static function booted(): void
     {
+        // แอดมินตั้ง "เทรนเนอร์ประจำ" จากหลังบ้าน = เข้าทีมของเทรนเนอร์คนนั้นด้วย
+        // ไม่งั้นเทรนเนอร์จะไม่เห็นคนนี้ในหน้า "ทีม" และจองให้ไม่ได้
+        static::saved(function (self $member) {
+            if ($member->wasChanged('primary_trainer_id') && $member->primary_trainer_id) {
+                $row = TeamMember::firstOrNew(['trainer_id' => $member->primary_trainer_id, 'member_id' => $member->id]);
+
+                // แถวที่มีอยู่และยัง active (เช่น TeamService เพิ่งสร้าง) ไม่แตะ จะได้ไม่ทับที่มาของการเข้าทีม
+                if (! $row->exists || $row->status !== 'active') {
+                    $row->fill(['status' => 'active', 'joined_at' => now(), 'left_at' => null, 'joined_via' => $row->exists ? $row->joined_via : 'admin'])->save();
+                }
+            }
+        });
+
         static::creating(function (self $member) {
             $member->member_code ??= 'MB-'.strtoupper(Str::random(6));
         });

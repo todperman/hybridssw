@@ -42,10 +42,61 @@ class TeamJoin extends Component
             ->approved()
             ->with(['user', 'branch'])
             ->firstOrFail();
+
+        // คนที่มีบัญชีแล้วกด "เข้าสู่ระบบ" จะถูกพากลับมาลิงก์นี้หลังล็อกอิน
+        if (! auth()->check()) {
+            session(['url.intended' => url()->current()]);
+        }
+    }
+
+    /** สมาชิกที่ล็อกอินอยู่ (สมัครเองทั่วไป) เปิดลิงก์นี้ = ขอเข้าทีม ไม่ต้องสมัครใหม่ */
+    public function existingMember(): ?Member
+    {
+        return auth()->user()?->member;
+    }
+
+    /** ทำไมบัญชีที่ล็อกอินอยู่เข้าทีมไม่ได้ null = เข้าได้ */
+    public function existingBlocker(\App\Services\TeamService $team): ?string
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        if (! $user->member) {
+            return 'บัญชีที่ล็อกอินอยู่เป็น'.($user->trainer ? 'เทรนเนอร์' : 'เจ้าหน้าที่').' เข้าร่วมทีมไม่ได้ ออกจากระบบแล้วเปิดลิงก์นี้ใหม่เพื่อสมัครเป็นลูกทีม';
+        }
+
+        if ($team->isInTeam($this->trainer, $user->member)) {
+            return 'คุณอยู่ในทีมของ '.$this->trainer->user->displayName().' อยู่แล้ว';
+        }
+
+        return $team->blocker($this->trainer, $user->member);
+    }
+
+    public function joinExisting(\App\Services\TeamService $team): void
+    {
+        $member = $this->existingMember();
+        abort_unless($member, 403);
+
+        try {
+            $team->join($this->trainer, $member, \App\Services\TeamService::VIA_INVITE_LINK);
+        } catch (\RuntimeException $e) {
+            $this->addError('accept', $e->getMessage());
+
+            return;
+        }
+
+        $this->dispatch('toast', tone: 'success', title: 'เข้าทีมแล้ว', body: 'คุณอยู่ในทีมของ '.$this->trainer->user->displayName().' แล้ว');
+        $this->redirect(route('member.reservations'), navigate: true);
     }
 
     public function join(): void
     {
+        // ล็อกอินอยู่แล้วต้องใช้ปุ่ม "เข้าร่วมทีม" ของบัญชีเดิม ไม่ให้สร้างบัญชีซ้อน
+        abort_if(auth()->check(), 403);
+
         $data = $this->validate([
             'first_name' => ['required', 'string', 'max:120'],
             'last_name' => ['required', 'string', 'max:120'],

@@ -563,10 +563,44 @@
             <div class="glass-panel modal-panel max-w-md">
                 <div class="flex justify-center pt-2.5 sm:hidden"><span class="h-1 w-10 rounded-full bg-ink/15"></span></div>
 
+                <div class="glass-head">
+                    <h3 class="font-display text-[19px] font-bold text-grad">เพิ่มลูกทีมเอง</h3>
+                    <p class="mt-0.5 text-[13px] text-muted">มีบัญชีอยู่แล้วค้นด้วยเบอร์โทร ยังไม่มีกรอกข้อมูลให้ด้านล่าง</p>
+                </div>
+
+                {{-- สมาชิกเดิม (สมัครเองทั่วไป) เข้าทีม: ค้นด้วยเบอร์หรือรหัสสมาชิก ตรงเป๊ะเท่านั้น --}}
+                <div class="border-b border-line/70 px-5 py-4">
+                    <p class="text-[13px] font-semibold text-ink">มีบัญชีอยู่แล้ว</p>
+                    <div class="mt-2 flex gap-2">
+                        <div class="field flex-1">
+                            <input wire:model="lookupQuery" wire:keydown.enter.prevent="findExistingMember" id="lookupQuery" type="text" placeholder=" " inputmode="tel"
+                                   class="peer field-input @error('lookupQuery') border-red-400 @enderror">
+                            <label for="lookupQuery" class="field-label">เบอร์โทรหรือรหัสสมาชิก</label>
+                        </div>
+                        <button type="button" wire:click="findExistingMember" wire:loading.attr="disabled" class="btn-ghost shrink-0 px-4">
+                            @svg('lucide-search', 'h-4 w-4', ['stroke-width' => '2']) ค้นหา
+                        </button>
+                    </div>
+                    @error('lookupQuery') <p class="field-error">{{ $message }}</p> @enderror
+
+                    @if ($this->lookupMember)
+                        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3">
+                            <x-avatar :user="$this->lookupMember->user" size="h-10 w-10" text="text-[12px]" />
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate font-display text-[14px] font-bold text-ink">{{ $this->lookupMember->user->displayName() }}</p>
+                                <p class="text-[12px] text-muted">{{ $this->lookupMember->member_code }}{{ $this->lookupMember->primaryTrainer ? ' · เทรนเนอร์ประจำ '.$this->lookupMember->primaryTrainer->user->displayName() : '' }}</p>
+                            </div>
+                            <button type="button" wire:click="addExistingMember" wire:loading.attr="disabled" class="btn-grad shrink-0 px-4 py-2 text-sm">
+                                <span wire:loading.remove wire:target="addExistingMember">เพิ่มเข้าทีม</span>
+                                <span wire:loading wire:target="addExistingMember">กำลังเพิ่ม…</span>
+                            </button>
+                        </div>
+                    @endif
+                </div>
+
                 <form wire:submit="addMember">
-                    <div class="glass-head">
-                        <h3 class="font-display text-[19px] font-bold text-grad">เพิ่มลูกทีมเอง</h3>
-                        <p class="mt-0.5 text-[13px] text-muted">กรอกข้อมูลให้ลูกทีมที่อยู่ตรงหน้า ไม่ต้องรอเขากดลิงก์</p>
+                    <div class="px-5 pt-4">
+                        <p class="text-[13px] font-semibold text-ink">ยังไม่มีบัญชี สร้างให้ใหม่</p>
                     </div>
 
                     <div class="space-y-4 px-5 py-4">

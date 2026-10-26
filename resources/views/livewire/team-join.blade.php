@@ -1,9 +1,41 @@
 <div x-data="{ showPassword: false }">
+@auth
+    @php($blocker = $this->existingBlocker(app(\App\Services\TeamService::class)))
+    <div class="fade-up">
+        <h2 class="font-display text-3xl font-extrabold heading-th text-ink">เข้าร่วมทีม</h2>
+        <p class="mt-2 text-[15px] text-muted">คุณล็อกอินเป็น <strong class="text-ink">{{ auth()->user()->displayName() }}</strong> อยู่แล้ว ไม่ต้องสมัครใหม่</p>
+    </div>
+
+    <div class="mt-8 space-y-4">
+        <div class="flex items-center gap-4 rounded-2xl border border-line bg-white/70 p-4">
+            <x-avatar :user="$trainer->user" size="h-14 w-14" text="text-base" />
+            <div class="min-w-0">
+                <p class="text-[12px] text-muted">เทรนเนอร์</p>
+                <p class="truncate font-display text-[18px] font-bold text-ink">{{ $trainer->user->displayName() }}</p>
+                <p class="text-[12.5px] text-muted">{{ $trainer->branch->name }}</p>
+            </div>
+        </div>
+
+        @if ($blocker)
+            <div class="rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-[14px] text-amber-900">{{ $blocker }}</div>
+            <a href="{{ auth()->user()->member ? route('member.reservations') : route('dashboard') }}" wire:navigate class="btn-ghost w-full">ไปหน้าหลักของฉัน</a>
+        @else
+            <p class="text-[14px] leading-relaxed text-muted">กดยืนยันแล้ว {{ $trainer->user->displayName() }} จะเห็นคุณในทีมและจองยิมให้คุณได้ คุณยังจองเองได้เหมือนเดิม</p>
+            @error('accept') <p class="field-error">{{ $message }}</p> @enderror
+            <button type="button" wire:click="joinExisting" wire:loading.attr="disabled"
+                    class="btn-grad w-full py-3.5 text-[15px] font-semibold">
+                <span wire:loading.remove wire:target="joinExisting">เข้าร่วมทีมของ {{ $trainer->user->displayName() }}</span>
+                <span wire:loading wire:target="joinExisting">กำลังเข้าทีม…</span>
+            </button>
+        @endif
+    </div>
+@else
     <div class="fade-up">
         <h2 class="font-display text-3xl font-extrabold heading-th text-ink">สมัครเข้าทีม</h2>
         <p class="mt-2 text-[15px] text-muted">
             กรอกข้อมูลครั้งเดียว จากนั้น {{ $trainer->user->name }} จะจองยิมให้คุณได้เลย
         </p>
+        <p class="mt-1 text-[13px] text-muted">มีบัญชีอยู่แล้ว? <a href="{{ route('login') }}" class="font-semibold text-brand-deep">เข้าสู่ระบบ</a> แล้วระบบจะพากลับมาหน้านี้ให้กดเข้าทีมด้วยบัญชีเดิม</p>
     </div>
 
     <form wire:submit="join" class="mt-8 space-y-4">
@@ -123,4 +155,5 @@
             </span>
         </button>
     </form>
+@endauth
 </div>

@@ -30,8 +30,8 @@ Route::get('register/trainer', TrainerRegistration::class)
     ->name('trainer.register');
 
 // ลิงก์/QR ที่เทรนเนอร์แชร์ให้ลูกทีมสมัครเข้าทีมเอง
+// เปิดได้ทั้งคนทั่วไป (สมัครใหม่) และสมาชิกที่ล็อกอินอยู่ (เข้าทีมด้วยบัญชีเดิม)
 Route::get('team/join/{token}', TeamJoin::class)
-    ->middleware('guest')
     ->name('team.join');
 
 // พาผู้ใช้ไปหน้าที่ตรงกับบทบาทของตัวเอง
