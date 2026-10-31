@@ -19,7 +19,13 @@ class ListReservations extends ListRecords
     /** การจองเกิดจากหน้าบ้านเท่านั้น ผู้จองต้องเป็น Trainee หรือ Trainer ตามข้อกำหนด */
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            \Filament\Actions\Action::make('calendar')
+                ->label('ดูเป็นปฏิทิน')
+                ->icon('heroicon-o-calendar')
+                ->color('gray')
+                ->url(\App\Filament\Pages\ReservationCalendar::getUrl()),
+        ];
     }
 
     public function getTabs(): array

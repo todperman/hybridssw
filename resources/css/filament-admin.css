@@ -608,3 +608,284 @@ html:not(.dark) .fi-wi-stats-overview-stat::before {
     height: 3px;
     background-image: linear-gradient(90deg, var(--ssw-brand-dark) 0%, var(--ssw-brand-light) 55%, var(--ssw-accent) 100%);
 }
+
+/* ---------- ปฏิทินการจอง (หลังบ้าน) ---------- */
+
+.rc-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1rem;
+}
+
+.rc-filter {
+    min-width: 12rem;
+}
+
+.rc-check {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .875rem;
+    color: var(--ssw-muted);
+}
+
+.rc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+    margin-inline-start: auto;
+    font-size: .75rem;
+    color: var(--ssw-muted);
+}
+
+.rc-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+}
+
+.rc-legend i {
+    width: .625rem;
+    height: .625rem;
+    border-radius: 999px;
+}
+
+.rc-legend i.is-confirmed,
+.rc-chip.is-confirmed,
+.rc-block.is-confirmed { background-color: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.rc-legend i.is-pending,
+.rc-chip.is-pending,
+.rc-block.is-pending { background-color: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.rc-legend i.is-cancelled,
+.rc-chip.is-cancelled,
+.rc-block.is-cancelled { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.rc-legend i.is-expired,
+.rc-chip.is-expired,
+.rc-block.is-expired { background-color: #e5e7eb; color: #4b5563; border-color: #d1d5db; }
+
+.rc-layout {
+    display: grid;
+    gap: 1rem;
+}
+
+@media (min-width: 1280px) {
+    .rc-layout {
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        align-items: start;
+    }
+}
+
+.rc-card {
+    border-radius: var(--ssw-radius);
+    border: 1px solid var(--ssw-line);
+    background-color: rgba(255, 255, 255, .85);
+    box-shadow: 0 10px 30px -18px rgba(0, 51, 74, .25);
+    overflow: hidden;
+}
+
+.rc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .875rem 1rem;
+    border-bottom: 1px solid var(--ssw-line);
+    background-image: linear-gradient(180deg, rgba(43, 187, 215, .08), transparent);
+}
+
+.rc-head__title { flex: 1; min-width: 0; text-align: center; }
+.rc-head--day .rc-head__title { text-align: start; }
+
+.rc-head__title h2 {
+    font-family: var(--ssw-display);
+    font-size: 1.0625rem;
+    font-weight: 800;
+    color: var(--ssw-brand-dark);
+}
+
+.rc-head__title p {
+    margin-top: .125rem;
+    font-size: .75rem;
+    color: var(--ssw-muted);
+}
+
+.rc-nav {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    font-size: 1.375rem;
+    line-height: 1;
+    color: var(--ssw-brand-dark);
+    background-color: rgba(255, 255, 255, .7);
+    border: 1px solid var(--ssw-line);
+}
+
+.rc-nav:hover { background-color: #fff; }
+
+.rc-badge {
+    border-radius: 999px;
+    background-color: rgba(43, 187, 215, .2);
+    color: var(--ssw-brand-dark);
+    padding: .125rem .625rem;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.rc-dow {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    padding: .5rem .5rem 0;
+    text-align: center;
+    font-size: .6875rem;
+    font-weight: 600;
+    color: var(--ssw-muted);
+}
+
+.rc-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: .25rem;
+    padding: .5rem;
+}
+
+.rc-day {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    min-height: 5.5rem;
+    padding: .375rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background-color: rgba(255, 255, 255, .6);
+    text-align: start;
+    transition: background-color .15s, border-color .15s;
+}
+
+.rc-day:hover { background-color: #fff; border-color: var(--ssw-line); }
+.rc-day.is-out { opacity: .35; }
+.rc-day.is-past:not(.is-selected) { background-color: transparent; }
+.rc-day.is-today .rc-day__num { color: var(--ssw-brand-deep); }
+.rc-day.is-selected { border-color: var(--ssw-brand-deep); background-color: rgba(43, 187, 215, .12); box-shadow: 0 0 0 1px var(--ssw-brand-deep); }
+
+.rc-day__num {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--ssw-display);
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--ssw-ink);
+}
+
+.rc-day__num b {
+    min-width: 1.25rem;
+    border-radius: 999px;
+    background-color: var(--ssw-brand-dark);
+    color: #fff;
+    text-align: center;
+    font-size: .6875rem;
+    padding: 0 .375rem;
+}
+
+.rc-day__list { display: flex; flex-direction: column; gap: .125rem; }
+
+.rc-chip {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    border-radius: 6px;
+    border: 1px solid;
+    padding: .0625rem .375rem;
+    font-size: .6875rem;
+    line-height: 1.3;
+}
+
+.rc-more { font-size: .6875rem; color: var(--ssw-muted); padding-inline: .25rem; }
+
+@media (max-width: 767px) {
+    .rc-day { min-height: 3.75rem; }
+    .rc-day__list { display: none; }
+    .rc-day__num { flex-direction: column; align-items: flex-start; gap: .125rem; }
+}
+
+.rc-empty { padding: 2rem 1rem; text-align: center; color: var(--ssw-muted); font-size: .875rem; }
+
+.rc-hours { list-style: none; margin: 0; padding: 0; }
+
+.rc-hour {
+    display: flex;
+    align-items: stretch;
+    gap: .75rem;
+    min-height: 2.75rem;
+    padding: .25rem .75rem .25rem 1rem;
+    border-bottom: 1px solid rgba(214, 220, 222, .6);
+}
+
+.rc-hour:last-child { border-bottom: 0; }
+.rc-hour.is-cont { min-height: 1.75rem; }
+
+.rc-hour__time {
+    width: 3rem;
+    flex: none;
+    padding-top: .375rem;
+    font-family: var(--ssw-display);
+    font-size: .8125rem;
+    font-weight: 700;
+    color: var(--ssw-ink);
+}
+
+.rc-hour.is-cont .rc-hour__time { color: var(--ssw-muted); font-weight: 500; }
+
+.rc-hour__free { align-self: center; font-size: .8125rem; color: #059669; }
+.rc-hour__cont { align-self: center; font-size: .75rem; color: var(--ssw-muted); }
+
+.rc-block {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .25rem .75rem;
+    border-radius: 12px;
+    border: 1px solid;
+    padding: .5rem .75rem;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+}
+
+.rc-block:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -12px rgba(0, 51, 74, .5); }
+.rc-block__main { display: flex; flex-direction: column; min-width: 0; }
+.rc-block__main strong { font-size: .875rem; }
+.rc-block__main span { font-size: .75rem; opacity: .85; }
+.rc-block__side { display: flex; flex-direction: column; align-items: flex-end; gap: .125rem; font-size: .6875rem; }
+
+.rc-status {
+    border-radius: 999px;
+    border: 1px solid;
+    padding: 0 .5rem;
+    font-size: .6875rem;
+    font-weight: 600;
+}
+
+.rc-status.is-confirmed { background-color: #a7f3d0; border-color: #34d399; color: #064e3b; }
+.rc-status.is-pending { background-color: #fde68a; border-color: #f59e0b; color: #78350f; }
+.rc-status.is-cancelled { background-color: #fecaca; border-color: #f87171; color: #7f1d1d; }
+.rc-status.is-expired { background-color: #e5e7eb; border-color: #9ca3af; color: #374151; }
+
+.rc-ref { color: inherit; opacity: .8; }
+.rc-hold { color: #b45309; font-weight: 600; }
+
+.rc-closed { padding: .75rem 1rem 1rem; border-top: 1px dashed var(--ssw-line); }
+.rc-closed p { font-size: .75rem; font-weight: 600; color: var(--ssw-muted); margin-bottom: .375rem; }
+.rc-closed__item { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; font-size: .8125rem; color: var(--ssw-muted); text-decoration: none; }
+.rc-closed__item:hover { color: var(--ssw-ink); }
+
+@media (prefers-color-scheme: dark) {
+    html.dark .rc-card { background-color: rgba(24, 24, 27, .7); border-color: rgba(255, 255, 255, .08); }
+    html.dark .rc-day { background-color: rgba(255, 255, 255, .03); }
+    html.dark .rc-day__num, html.dark .rc-hour__time, html.dark .rc-head__title h2 { color: #e4e4e7; }
+}
