@@ -83,6 +83,11 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
+    public function earning(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TrainerEarning::class);
+    }
+
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(Member::class, 'reservation_participants')->withPivot('free_hours')->withTimestamps();

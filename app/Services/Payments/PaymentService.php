@@ -102,6 +102,7 @@ class PaymentService
         });
 
         $reservation->refresh();
+        app(\App\Services\TrainerEarningService::class)->sync($reservation);
 
         AuditLog::record('reservation.payment_recorded', $reservation, null, [
             'payment_id' => $payment->id,

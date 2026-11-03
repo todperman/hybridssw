@@ -19,6 +19,7 @@ class Branch extends Model
         'timezone',
         'max_group_size',
         'pricing',
+        'payout',
         'max_trainees',
         'booking_window_days',
         'max_booking_hours',
@@ -31,6 +32,7 @@ class Branch extends Model
         return [
             'max_group_size' => 'integer',
             'pricing' => 'array',
+            'payout' => 'array',
             'max_trainees' => 'integer',
             'booking_window_days' => 'integer',
             'max_booking_hours' => 'integer',
@@ -42,6 +44,12 @@ class Branch extends Model
     public function priceTable(): \App\Support\PriceTable
     {
         return \App\Support\PriceTable::for($this);
+    }
+
+    /** ตารางส่วนแบ่ง Trainer/Facility ของสาขานี้ (ไม่ตั้งใช้ค่าตั้งต้นจาก config) */
+    public function payoutTable(): \App\Support\PayoutTable
+    {
+        return \App\Support\PayoutTable::for($this);
     }
 
     public function users(): HasMany

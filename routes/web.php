@@ -59,6 +59,7 @@ Route::middleware(['auth', EnsureUserIsTrainer::class])->prefix('trainer')->name
     Route::get('book', BookingWizard::class)->name('book');
     Route::get('availability', \App\Livewire\Trainer\AvailabilityPlanner::class)->name('availability');
     Route::get('team', TeamRoster::class)->name('team');
+    Route::get('earnings', \App\Livewire\Trainer\Earnings::class)->name('earnings');
 });
 
 Route::middleware(['auth', EnsureMemberIsApproved::class])->prefix('member')->name('member.')->group(function () {

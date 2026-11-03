@@ -10,6 +10,8 @@ Schedule::command('reservations:expire-holds')
     ->withoutOverlapping();
 
 // ตาข่ายรองรับเมื่อ webhook ของ Omise ไม่มา ถามผลรายการที่ค้างอยู่จาก Omise โดยตรง
+Schedule::command('earnings:settle')->hourly();
+
 Schedule::command('payments:sync-omise')
     ->everyTwoMinutes()
     ->withoutOverlapping()

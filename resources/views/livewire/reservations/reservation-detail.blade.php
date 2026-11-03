@@ -58,6 +58,12 @@
                         <span class="text-sm text-muted">ยอดชำระ ({{ $r->priceLabel() }})</span>
                         <span class="font-display text-2xl font-bold text-ink">฿{{ number_format((float) $r->amount, 2) }}</span>
                     </div>
+                    @if ($this->isAssignedTrainer && $r->earning && $r->earning->counts())
+                        <p class="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                            <span>ส่วนแบ่งของคุณ ({{ $r->earning->status->label() }})</span>
+                            <span class="font-display font-bold">฿{{ number_format((float) $r->earning->amount) }}</span>
+                        </p>
+                    @endif
                     <p class="text-sm text-muted">
                         ผู้ชำระเงิน: <span class="font-medium text-ink">{{ $r->payer->user->displayName() }}</span>
                         · ต้องชำระภายใน {{ $r->hold_expires_at->format('H:i') }} น. ไม่งั้นระบบจะปล่อยเวลานี้ให้คนอื่นจอง

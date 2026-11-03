@@ -27,6 +27,11 @@ new class extends Component
                 $links[] = ['route' => 'trainer.book', 'label' => 'จองให้ลูกเทรน', 'icon' => 'calendar-plus'];
                 $links[] = ['route' => 'trainer.availability', 'label' => 'เวลาว่าง', 'icon' => 'clock'];
                 $links[] = ['route' => 'trainer.team', 'label' => 'ทีม', 'icon' => 'users'];
+
+                // ส่วนแบ่งมีเฉพาะเทรนเนอร์ภายนอก ภายในเป็นพนักงานไม่ต้องเห็นเมนูนี้
+                if ($user->trainer->type === \App\Enums\TrainerType::External) {
+                    $links[] = ['route' => 'trainer.earnings', 'label' => 'รายได้', 'icon' => 'wallet'];
+                }
             } else {
                 $links[] = ['route' => 'trainer.pending', 'label' => 'สถานะใบสมัคร', 'icon' => 'clock'];
             }

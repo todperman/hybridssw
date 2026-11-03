@@ -113,6 +113,11 @@ class Trainer extends Model
             ->wherePivot('status', 'active');
     }
 
+    public function earnings(): HasMany
+    {
+        return $this->hasMany(TrainerEarning::class);
+    }
+
     public function teamMemberships(): HasMany
     {
         return $this->hasMany(TeamMember::class);

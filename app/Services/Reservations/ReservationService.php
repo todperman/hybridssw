@@ -149,6 +149,8 @@ class ReservationService
         $reservation->load('participants.user', 'trainer.user', 'payer.user');
 
         if ($waived) {
+            app(\App\Services\TrainerEarningService::class)->sync($reservation);
+
             $this->notify->send(
                 $reservation,
                 $this->notify->everyone($reservation),
@@ -211,6 +213,10 @@ class ReservationService
 
             return $r;
         });
+
+        if ($reservation) {
+            app(\App\Services\TrainerEarningService::class)->sync($reservation);
+        }
 
         if ($reservation && $notify) {
             $this->notify->send(
@@ -303,6 +309,7 @@ class ReservationService
         $reservation->refresh();
 
         AuditLog::record('reservation.rescheduled', $reservation, $before, $this->snapshot($reservation), $reason, $actor);
+        app(\App\Services\TrainerEarningService::class)->sync($reservation);
 
         $this->notify->send(
             $reservation,
@@ -426,6 +433,7 @@ class ReservationService
         $reservation->refresh();
 
         AuditLog::record('reservation.trainer_changed', $reservation, $before, $this->snapshot($reservation), $reason, $actor);
+        app(\App\Services\TrainerEarningService::class)->sync($reservation);
 
         $this->notify->send(
             $reservation,
@@ -546,6 +554,7 @@ class ReservationService
         $reservation->refresh();
 
         AuditLog::record('reservation.cancelled', $reservation, $before, $this->snapshot($reservation), $reason, $admin);
+        app(\App\Services\TrainerEarningService::class)->sync($reservation);
 
         $payment = $reservation->payments()->where('status', PaymentStatus::Succeeded->value)->latest('id')->first();
 

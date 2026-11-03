@@ -181,6 +181,12 @@ class DemoData
             }
         }, 'แอดมินเปลี่ยน Trainer');
 
+        // ส่วนแบ่งของงานที่ผ่านไปแล้วของครูฝน (ภายนอก) จ่ายรอบตัวอย่างไว้ ให้เห็นทั้ง "จ่ายแล้ว" และ "รอจ่าย"
+        $earnings = app(\App\Services\TrainerEarningService::class);
+        $earnings->settle();
+        $paid = $earnings->pay($t2, $today->subDays(30), $today->subDays(2)->endOfDay(), $this->admin, 'โอนรอบตัวอย่าง');
+        $this->log[] = 'จ่ายส่วนแบ่งครูฝน '.$paid['count'].' งาน ฿'.number_format($paid['amount']).' (ตัวอย่าง)';
+
         // --- กำลังจะถึง ---
         $r = $this->book($today->addDays(3), 2, 18, $m->take(3)->all(), $m[2], $t1, $t1->user);
         $r && $this->pay($r);
