@@ -108,6 +108,10 @@ class TrainerEarningService
      */
     public function pay(Trainer $trainer, CarbonInterface $from, CarbonInterface $to, User $admin, ?string $note = null): array
     {
+        if (! $trainer->canReceivePayout()) {
+            throw new \RuntimeException('เทรนเนอร์ยังไม่ได้กรอกบัญชีรับเงิน กรอกแทนได้ที่ปุ่ม "กรอกบัญชี" ก่อนจ่าย');
+        }
+
         $this->settle();
 
         $rows = TrainerEarning::where('trainer_id', $trainer->id)

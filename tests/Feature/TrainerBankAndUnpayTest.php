@@ -99,4 +99,62 @@ class TrainerBankAndUnpayTest extends TestCase
         $trainer->update(['bank_code' => null, 'bank_account_number' => null]);
         $this->actingAs($admin)->get('/admin/trainer-earnings?m=2026-11')->assertOk()->assertSee('ยังไม่ได้กรอกบัญชีรับเงิน');
     }
+
+    #[Test]
+    public function paying_is_refused_until_a_bank_account_exists_and_an_admin_can_fill_it_in(): void
+    {
+        $gym = $this->makeGym(['pricing' => config('gym.pricing'), 'payout' => null]);
+        $admin = $this->makeAdmin($gym);
+        $trainer = $this->makeAvailableTrainer($gym, ['type' => TrainerType::External]);
+        $r = $this->confirmManually($this->bookAsTrainee($gym, $this->makeMember($gym), [], $trainer, CarbonImmutable::parse('2026-11-04 18:00')));
+        $this->travelTo(CarbonImmutable::parse('2026-11-05 09:00'));
+
+        $this->actingAs($admin)->get('/admin/trainer-earnings?m=2026-11')->assertOk()->assertSee('จ่ายไม่ได้ ยังไม่มีบัญชี')->assertSee('กรอกบัญชี');
+
+        try {
+            app(\App\Services\TrainerEarningService::class)->pay($trainer, CarbonImmutable::parse('2026-11-01'), CarbonImmutable::parse('2026-11-30'), $admin);
+            $this->fail('ต้องจ่ายไม่ได้');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('ยังไม่ได้กรอกบัญชี', $e->getMessage());
+        }
+        $this->assertSame(EarningStatus::Payable, TrainerEarning::where('reservation_id', $r->id)->sole()->status);
+
+        // แอดมินกรอกแทนจากหน้าส่วนแบ่ง: ตรวจรูปแบบ ลงประวัติ และแจ้งเทรนเนอร์
+        $page = Livewire::actingAs($admin)->test(AdminPage::class, ['m' => '2026-11']);
+        $page->callAction('bank', ['bank_code' => 'SCB', 'bank_account_number' => '12345', 'bank_account_name' => 'ครู'], ['trainer' => $trainer->id])
+            ->assertNotified('บันทึกไม่ได้');
+        $page->callAction('bank', ['bank_code' => 'SCB', 'bank_account_number' => '111-2-33344-5', 'bank_account_name' => 'ครูฝน ตัวอย่าง'], ['trainer' => $trainer->id])
+            ->assertNotified('บันทึกบัญชีแล้ว');
+
+        $this->assertSame('1112333445', $trainer->fresh()->bank_account_number);
+        $this->assertTrue(AuditLog::where('action', 'trainer.bank_changed')->where('actor_user_id', $admin->id)->exists());
+        Notification::assertSentTo($trainer->user, AccountNotice::class, fn (AccountNotice $n) => $n->title === 'เจ้าหน้าที่ตั้งบัญชีรับเงินให้คุณ' && str_contains($n->body, '111-2-33344-5'));
+
+        $this->actingAs($admin)->get('/admin/trainer-earnings?m=2026-11')->assertOk()->assertSee('ไทยพาณิชย์ 111-2-33344-5')->assertDontSee('จ่ายไม่ได้ ยังไม่มีบัญชี');
+
+        $page->callAction('pay', ['note' => 'โอนแล้ว'], ['trainer' => $trainer->id]);
+        $this->assertSame(EarningStatus::Paid, TrainerEarning::where('reservation_id', $r->id)->sole()->status);
+    }
+
+    #[Test]
+    public function the_trainer_edit_form_also_saves_the_bank_account_through_the_audited_path(): void
+    {
+        $gym = $this->makeGym();
+        $admin = $this->makeAdmin($gym);
+        $trainer = $this->makeAvailableTrainer($gym, ['type' => TrainerType::External]);
+        $trainer->user->update(['phone' => '0812345678']);
+
+        Livewire::actingAs($admin)->test(\App\Filament\Resources\Trainers\Pages\EditTrainer::class, ['record' => $trainer->getRouteKey()])
+            ->fillForm(['bank_code' => 'GSB', 'bank_account_number' => '020123456789', 'bank_account_name' => 'ครูฝน'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $trainer->refresh();
+        $this->assertSame('GSB', $trainer->bank_code);
+        $this->assertSame('020123456789', $trainer->bank_account_number);
+        $this->assertTrue(AuditLog::where('action', 'trainer.bank_changed')->exists());
+        Notification::assertSentTo($trainer->user, AccountNotice::class, fn (AccountNotice $n) => $n->title === 'เจ้าหน้าที่ตั้งบัญชีรับเงินให้คุณ');
+
+        $this->actingAs($admin)->get('/admin/trainers/'.$trainer->id.'/edit')->assertOk()->assertSee('020123456789');
+    }
 }

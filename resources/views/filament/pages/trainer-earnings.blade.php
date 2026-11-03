@@ -70,16 +70,19 @@
                                 <span>{{ $t->bankLabel() }}</span>
                                 @if ($t->bank_account_number)<button type="button" class="te-copy" x-data x-on:click="navigator.clipboard.writeText('{{ $t->bank_account_number }}'); $tooltip('คัดลอกเลขบัญชีแล้ว', { timeout: 1500 })">คัดลอกเลขบัญชี</button>@endif
                                 @if ($t->bank_updated_at && $t->bank_updated_at->gt(now()->subDays(14)))<span class="te-bank__new">เปลี่ยนเมื่อ {{ $t->bank_updated_at->format('d/m') }} ตรวจก่อนโอน</span>@endif
+                                @if ($t){{ ($this->bankAction)(['trainer' => $t->id]) }}@endif
                             </p>
                         @else
-                            <p class="te-bank te-bank--none">ยังไม่ได้กรอกบัญชีรับเงิน (เทรนเนอร์กรอกเองที่หน้า "รายได้")</p>
+                            <p class="te-bank te-bank--none">ยังไม่ได้กรอกบัญชีรับเงิน จ่ายไม่ได้จนกว่าจะกรอก @if ($t){{ ($this->bankAction)(['trainer' => $t->id]) }}@endif</p>
                         @endif
                     </div>
                     <div class="te-group__side">
                         <span class="te-pill is-paid">จ่ายแล้ว ฿{{ number_format($s['paid']) }}</span>
                         <span class="te-pill is-payable">รอจ่าย ฿{{ number_format($s['payable']) }}</span>
-                        @if ($s['payable'] > 0 && $t)
+                        @if ($s['payable'] > 0 && $t && $t->canReceivePayout())
                             {{ ($this->payAction)(['trainer' => $t->id]) }}
+                        @elseif ($s['payable'] > 0 && $t)
+                            <span class="te-pill is-void" title="กรอกบัญชีรับเงินก่อนจึงจะจ่ายได้">จ่ายไม่ได้ ยังไม่มีบัญชี</span>
                         @endif
                         @if ($s['paid'] > 0 && $t)
                             {{ ($this->unpayAction)(['trainer' => $t->id]) }}

@@ -194,7 +194,17 @@ class TrainerForm
                         TextEntry::make('approved_at')->label('อนุมัติเมื่อ')->dateTime('d/m/Y H:i')->placeholder('ยังไม่อนุมัติ')
                             ->helperText(fn (Trainer $record) => $record->approver?->name ? 'โดย '.$record->approver->name : null),
                         TextEntry::make('team_members_count')->label('ลูกทีม')->state(fn (Trainer $record) => $record->teamMembers()->count().' คน'),
-                        TextEntry::make('bank_account_number')->label('บัญชีรับเงิน')->state(fn (Trainer $record) => $record->bankLabel())->placeholder('ยังไม่กรอก (เทรนเนอร์กรอกเองที่หน้ารายได้)')->copyable(),
+                    ]),
+
+                Section::make('บัญชีรับเงิน')
+                    ->description('กรอกแทนเทรนเนอร์ได้ เทรนเนอร์จะได้รับแจ้งและแก้เองได้ที่หน้า "รายได้" ยังไม่มีบัญชี = จ่ายส่วนแบ่งไม่ได้')
+                    ->visibleOn('edit')
+                    ->schema([
+                        Select::make('bank_code')->label('ธนาคาร')->options(\App\Enums\ThaiBank::options())->searchable()->placeholder('ยังไม่เลือก'),
+                        TextInput::make('bank_account_number')->label('เลขบัญชี')->maxLength(20)->helperText('ตัวเลข 10 หลัก (ออมสิน 12, ธ.ก.ส. 10–12)')
+                            ->formatStateUsing(fn (?string $state) => \App\Enums\ThaiBank::formatAccount($state)),
+                        TextInput::make('bank_account_name')->label('ชื่อบัญชี (ตามหน้าสมุด)')->maxLength(120),
+                        TextInput::make('promptpay_id')->label('พร้อมเพย์ (ไม่บังคับ)')->maxLength(20),
                     ]),
                     ]),
             ]);

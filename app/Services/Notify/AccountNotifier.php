@@ -154,6 +154,21 @@ class AccountNotifier extends Notifier
     /** เทรนเนอร์เปลี่ยนบัญชีรับเงิน แจ้งผู้ดูแลเสมอ (และสำเนาเข้ากล่องผู้ดูแล) ไว้ตรวจก่อนโอนรอบถัดไป */
     public function trainerBankChanged(Trainer $trainer, User $actor): void
     {
+        // แอดมินกรอกแทน → บอกเทรนเนอร์ให้ตรวจ (และผู้ดูแลได้สำเนา) เทรนเนอร์แก้เอง → บอกแอดมินให้ตรวจก่อนโอน
+        if ($actor->id !== $trainer->user_id) {
+            $this->deliver(
+                new AccountNotice(
+                    'เจ้าหน้าที่ตั้งบัญชีรับเงินให้คุณ',
+                    'บัญชีรับส่วนแบ่งของคุณถูกตั้งเป็น '.($trainer->bankLabel() ?? 'ไม่มี').' โดย '.$actor->displayName().' ถ้าไม่ถูกต้องแก้ได้ที่หน้า "รายได้"',
+                    route('trainer.earnings'),
+                ),
+                [$trainer->user],
+                context: ['trainer' => $trainer->id],
+            );
+
+            return;
+        }
+
         $this->deliver(
             new AccountNotice(
                 'เทรนเนอร์เปลี่ยนบัญชีรับเงิน',

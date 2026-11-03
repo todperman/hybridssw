@@ -81,6 +81,10 @@ class DemoData
             $this->trainers = collect([
                 $this->trainer('trainer1', 'ครูต้น', TrainerType::Internal, $password),
                 $this->trainer('trainer2', 'ครูฝน', TrainerType::External, $password, [
+                    // บัญชีรับเงินตัวอย่าง (เลขสมมติ) ให้เห็นในหน้าส่วนแบ่งและจ่ายรอบตัวอย่างได้
+                    'bank_code' => 'KBANK',
+                    'bank_account_number' => '0001234567',
+                    'bank_account_name' => 'ครูฝน ตัวอย่าง',
                     'certification_name' => 'ใบรับรองตัวอย่าง',
                     'certification_expires_at' => now()->addYear(),
                     'contract_starts_at' => now()->subMonths(2),

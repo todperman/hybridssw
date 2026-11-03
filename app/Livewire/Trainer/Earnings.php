@@ -46,25 +46,7 @@ class Earnings extends Component
 
     public function saveBank(): void
     {
-        $digits = preg_replace('/\D+/', '', $this->bank_account_number);
-        $bank = \App\Enums\ThaiBank::tryFrom($this->bank_code);
-        [$min, $max] = $bank?->accountDigits() ?? [10, 15];
-
-        $data = $this->validate([
-            'bank_code' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Enums\ThaiBank::options()))],
-            'bank_account_number' => ['required', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) use ($digits, $min, $max) {
-                if (strlen($digits) < $min || strlen($digits) > $max) {
-                    $fail($min === $max ? "เลขบัญชีต้องมี {$min} หลัก" : "เลขบัญชีต้องมี {$min}–{$max} หลัก");
-                }
-            }],
-            'bank_account_name' => ['required', 'string', 'max:120'],
-            'promptpay_id' => ['nullable', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) {
-                $d = preg_replace('/\D+/', '', (string) $value);
-                if ($d !== '' && ! in_array(strlen($d), [10, 13], true)) {
-                    $fail('พร้อมเพย์ต้องเป็นเบอร์โทร 10 หลัก หรือเลขบัตรประชาชน 13 หลัก');
-                }
-            }],
-        ], [], [
+        $data = $this->validate(Trainer::bankRules($this->bank_code), [], [
             'bank_code' => 'ธนาคาร', 'bank_account_number' => 'เลขบัญชี', 'bank_account_name' => 'ชื่อบัญชี', 'promptpay_id' => 'พร้อมเพย์',
         ]);
 

@@ -203,6 +203,36 @@ class Trainer extends Model
         return $this->bank() !== null && filled($this->bank_account_number);
     }
 
+    /** มีปลายทางให้โอนได้ (บัญชีธนาคาร หรืออย่างน้อยพร้อมเพย์) */
+    public function canReceivePayout(): bool
+    {
+        return $this->hasBankAccount() || filled($this->promptpay_id);
+    }
+
+    /** กฎตรวจบัญชีชุดเดียว ใช้ทั้งหน้าเทรนเนอร์และหลังบ้าน */
+    public static function bankRules(?string $bankCode): array
+    {
+        $bank = $bankCode ? \App\Enums\ThaiBank::tryFrom($bankCode) : null;
+        [$min, $max] = $bank?->accountDigits() ?? [10, 15];
+
+        return [
+            'bank_code' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Enums\ThaiBank::options()))],
+            'bank_account_number' => ['required', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) use ($min, $max) {
+                $digits = preg_replace('/\D+/', '', (string) $value);
+                if (strlen($digits) < $min || strlen($digits) > $max) {
+                    $fail($min === $max ? "เลขบัญชีต้องมี {$min} หลัก" : "เลขบัญชีต้องมี {$min}–{$max} หลัก");
+                }
+            }],
+            'bank_account_name' => ['required', 'string', 'max:120'],
+            'promptpay_id' => ['nullable', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) {
+                $d = preg_replace('/\D+/', '', (string) $value);
+                if ($d !== '' && ! in_array(strlen($d), [10, 13], true)) {
+                    $fail('พร้อมเพย์ต้องเป็นเบอร์โทร 10 หลัก หรือเลขบัตรประชาชน 13 หลัก');
+                }
+            }],
+        ];
+    }
+
     /** "กสิกรไทย 123-4-56789-0 · ชื่อบัญชี" ไว้โชว์ให้แอดมินตอนโอน */
     public function bankLabel(): ?string
     {
@@ -230,6 +260,10 @@ class Trainer extends Model
             'promptpay_id' => preg_replace('/\D+/', '', (string) ($data['promptpay_id'] ?? '')) ?: null,
             'bank_updated_at' => now(),
         ])->save();
+
+        if ($before['bank'] === $this->bankLabel()) {
+            return;
+        }
 
         AuditLog::record('trainer.bank_changed', $this, $before, ['bank' => $this->bankLabel()], null, $actor);
 

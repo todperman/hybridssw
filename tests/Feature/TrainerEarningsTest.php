@@ -39,7 +39,7 @@ class TrainerEarningsTest extends TestCase
 
     protected function external(\App\Models\Branch $gym): \App\Models\Trainer
     {
-        return $this->makeAvailableTrainer($gym, ['type' => TrainerType::External]);
+        return $this->makeAvailableTrainer($gym, ['type' => TrainerType::External, 'bank_code' => 'KBANK', 'bank_account_number' => '1234567890', 'bank_account_name' => 'ครู']);
     }
 
     #[Test]

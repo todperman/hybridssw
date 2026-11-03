@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\EarningStatus;
+use App\Enums\ThaiBank;
 use App\Enums\TrainerType;
 use App\Filament\Resources\Reservations\ReservationResource;
 use App\Models\Branch;
@@ -12,6 +13,7 @@ use App\Services\TrainerEarningService;
 use BackedEnum;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -189,13 +191,55 @@ class TrainerEarnings extends Page
             ])
             ->action(function (array $arguments, array $data) {
                 $trainer = Trainer::findOrFail($arguments['trainer']);
-                $result = app(TrainerEarningService::class)->pay($trainer, $this->monthStart, $this->monthStart->endOfMonth(), auth()->user(), $data['note'] ?? null);
+
+                try {
+                    $result = app(TrainerEarningService::class)->pay($trainer, $this->monthStart, $this->monthStart->endOfMonth(), auth()->user(), $data['note'] ?? null);
+                } catch (\RuntimeException $e) {
+                    Notification::make()->title('จ่ายไม่ได้')->body($e->getMessage())->danger()->send();
+
+                    return;
+                }
+
                 $this->forget();
 
                 Notification::make()
                     ->title($result['count'] ? 'จ่ายแล้ว '.$result['count'].' งาน ฿'.number_format($result['amount']) : 'ไม่มีรายการรอจ่ายในเดือนนี้')
                     ->{$result['count'] ? 'success' : 'warning'}()
                     ->send();
+            });
+    }
+
+    /** แอดมินกรอก/แก้บัญชีรับเงินแทนเทรนเนอร์ (ลงประวัติและแจ้งเทรนเนอร์ผ่าน Trainer::updateBankAccount) */
+    public function bankAction(): Action
+    {
+        return Action::make('bank')
+            ->label(fn (array $arguments) => Trainer::find($arguments['trainer'])?->canReceivePayout() ? 'แก้บัญชี' : 'กรอกบัญชี')
+            ->icon('heroicon-o-building-library')
+            ->color(fn (array $arguments) => Trainer::find($arguments['trainer'])?->canReceivePayout() ? 'gray' : 'warning')
+            ->link()
+            ->modalHeading(fn (array $arguments) => 'บัญชีรับเงินของ '.(Trainer::find($arguments['trainer'])?->user?->name ?? ''))
+            ->modalDescription('เทรนเนอร์จะได้รับแจ้งว่าเจ้าหน้าที่ตั้งบัญชีให้ และแก้เองได้ที่หน้า "รายได้"')
+            ->fillForm(fn (array $arguments) => tap(Trainer::find($arguments['trainer']), fn () => null)?->only(['bank_code', 'bank_account_number', 'bank_account_name', 'promptpay_id']) ?? [])
+            ->schema([
+                Select::make('bank_code')->label('ธนาคาร')->options(ThaiBank::options())->searchable()->required(),
+                TextInput::make('bank_account_number')->label('เลขบัญชี')->required()->maxLength(20)->helperText('ตัวเลข 10 หลัก (ออมสิน 12, ธ.ก.ส. 10–12) พิมพ์มีขีดได้'),
+                TextInput::make('bank_account_name')->label('ชื่อบัญชี (ตามหน้าสมุด)')->required()->maxLength(120),
+                TextInput::make('promptpay_id')->label('พร้อมเพย์ (ไม่บังคับ)')->maxLength(20),
+            ])
+            ->action(function (array $arguments, array $data) {
+                $trainer = Trainer::findOrFail($arguments['trainer']);
+                $validator = validator($data, Trainer::bankRules($data['bank_code'] ?? null));
+
+                if ($validator->fails()) {
+                    Notification::make()->title('บันทึกไม่ได้')->body(implode(' · ', $validator->errors()->all()))->danger()->send();
+
+                    return;
+                }
+
+                $trainer->updateBankAccount($data, auth()->user());
+                $this->forget();
+
+                Notification::make()->title('บันทึกบัญชีแล้ว')->body($trainer->fresh()->bankLabel())->success()->send();
             });
     }
 
