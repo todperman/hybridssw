@@ -1,6 +1,7 @@
 <div class="pb-16">
     @php($trainer = $this->trainer())
-    @php($external = $trainer->type === \App\Enums\TrainerType::External)
+    @php($external = $this->eligible())
+    @php($shareTable = $this->shareTable())
     @php($s = $this->summary)
     @php($monthStart = $this->monthStart)
     @php($byDay = $this->rows->groupBy(fn ($e) => $e->earned_at->toDateString()))
@@ -38,11 +39,11 @@
     <div class="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
         @unless ($external)
             <div class="card p-6 text-center">
-                <p class="font-display text-lg font-bold text-ink">บัญชีเทรนเนอร์ภายในไม่มีส่วนแบ่งรายงาน</p>
+                <p class="font-display text-lg font-bold text-ink">บัญชีเทรนเนอร์ภายในไม่มีส่วนแบ่งต่อรอบ</p>
                 <p class="mt-1 text-sm text-muted">ส่วนแบ่งต่อการจองมีเฉพาะเทรนเนอร์ภายนอก ตามนโยบายของยิม</p>
             </div>
         @else
-            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:[&>section:nth-child(2)]:row-span-2">
                 {{-- กราฟ 6 เดือน --}}
                 <section class="card overflow-hidden self-start">
                     <div class="card-head flex items-center justify-between">
@@ -66,8 +67,36 @@
                             </button>
                         @endforeach
                     </div>
-                    <p class="px-5 pb-4 text-[12px] leading-relaxed text-muted">ส่วนแบ่งคิดเป็นค่า Trainer ต่อชั่วโมงตามจำนวนคน × ชั่วโมง นับเป็นรายได้เมื่อหมดเวลาใช้งาน ส่วนลดหรือสิทธิ์ฟรีของลูกค้าไม่ลดส่วนแบ่งของคุณ</p>
                 </section>
+
+                {{-- ตารางส่วนแบ่ง: ดึงจากการตั้งค่าของสาขา แอดมินปิดการแสดงได้ --}}
+                @if ($shareTable !== [])
+                <section class="card overflow-hidden self-start lg:col-start-1">
+                    <div class="card-head">
+                        <h2 class="font-display text-[17px] font-bold text-grad">ตารางส่วนแบ่งของคุณ</h2>
+                        <p class="mt-0.5 text-xs text-muted">ค่า Trainer ต่อชั่วโมง ตามจำนวนคนในรอบ × จำนวนชั่วโมงที่จอง</p>
+                    </div>
+                    <table class="w-full text-[13.5px]">
+                        <thead class="bg-mist/60 text-[11px] font-semibold text-muted">
+                            <tr><th class="px-5 py-2 text-start">จำนวนคน</th><th class="px-3 py-2 text-end">คุณได้ / ชม.</th><th class="px-5 py-2 text-end text-muted/70">ลูกค้าจ่าย / ชม.</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach ($shareTable as $row)
+                                <tr>
+                                    <td class="px-5 py-2 font-display font-bold text-ink">{{ $row['people'] }} คน</td>
+                                    <td class="px-3 py-2 text-end font-display text-[15px] font-bold text-brand-deep">฿{{ number_format($row['trainer']) }}</td>
+                                    <td class="px-5 py-2 text-end text-muted">฿{{ number_format($row['price']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    <ul class="space-y-1 px-5 py-4 text-[12.5px] leading-relaxed text-muted">
+                        @foreach ($this->policyLines() as $line)
+                            <li class="flex items-start gap-2">@svg('lucide-check', 'mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600', ['stroke-width' => '2.5']) {{ $line }}</li>
+                        @endforeach
+                    </ul>
+                </section>
+                @endif
 
                 {{-- รายวัน --}}
                 <section class="card overflow-hidden self-start">

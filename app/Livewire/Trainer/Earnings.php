@@ -37,6 +37,35 @@ class Earnings extends Component
         return auth()->user()->trainer;
     }
 
+    public function eligible(): bool
+    {
+        return app(TrainerEarningService::class)->eligible($this->trainer());
+    }
+
+    /** ตารางส่วนแบ่งของสาขา ไว้ให้เทรนเนอร์เห็นว่ากี่คนได้เท่าไร (ปิดได้จากหลังบ้าน) */
+    public function shareTable(): array
+    {
+        if (! \App\Support\PayoutSettings::load()['visible']) {
+            return [];
+        }
+
+        $branch = $this->trainer()->branch;
+        $payout = $branch->payoutTable();
+        $prices = $branch->priceTable();
+        $max = max(1, (int) $branch->max_trainees);
+
+        return collect(range(1, $max))->map(fn (int $n) => [
+            'people' => $n,
+            'trainer' => $payout->trainerPerHour($n),
+            'price' => $prices->perHour($n, true),
+        ])->all();
+    }
+
+    public function policyLines(): array
+    {
+        return \App\Support\PayoutSettings::policyLines();
+    }
+
     #[Computed]
     public function monthStart(): CarbonImmutable
     {

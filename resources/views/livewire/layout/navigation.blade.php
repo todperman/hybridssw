@@ -29,7 +29,7 @@ new class extends Component
                 $links[] = ['route' => 'trainer.team', 'label' => 'ทีม', 'icon' => 'users'];
 
                 // ส่วนแบ่งมีเฉพาะเทรนเนอร์ภายนอก ภายในเป็นพนักงานไม่ต้องเห็นเมนูนี้
-                if ($user->trainer->type === \App\Enums\TrainerType::External) {
+                if (app(\App\Services\TrainerEarningService::class)->eligible($user->trainer)) {
                     $links[] = ['route' => 'trainer.earnings', 'label' => 'รายได้', 'icon' => 'wallet'];
                 }
             } else {

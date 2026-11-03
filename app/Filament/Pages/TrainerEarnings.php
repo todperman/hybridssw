@@ -202,6 +202,7 @@ class TrainerEarnings extends Page
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(fn () => $this->export()),
+            Action::make('settings')->label('ตั้งค่าส่วนแบ่ง')->icon('heroicon-o-scale')->color('gray')->url(PayoutSettings::getUrl())->visible(fn () => (bool) auth()->user()?->isAdmin()),
             Action::make('calendar')->label('ปฏิทินการจอง')->icon('heroicon-o-calendar')->color('gray')->url(ReservationCalendar::getUrl()),
         ];
     }

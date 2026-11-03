@@ -1,0 +1,10 @@
+<x-filament-panels::page>
+    <form wire:submit="save" class="space-y-6">
+        {{ $this->form }}
+
+        <div class="flex flex-wrap items-center gap-3">
+            <x-filament::button type="submit" wire:loading.attr="disabled">บันทึก</x-filament::button>
+            <span class="text-sm" style="color: var(--gray-500)">ส่วนแบ่ง = ค่า Trainer ต่อชั่วโมงตามจำนวนคน × ชั่วโมงที่จอง · ดูยอดจริงที่ การจอง → ส่วนแบ่งเทรนเนอร์</span>
+        </div>
+    </form>
+</x-filament-panels::page>

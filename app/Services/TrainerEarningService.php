@@ -12,6 +12,7 @@ use App\Models\TrainerEarning;
 use App\Models\User;
 use App\Notifications\AccountNotice;
 use App\Services\Notify\Notifier;
+use App\Support\PayoutSettings;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -53,13 +54,22 @@ class TrainerEarningService
         $people = $reservation->participants()->count();
         $split = $reservation->branch->payoutTable()->split($people);
         $hours = (int) $reservation->hours;
+        $perHour = $split['trainer'];
+
+        // นโยบาย "ลดตามสัดส่วนที่ลูกค้าจ่ายจริง": ลูกค้าจ่าย 60% ของราคาตั้ง ส่วนแบ่งก็ 60%
+        if (PayoutSettings::load()['discounts'] === 'net') {
+            $list = $reservation->branch->priceTable()->perHour($people, true) * $hours;
+            $ratio = $list > 0 ? min(1, max(0, (float) $reservation->amount / $list)) : 0;
+            $perHour = round($perHour * $ratio, 2);
+        }
+
         $values = [
             'trainer_id' => $trainer->id,
             'branch_id' => $reservation->branch_id,
             'people' => $people,
             'hours' => $hours,
-            'per_hour' => $split['trainer'],
-            'amount' => round($split['trainer'] * $hours, 2),
+            'per_hour' => $perHour,
+            'amount' => round($perHour * $hours, 2),
             'facility_amount' => round($split['facility'] * $hours, 2),
             'customer_amount' => (float) $reservation->amount,
             'earned_at' => $reservation->ends_at,
@@ -159,11 +169,15 @@ class TrainerEarningService
 
     public function eligible(Trainer $trainer): bool
     {
-        return $trainer->type === TrainerType::External;
+        return $trainer->type === TrainerType::External || PayoutSettings::load()['internal'] === 'table';
     }
 
     protected function statusFor(CarbonInterface $endsAt): EarningStatus
     {
+        if (PayoutSettings::load()['earn_when'] === 'confirmed') {
+            return EarningStatus::Payable;
+        }
+
         return $endsAt->lte(now()) ? EarningStatus::Payable : EarningStatus::Accrued;
     }
 
