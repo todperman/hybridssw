@@ -150,6 +150,46 @@ class TrainerEarningService
         return ['count' => $rows->count(), 'amount' => $amount];
     }
 
+    /**
+     * ยกเลิกการจ่าย: แถว paid ของเทรนเนอร์ในช่วงนี้กลับเป็น payable (กดผิดคน/ผิดรอบ/โอนไม่สำเร็จ)
+     *
+     * @return array{count: int, amount: float}
+     */
+    public function unpay(Trainer $trainer, CarbonInterface $from, CarbonInterface $to, User $admin, string $reason): array
+    {
+        $rows = TrainerEarning::where('trainer_id', $trainer->id)
+            ->where('status', EarningStatus::Paid->value)
+            ->whereBetween('earned_at', [$from, $to])
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return ['count' => 0, 'amount' => 0.0];
+        }
+
+        $amount = (float) $rows->sum('amount');
+
+        TrainerEarning::whereIn('id', $rows->modelKeys())->update([
+            'status' => EarningStatus::Payable->value,
+            'paid_at' => null,
+            'paid_by_user_id' => null,
+            'payout_note' => null,
+        ]);
+
+        AuditLog::record('earning.unpaid', $trainer, ['paid' => number_format($amount, 2, '.', '')], ['count' => $rows->count(), 'from' => $from->toDateString(), 'to' => $to->toDateString()], $reason, $admin);
+
+        $this->notify->deliver(
+            new AccountNotice(
+                'ยกเลิกรายการจ่ายส่วนแบ่ง ฿'.number_format($amount),
+                'รอบ '.$from->locale('th')->isoFormat('D MMM').' – '.$to->locale('th')->isoFormat('D MMM YYYY').' จำนวน '.$rows->count().' งาน กลับเป็นสถานะรอจ่าย เหตุผล: '.$reason,
+                route('trainer.earnings'),
+            ),
+            [$trainer->user],
+            context: ['trainer' => $trainer->id],
+        );
+
+        return ['count' => $rows->count(), 'amount' => $amount];
+    }
+
     /** ยอดสรุปของชุดแถวที่ให้มา (ใช้ทั้งหน้าแอดมินและหน้าเทรนเนอร์) */
     public static function summarize(Collection $rows): array
     {

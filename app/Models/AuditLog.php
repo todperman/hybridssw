@@ -70,6 +70,8 @@ class AuditLog extends Model
             'payments.settings_changed' => 'แก้ตั้งค่าชำระเงิน / Omise',
             'mail.settings_changed' => 'แก้ตั้งค่าอีเมลแจ้งเตือน',
             'earning.paid' => 'จ่ายส่วนแบ่งเทรนเนอร์',
+            'earning.unpaid' => 'ยกเลิกการจ่ายส่วนแบ่ง',
+            'trainer.bank_changed' => 'เปลี่ยนบัญชีรับเงินของเทรนเนอร์',
             'payout.settings_changed' => 'แก้ตั้งค่าส่วนแบ่งเทรนเนอร์',
             'earning.paid_but_cancelled' => 'จ่ายส่วนแบ่งไปแล้วแต่การจองถูกยกเลิก',
             'earning.paid_but_reassigned' => 'เปลี่ยน Trainer หลังจ่ายส่วนแบ่ง',

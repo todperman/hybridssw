@@ -151,6 +151,20 @@ class AccountNotifier extends Notifier
         );
     }
 
+    /** เทรนเนอร์เปลี่ยนบัญชีรับเงิน แจ้งผู้ดูแลเสมอ (และสำเนาเข้ากล่องผู้ดูแล) ไว้ตรวจก่อนโอนรอบถัดไป */
+    public function trainerBankChanged(Trainer $trainer, User $actor): void
+    {
+        $this->deliver(
+            new AccountNotice(
+                'เทรนเนอร์เปลี่ยนบัญชีรับเงิน',
+                ($trainer->user?->displayName() ?? 'เทรนเนอร์').' ตั้งบัญชีรับส่วนแบ่งเป็น '.($trainer->bankLabel() ?? 'ไม่มี').' (แก้โดย '.$actor->displayName().') ตรวจชื่อบัญชีให้ตรงกับชื่อเทรนเนอร์ก่อนโอนรอบถัดไป',
+                url('/admin/trainer-earnings'),
+            ),
+            $trainer->branch ? $this->admins($trainer->branch) : [],
+            context: ['trainer' => $trainer->id],
+        );
+    }
+
     protected function who(User $user): string
     {
         return $user->displayName().' · '.($user->phone ?: 'ไม่มีเบอร์').' · '.$user->email;

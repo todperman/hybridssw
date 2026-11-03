@@ -64,12 +64,25 @@
                     <div class="rc-head__title">
                         <h2>{{ $t?->user?->name ?? '-' }} <span class="te-code">{{ $t?->code }}</span></h2>
                         <p>{{ $s['jobs'] }} งาน · {{ $s['hours'] }} ชม. · ส่วนแบ่ง <strong>฿{{ number_format($s['amount']) }}</strong> · ลูกค้าจ่าย ฿{{ number_format($s['customer']) }} · ยิมได้ ฿{{ number_format($s['facility']) }}</p>
+                        @if ($t?->hasBankAccount() || $t?->promptpay_id)
+                            <p class="te-bank">
+                                @if ($t->bank())<span class="te-bank__chip" style="background: {{ $t->bank()->color() }}">{{ $t->bank()->value }}</span>@endif
+                                <span>{{ $t->bankLabel() }}</span>
+                                @if ($t->bank_account_number)<button type="button" class="te-copy" x-data x-on:click="navigator.clipboard.writeText('{{ $t->bank_account_number }}'); $tooltip('คัดลอกเลขบัญชีแล้ว', { timeout: 1500 })">คัดลอกเลขบัญชี</button>@endif
+                                @if ($t->bank_updated_at && $t->bank_updated_at->gt(now()->subDays(14)))<span class="te-bank__new">เปลี่ยนเมื่อ {{ $t->bank_updated_at->format('d/m') }} ตรวจก่อนโอน</span>@endif
+                            </p>
+                        @else
+                            <p class="te-bank te-bank--none">ยังไม่ได้กรอกบัญชีรับเงิน (เทรนเนอร์กรอกเองที่หน้า "รายได้")</p>
+                        @endif
                     </div>
                     <div class="te-group__side">
                         <span class="te-pill is-paid">จ่ายแล้ว ฿{{ number_format($s['paid']) }}</span>
                         <span class="te-pill is-payable">รอจ่าย ฿{{ number_format($s['payable']) }}</span>
                         @if ($s['payable'] > 0 && $t)
                             {{ ($this->payAction)(['trainer' => $t->id]) }}
+                        @endif
+                        @if ($s['paid'] > 0 && $t)
+                            {{ ($this->unpayAction)(['trainer' => $t->id]) }}
                         @endif
                     </div>
                 </header>

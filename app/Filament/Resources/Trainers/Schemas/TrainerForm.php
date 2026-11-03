@@ -194,6 +194,7 @@ class TrainerForm
                         TextEntry::make('approved_at')->label('อนุมัติเมื่อ')->dateTime('d/m/Y H:i')->placeholder('ยังไม่อนุมัติ')
                             ->helperText(fn (Trainer $record) => $record->approver?->name ? 'โดย '.$record->approver->name : null),
                         TextEntry::make('team_members_count')->label('ลูกทีม')->state(fn (Trainer $record) => $record->teamMembers()->count().' คน'),
+                        TextEntry::make('bank_account_number')->label('บัญชีรับเงิน')->state(fn (Trainer $record) => $record->bankLabel())->placeholder('ยังไม่กรอก (เทรนเนอร์กรอกเองที่หน้ารายได้)')->copyable(),
                     ]),
                     ]),
             ]);

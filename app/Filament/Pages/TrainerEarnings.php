@@ -178,7 +178,12 @@ class TrainerEarnings extends Page
             ->color('success')
             ->requiresConfirmation()
             ->modalHeading(fn (array $arguments) => 'จ่ายส่วนแบ่ง '.(Trainer::find($arguments['trainer'])?->user?->name ?? ''))
-            ->modalDescription(fn (array $arguments) => 'รายการ "รอจ่าย" ทั้งหมดของ '.$this->monthStart->locale('th')->isoFormat('MMMM YYYY').' จะถูกบันทึกว่าจ่ายแล้ว และแจ้งเทรนเนอร์ทางกระดิ่งและอีเมล')
+            ->modalDescription(function (array $arguments) {
+                $t = Trainer::find($arguments['trainer']);
+
+                return 'รายการ "รอจ่าย" ทั้งหมดของ '.$this->monthStart->locale('th')->isoFormat('MMMM YYYY').' จะถูกบันทึกว่าจ่ายแล้ว และแจ้งเทรนเนอร์ทางกระดิ่งและอีเมล'
+                    .' · โอนเข้า: '.($t?->bankLabel() ?? 'เทรนเนอร์ยังไม่ได้กรอกบัญชีรับเงิน').' · ปุ่มนี้ไม่ได้โอนเงินให้ ต้องโอนเอง';
+            })
             ->schema([
                 TextInput::make('note')->label('บันทึก (เช่น เลขอ้างอิงโอน วันที่โอน)')->maxLength(200),
             ])
@@ -189,6 +194,32 @@ class TrainerEarnings extends Page
 
                 Notification::make()
                     ->title($result['count'] ? 'จ่ายแล้ว '.$result['count'].' งาน ฿'.number_format($result['amount']) : 'ไม่มีรายการรอจ่ายในเดือนนี้')
+                    ->{$result['count'] ? 'success' : 'warning'}()
+                    ->send();
+            });
+    }
+
+    /** ปุ่ม "ยกเลิกการจ่าย": รอบที่กดผิดหรือโอนไม่สำเร็จ กลับเป็นรอจ่ายพร้อมเหตุผล */
+    public function unpayAction(): Action
+    {
+        return Action::make('unpay')
+            ->label('ยกเลิกการจ่าย')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('danger')
+            ->link()
+            ->requiresConfirmation()
+            ->modalHeading(fn (array $arguments) => 'ยกเลิกการจ่ายของ '.(Trainer::find($arguments['trainer'])?->user?->name ?? ''))
+            ->modalDescription(fn () => 'รายการ "จ่ายแล้ว" ทั้งหมดของ '.$this->monthStart->locale('th')->isoFormat('MMMM YYYY').' จะกลับเป็น "รอจ่าย" และแจ้งเทรนเนอร์พร้อมเหตุผล ใช้เมื่อกดผิดคน ผิดรอบ หรือโอนไม่สำเร็จ')
+            ->schema([
+                TextInput::make('reason')->label('เหตุผล (เทรนเนอร์จะเห็น)')->required()->maxLength(200),
+            ])
+            ->action(function (array $arguments, array $data) {
+                $trainer = Trainer::findOrFail($arguments['trainer']);
+                $result = app(TrainerEarningService::class)->unpay($trainer, $this->monthStart, $this->monthStart->endOfMonth(), auth()->user(), $data['reason']);
+                $this->forget();
+
+                Notification::make()
+                    ->title($result['count'] ? 'ยกเลิกแล้ว '.$result['count'].' งาน ฿'.number_format($result['amount']).' กลับเป็นรอจ่าย' : 'ไม่มีรายการที่จ่ายแล้วในเดือนนี้')
                     ->{$result['count'] ? 'success' : 'warning'}()
                     ->send();
             });

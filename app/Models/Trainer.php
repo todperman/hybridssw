@@ -41,6 +41,11 @@ class Trainer extends Model
         'approved_at',
         'approved_by',
         'review_note',
+        'bank_code',
+        'bank_account_number',
+        'bank_account_name',
+        'promptpay_id',
+        'bank_updated_at',
     ];
 
     protected function casts(): array
@@ -53,6 +58,7 @@ class Trainer extends Model
             'contract_starts_at' => 'date',
             'contract_ends_at' => 'date',
             'approved_at' => 'datetime',
+            'bank_updated_at' => 'datetime',
             'accepts_bookings' => 'boolean',
         ];
     }
@@ -185,6 +191,49 @@ class Trainer extends Model
 
         AuditLog::record('trainer.rejected', $this, null, null, $note, $by);
         app(\App\Services\Notify\AccountNotifier::class)->trainerRejected($this, $note);
+    }
+
+    public function bank(): ?\App\Enums\ThaiBank
+    {
+        return $this->bank_code ? \App\Enums\ThaiBank::tryFrom($this->bank_code) : null;
+    }
+
+    public function hasBankAccount(): bool
+    {
+        return $this->bank() !== null && filled($this->bank_account_number);
+    }
+
+    /** "กสิกรไทย 123-4-56789-0 · ชื่อบัญชี" ไว้โชว์ให้แอดมินตอนโอน */
+    public function bankLabel(): ?string
+    {
+        if (! $this->hasBankAccount()) {
+            return $this->promptpay_id ? 'พร้อมเพย์ '.$this->promptpay_id : null;
+        }
+
+        return $this->bank()->label().' '.\App\Enums\ThaiBank::formatAccount($this->bank_account_number)
+            .($this->bank_account_name ? ' · '.$this->bank_account_name : '')
+            .($this->promptpay_id ? ' · พร้อมเพย์ '.$this->promptpay_id : '');
+    }
+
+    /**
+     * เทรนเนอร์แก้บัญชีรับเงินเอง: ลงประวัติและแจ้งแอดมินทุกครั้ง (กันคนอื่นแอบเปลี่ยนปลายทางเงิน)
+     *
+     * @param  array{bank_code: ?string, bank_account_number: ?string, bank_account_name: ?string, promptpay_id: ?string}  $data
+     */
+    public function updateBankAccount(array $data, User $actor): void
+    {
+        $before = ['bank' => $this->bankLabel()];
+        $this->fill([
+            'bank_code' => $data['bank_code'] ?: null,
+            'bank_account_number' => preg_replace('/\D+/', '', (string) ($data['bank_account_number'] ?? '')) ?: null,
+            'bank_account_name' => trim((string) ($data['bank_account_name'] ?? '')) ?: null,
+            'promptpay_id' => preg_replace('/\D+/', '', (string) ($data['promptpay_id'] ?? '')) ?: null,
+            'bank_updated_at' => now(),
+        ])->save();
+
+        AuditLog::record('trainer.bank_changed', $this, $before, ['bank' => $this->bankLabel()], null, $actor);
+
+        app(\App\Services\Notify\AccountNotifier::class)->trainerBankChanged($this, $actor);
     }
 
     public function genderLabel(): ?string

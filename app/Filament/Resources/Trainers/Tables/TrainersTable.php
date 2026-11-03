@@ -71,6 +71,15 @@ class TrainersTable
                     ->sortable()
                     ->toggleable(),
 
+                TextColumn::make('bank_account_number')
+                    ->label('บัญชีรับเงิน')
+                    ->formatStateUsing(fn (Trainer $r) => $r->bankLabel())
+                    ->placeholder('ยังไม่กรอก')
+                    ->copyable()
+                    ->copyableState(fn (Trainer $r) => $r->bank_account_number)
+                    ->copyMessage('คัดลอกเลขบัญชีแล้ว')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('gender')
                     ->label('เพศ')
                     ->formatStateUsing(fn (Trainer $r) => $r->genderLabel())

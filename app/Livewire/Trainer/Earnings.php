@@ -21,6 +21,59 @@ class Earnings extends Component
     #[Url(as: 'm')]
     public string $month = '';
 
+    /* ---------- บัญชีรับเงิน ---------- */
+
+    public bool $editingBank = false;
+
+    public string $bank_code = '';
+
+    public string $bank_account_number = '';
+
+    public string $bank_account_name = '';
+
+    public string $promptpay_id = '';
+
+    public function openBank(): void
+    {
+        $t = $this->trainer();
+        $this->bank_code = (string) $t->bank_code;
+        $this->bank_account_number = (string) $t->bank_account_number;
+        $this->bank_account_name = (string) ($t->bank_account_name ?: $t->user->name);
+        $this->promptpay_id = (string) $t->promptpay_id;
+        $this->resetValidation();
+        $this->editingBank = true;
+    }
+
+    public function saveBank(): void
+    {
+        $digits = preg_replace('/\D+/', '', $this->bank_account_number);
+        $bank = \App\Enums\ThaiBank::tryFrom($this->bank_code);
+        [$min, $max] = $bank?->accountDigits() ?? [10, 15];
+
+        $data = $this->validate([
+            'bank_code' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Enums\ThaiBank::options()))],
+            'bank_account_number' => ['required', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) use ($digits, $min, $max) {
+                if (strlen($digits) < $min || strlen($digits) > $max) {
+                    $fail($min === $max ? "เลขบัญชีต้องมี {$min} หลัก" : "เลขบัญชีต้องมี {$min}–{$max} หลัก");
+                }
+            }],
+            'bank_account_name' => ['required', 'string', 'max:120'],
+            'promptpay_id' => ['nullable', 'regex:/^[0-9\- ]+$/', function ($attr, $value, $fail) {
+                $d = preg_replace('/\D+/', '', (string) $value);
+                if ($d !== '' && ! in_array(strlen($d), [10, 13], true)) {
+                    $fail('พร้อมเพย์ต้องเป็นเบอร์โทร 10 หลัก หรือเลขบัตรประชาชน 13 หลัก');
+                }
+            }],
+        ], [], [
+            'bank_code' => 'ธนาคาร', 'bank_account_number' => 'เลขบัญชี', 'bank_account_name' => 'ชื่อบัญชี', 'promptpay_id' => 'พร้อมเพย์',
+        ]);
+
+        $this->trainer()->updateBankAccount($data, auth()->user());
+
+        $this->editingBank = false;
+        $this->dispatch('toast', tone: 'success', title: 'บันทึกบัญชีรับเงินแล้ว', body: 'แอดมินจะใช้บัญชีนี้โอนส่วนแบ่งรอบถัดไป');
+    }
+
     public function mount(): void
     {
         abort_unless(auth()->user()?->trainer, 403);
